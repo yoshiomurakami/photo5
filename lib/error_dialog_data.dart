@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 enum ErrorDialogType {
+  DEPEND_DIALOG,
   RETRY_DIALOG,
   CLOSE_DIALOG,
   YES_NO_DIALOG,
@@ -22,6 +23,9 @@ class ErrorDialogData {
 
   static List<Widget> _generateActions(ErrorDialogType dialogType, Future<bool> Function(BuildContext context) actionInDialog, BuildContext context) {
     switch(dialogType) {
+      case ErrorDialogType.DEPEND_DIALOG:
+        return [
+        ];
       case ErrorDialogType.RETRY_DIALOG:
         return [
           TextButton(
