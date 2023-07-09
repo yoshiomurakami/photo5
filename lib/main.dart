@@ -10,22 +10,24 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overboard/flutter_overboard.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 void main() {
-  runApp(const MyApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  SharedPreferences.getInstance().then((prefs) {
+    final int? introStatus = prefs.getInt('intro') ?? 0;
+    runApp(MyApp(home: introStatus == 1 ? Startup() : IntroductionScreen()));
+  });
 }
-
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final Widget home;
+
+  MyApp({required this.home});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-      ),
-      // home: Startup(),
-      home:IntroductionScreen(),
+      home: this.home,
     );
   }
 }
@@ -64,7 +66,7 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
         inactiveBulletColor: Colors.blue,
         finishCallback: () async {
           SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('intro', 1);
+          await prefs.setInt('intro', 0);
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => Startup()),
           );
@@ -137,15 +139,15 @@ class Startup extends StatefulWidget {
 }
 
 class _StartupState extends State<Startup> {
+  late PageController pageController;
   late StreamController<bool> _startupController;
   String loadingText = 'Now Loading';
-  // late Timer loadingTextTimer;
-  // int loadingDots = 1; // Add this line
   String latestVersion = "";
 
   @override
   void initState() {
     super.initState();
+    pageController = PageController();
     _startupController = StreamController<bool>();
     _startupProcedures(context);
   }
@@ -153,6 +155,7 @@ class _StartupState extends State<Startup> {
 
   @override
   void dispose() {
+    pageController.dispose();
     _startupController.close();
     super.dispose();
   }
@@ -213,7 +216,7 @@ class _StartupState extends State<Startup> {
                     ),
                     child: Center(
                       child: Text(
-                        "🤚",
+                        "✋",
                         style: TextStyle(
                           fontSize: MediaQuery.of(context).size.width * 0.1,
                         ),
@@ -394,28 +397,38 @@ class _StartupState extends State<Startup> {
 
   Future<void> _showTutorial() async {
     debugPrint("Start _showTutorial()");
-    // Implementation of the tutorial goes here.
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.8,
-            height: MediaQuery.of(context).size.height * 0.7,
-            child: PageView(
-              children: <Widget>[
-                _tutorialPage('assets/tutorial1.png', 'Tutorial text 1'),
-                _tutorialPage('assets/tutorial2.png', 'Tutorial text 2'),
-                _tutorialPage('assets/tutorial3.png', 'Tutorial text 3', showButton: true),
-              ],
+
+    // Check for location and camera permissions.
+    var locationStatus = await Permission.location.status;
+    var cameraStatus = await Permission.camera.status;
+
+    // Only show the tutorial if at least one permission is not granted.
+    if (locationStatus.isDenied || cameraStatus.isDenied) {
+      await showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return Dialog(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.8,
+              height: MediaQuery.of(context).size.height * 0.7,
+              child: PageView(
+                controller: pageController,
+                children: <Widget>[
+                  if (locationStatus.isDenied) _tutorialPage('assets/tutorial1.png', 'Tutorial text 1', Permission.location, showButton: true),
+                  if (cameraStatus.isDenied) _tutorialPage('assets/tutorial2.png', 'Tutorial text 2', Permission.camera, showButton: true),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
+          );
+        },
+      );
+    } else {
+      _navigateToMainScreen();
+    }
   }
-  Widget _tutorialPage(String imagePath, String text, {bool showButton = false}) {
+
+  Widget _tutorialPage(String imagePath, String text, Permission permission, {bool showButton = false}) {
     return Column(
       children: <Widget>[
         Container(
@@ -426,18 +439,56 @@ class _StartupState extends State<Startup> {
         Text(text, maxLines: 2, overflow: TextOverflow.ellipsis),
         if (showButton)
           ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
+            onPressed: () async {
+              // replace `Permission.camera` with the specific permission you need
+              final granted = await _requestPermission(permission);
+              if (granted) {
+                pageController.nextPage(
+                  duration: Duration(milliseconds: 500),
+                  curve: Curves.ease,
+                );
+              }
             },
-            child: Text('Start'),
+            child: Text('Request Permission'),
           ),
       ],
     );
   }
 
+  Future<bool> _requestPermission(Permission permission) async {
+    final status = await permission.request();
+    if (status.isDenied) {
+      await showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Permission error'),
+            content: Text('Permission is needed.'),
+            actions: <Widget>[
+              TextButton(
+                child: Text('Retry'),
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _requestPermission(permission);
+                },
+              ),
+            ],
+          );
+        },
+      );
+      return false;
+    }
 
+    // After getting a permission, check if we have all needed permissions. If so, navigate to the main screen.
+    var locationStatus = await Permission.location.status;
+    var cameraStatus = await Permission.camera.status;
+    if (locationStatus.isGranted && cameraStatus.isGranted) {
+      Navigator.of(context).pop(); // This will close the tutorial dialog.
+      _navigateToMainScreen();
+    }
 
-
+    return true;
+  }
 
   Future<bool> _startupProcedures(BuildContext context) async {
     debugPrint("Startup procedures starting");
@@ -462,6 +513,10 @@ class _StartupState extends State<Startup> {
       _startupController.addError(e);
       return false;
     }
+  }
+
+  void _navigateToMainScreen() {
+    _startupController.add(true);
   }
 
   void _showErrorDialog(ErrorDialogData errorDialogData) {

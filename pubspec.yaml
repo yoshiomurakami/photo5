@@ -39,6 +39,16 @@ dependencies:
   flutter_riverpod: ^2.3.6
   package_info_plus: ^4.0.2
   flutter_overboard: ^3.1.1
+  permission_handler: ^10.4.1
+  google_maps_flutter: ^2.3.1
+  camera: ^0.10.5+2
+  path_provider: ^2.0.15
+  geolocator: ^9.0.2
+  geocoding: ^2.1.0
+  flutter_image_compress: ^2.0.3
+  image: ^4.0.17
+  mime: ^1.0.4
+  http_parser: ^4.0.2
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
