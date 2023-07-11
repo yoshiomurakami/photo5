@@ -139,6 +139,13 @@ class _CameraScreenState extends State<CameraScreen> {
   String? _imagePath;
   String? _thumbnailPath;
   bool _uploading = false;
+  bool _conversionCompleted = false;
+  bool _locationAvailable = false;
+  String? _imageLat;
+  String? _imageLng;
+  String? _imageCountry;
+  String? _uploadImagePath; // Add this for the upload image
+  String? _uploadThumbnailPath; // Add this for the upload thumbnail
 
   @override
   void initState() {
@@ -171,7 +178,7 @@ class _CameraScreenState extends State<CameraScreen> {
     final Directory tempDir = await getTemporaryDirectory();
 
     final int timestamp = DateTime.now().microsecondsSinceEpoch;  // Use microseconds for higher precision
-    final String randomStr = _getRandomString(3);
+    final String randomStr = _getRandomString(5);
 
     try {
       await _initializeControllerFuture;
@@ -199,59 +206,91 @@ class _CameraScreenState extends State<CameraScreen> {
       // Save the picture
       await pictureFile.saveTo(imgPath);
 
-      // Convert the picture to webp
-      final webpImgFileName = '${timestamp}_${randomStr}_photo.webp';
-      final webpImgPath = p.join(tempDir.path, webpImgFileName);
-      await FlutterImageCompress.compressAndGetFile(
-        imgPath,
-        webpImgPath,
-        format: CompressFormat.webp,
-        quality: 90,
-      );
-
-      print('Image saved at: $webpImgPath');
-
-      // Create a thumbnail from the image
-      img.Image? image = img.decodeImage(File(imgPath).readAsBytesSync());
-
-      // Crop to square
-      int size = math.min(image!.width, image.height);
-      int startX = (image.width - size) ~/ 2;
-      int startY = (image.height - size) ~/ 2;
-      img.Image square = img.copyCrop(image, x: startX, y: startY, width: size, height: size);
-
-      // Resize to 1/4
-      img.Image thumbnail = img.copyResize(square, width: image.width ~/ 4, height: image.width ~/ 4);
-
-      File(thumbPath)..writeAsBytesSync(img.encodeJpg(thumbnail, quality: 90));
-
-      // Convert the thumbnail to webp
-      final webpThumbFileName = '${timestamp}_${randomStr}_thumb.webp';
-      final webpThumbPath = p.join(tempDir.path, webpThumbFileName);
-      await FlutterImageCompress.compressAndGetFile(
-        thumbPath,
-        webpThumbPath,
-        format: CompressFormat.webp,
-        quality: 90,
-      );
-
-      print('Thumbnail saved at: $webpThumbPath');
-
       // Set the path for the image and thumbnail
-      _imagePath = webpImgPath;
-      _thumbnailPath = webpThumbPath;
+      _imagePath = imgPath;
+      _thumbnailPath = thumbPath;
+
+      // Update the image display
       setState(() {
         _showImage = true;
+        _conversionCompleted = false;
       });
 
-      // Now you can call _uploadImage(_imagePath, _thumbnailPath);
+      // Call _convertImage() to convert image and thumbnail to webp format in the background
+      _convertImage(imgPath, thumbPath, timestamp, randomStr);
     } catch (e) {
       print(e);
     }
   }
 
+  Future<void> _convertImage(String imgPath, String thumbPath, int timestamp, String randomStr) async {
+
+    // Fetch the user's current location.
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    print('Current position: $position');
+    _imageLat = position.latitude.toString();
+    _imageLng = position.longitude.toString();
+
+    // Fetch the user's current country.
+    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+    _imageCountry = placemarks.first.isoCountryCode ?? 'Unknown';
+    print('Placemarks: $placemarks');
+
+    // Update _locationAvailable state
+    setState(() {
+      _locationAvailable = true;
+    });
+
+    final Directory tempDir = await getTemporaryDirectory();
+
+    // Convert the picture to webp
+    final webpImgFileName = '${timestamp}_${randomStr}_photo.webp';
+    final webpImgPath = p.join(tempDir.path, webpImgFileName);
+    await FlutterImageCompress.compressAndGetFile(
+      imgPath,
+      webpImgPath,
+      format: CompressFormat.webp,
+      quality: 90,
+    );
+
+    print('Image saved at: $webpImgPath');
+
+    // Create a thumbnail from the image
+    img.Image? image = img.decodeImage(File(imgPath).readAsBytesSync());
+
+    // Crop to square
+    int size = math.min(image!.width, image.height);
+    int startX = (image.width - size) ~/ 2;
+    int startY = (image.height - size) ~/ 2;
+    img.Image square = img.copyCrop(image, x: startX, y: startY, width: size, height: size);
+
+    // Resize to 1/4
+    img.Image thumbnail = img.copyResize(square, width: image.width ~/ 4, height: image.width ~/ 4, interpolation: img.Interpolation.average);
 
 
+    File(thumbPath)..writeAsBytesSync(img.encodeJpg(thumbnail, quality: 90));
+
+    // Convert the thumbnail to webp
+    final webpThumbFileName = '${timestamp}_${randomStr}_thumb.webp';
+    final webpThumbPath = p.join(tempDir.path, webpThumbFileName);
+    await FlutterImageCompress.compressAndGetFile(
+      thumbPath,
+      webpThumbPath,
+      format: CompressFormat.webp,
+      quality: 90,
+    );
+
+    print('Thumbnail saved at: $webpThumbPath');
+
+    // Set the path for the image and thumbnail
+    _uploadImagePath = webpImgPath;
+    _uploadThumbnailPath = webpThumbPath;
+
+    // Update the UI to show that the conversion has completed
+    setState(() {
+      _conversionCompleted = true;
+    });
+  }
 
   void _navigateBack(BuildContext context) async {
     if (_imagePath != null) {
@@ -296,32 +335,20 @@ class _CameraScreenState extends State<CameraScreen> {
       contentType: MediaType('image', 'jpeg'),
     ));
 
-
-    // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    print('Current position: $position');
-    String photoLat = position.latitude.toString();
-    String photoLng = position.longitude.toString();
-
-    // Fetch the user's current country.
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-    String photoCountry = placemarks.first.isoCountryCode ?? 'Unknown';
-    print('Placemarks: $placemarks');
-
     // Fetch user ID from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userId = prefs.getString('userID') ?? "";
 
     // Add the extra data to the request.
     request.fields['photo_u_id'] = userId;
-    request.fields['photo_country'] = photoCountry;
-    request.fields['photo_lat'] = photoLat;
-    request.fields['photo_lng'] = photoLng;
+    request.fields['photo_country'] = _imageCountry ?? 'Unknown';
+    request.fields['photo_lat'] = _imageLat ?? '';
+    request.fields['photo_lng'] = _imageLng ?? '';
 
     // Check the connectivity status.
     if (!await _checkConnectivity(context)) {
       // If not connected, save the image and extra information to cache.
-      _saveDataLocally(imagePath, photoCountry, photoLat, photoLng, userId);
+      // _saveDataLocally(imagePath, photoCountry, photoLat, photoLng, userId);
       setState(() {
         _uploading = false; // アップロード中フラグを解除
       });
@@ -393,22 +420,23 @@ class _CameraScreenState extends State<CameraScreen> {
                     ),
                   ),
                   // The controls should be outside the scaled preview
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    child: Row(
-                      children: [
-                        ElevatedButton(
-                          onPressed: _takePicture,
-                          child: Text('Take Picture'),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => _navigateBack(context),
-                          child: Text('Back'),
-                        ),
-                      ],
+                  if (!_showImage)  // Only show the buttons if _showImage is false
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: Row(
+                        children: [
+                          ElevatedButton(
+                            onPressed: _takePicture,
+                            child: Text('Take Picture'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () => _navigateBack(context),
+                            child: Text('Back'),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
                   _showImage && _imagePath != null
                       ? Positioned.fill(
                     child: Stack(
@@ -420,29 +448,53 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                         ),
                         Positioned(
-                          bottom: 20,
-                          left: 20,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              if (_imagePath != null && _thumbnailPath != null) _uploadImage(_imagePath!, _thumbnailPath!);
-                            },
-                            child: Text('Send'),
-                          ),
+                            bottom: 20,
+                            left: 20,
+                            child: ElevatedButton(
+                              child: Text('Send'),
+                              onPressed: (_conversionCompleted && _locationAvailable)
+                                  ? () {
+                                if (_uploadImagePath != null && _uploadThumbnailPath != null)
+                                  _uploadImage(_uploadImagePath!, _uploadThumbnailPath!);
+                              }
+                                  : null,  // Enable the button only if the conversion is completed
+                            )
                         ),
                         Positioned(
                           bottom: 20,
                           right: 20,
                           child: ElevatedButton(
-                            onPressed: () => _navigateBack(context),
+                            onPressed: () async {  // Make the handler asynchronous
+                              if (_imagePath != null) {
+                                var imgFile = File(_imagePath!);
+                                if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
+                                  await imgFile.delete();
+                                }
+                                _imagePath = null;
+                              }
+
+                              if (_thumbnailPath != null) {
+                                var thumbFile = File(_thumbnailPath!);
+                                if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
+                                  await thumbFile.delete();
+                                }
+                                _thumbnailPath = null;
+                              }
+
+                              setState(() {
+                                _showImage = false;  // Reset the flag when the button is pressed
+                              });
+                            },
                             child: Text('Back'),
                           ),
-                        ),
+                        )
                       ],
                     ),
                   )
                       : SizedBox(),
                 ],
               );
+
             } else {
               return SizedBox.shrink();
             }
