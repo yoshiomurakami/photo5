@@ -166,7 +166,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
   // Generate a random string
   String _getRandomString(int length) {
-    const _randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const _randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!';
     const _randStringLength = _randomChars.length;
     final _random = math.Random();
 
@@ -452,7 +452,7 @@ class _CameraScreenState extends State<CameraScreen> {
                             left: 20,
                             child: ElevatedButton(
                               child: Text('Send'),
-                              onPressed: (_conversionCompleted && _locationAvailable)
+                              onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
                                   ? () {
                                 if (_uploadImagePath != null && _uploadThumbnailPath != null)
                                   _uploadImage(_uploadImagePath!, _uploadThumbnailPath!);
@@ -505,6 +505,5 @@ class _CameraScreenState extends State<CameraScreen> {
       ),
     );
   }
-
 }
 
