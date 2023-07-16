@@ -9,7 +9,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-// import 'package:photo5/photo_model.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
@@ -17,6 +16,7 @@ import 'package:http_parser/http_parser.dart';
 import 'dart:math' as math;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
+import 'album_screen.dart';
 
 
 class MainScreen extends StatefulWidget {
@@ -39,6 +39,7 @@ class CameraButton extends StatelessWidget {
         width: size.width * 0.2,
         height: size.width * 0.2,
         child: FloatingActionButton(
+          heroTag: "camera", // HeroTag設定
           backgroundColor: Color(0xFFFFCC4D),
           foregroundColor: Colors.black,
           elevation: 0,
@@ -82,6 +83,15 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void _openAlbum() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AlbumScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -117,8 +127,14 @@ class _MainScreenState extends State<MainScreen> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        heroTag: "album", // HeroTag設定
+        onPressed: _openAlbum,
+        child: Icon(Icons.photo_album),
+      ),
     );
   }
+
 }
 
 class CameraScreen extends StatefulWidget {
