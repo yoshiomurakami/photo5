@@ -16,6 +16,8 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'dart:math' as math;
 import 'package:path/path.dart' as p;
+import 'package:sqflite/sqflite.dart';
+
 
 class MainScreen extends StatefulWidget {
   @override
@@ -166,12 +168,21 @@ class _CameraScreenState extends State<CameraScreen> {
 
   // Generate a random string
   String _getRandomString(int length) {
-    const _randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!';
+    const _randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const _randStringLength = _randomChars.length;
     final _random = math.Random();
 
     return String.fromCharCodes(Iterable.generate(
         length, (_) => _randomChars.codeUnitAt(_random.nextInt(_randStringLength))));
+  }
+
+  void _navigateBack(BuildContext context) async {
+    if (_imagePath != null) {
+      await File(_imagePath!).delete();
+      _imagePath = null;
+      _showImage = false;
+    }
+    Navigator.pop(context);
   }
 
   Future<void> _takePicture() async {
@@ -292,14 +303,82 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  void _navigateBack(BuildContext context) async {
-    if (_imagePath != null) {
-      await File(_imagePath!).delete();
-      _imagePath = null;
-      _showImage = false;
-    }
-    Navigator.pop(context);
+
+
+  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng) async {
+    await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng);
+    await _uploadImage(imagePath, thumbnailPath);
   }
+
+  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng) async {
+    final paths = await _saveFiles(imagePath, thumbnailPath);
+    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng);
+  }
+
+  Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    //Create new directories for images and thumbnails.
+    final imageDir = Directory('${directory.path}/uploadImage/');
+    final thumbnailDir = Directory('${directory.path}/uploadThumb/');
+
+    // Check if the directories exist. If not, create them.
+    if (!await imageDir.exists()) {
+      await imageDir.create();
+    }
+    if (!await thumbnailDir.exists()) {
+      await thumbnailDir.create();
+    }
+
+    // Get the file name from the original path.
+    String imageFileName = p.basename(imagePath);
+    String thumbnailFileName = p.basename(thumbnailPath);
+
+    // Copy the image and thumbnail to new directories with the original file name.
+    final File newImageFile = File('${imageDir.path}/$imageFileName');
+    final File newThumbnailFile = File('${thumbnailDir.path}/$thumbnailFileName');
+    await File(imagePath).copy(newImageFile.path);
+    await File(thumbnailPath).copy(newThumbnailFile.path);
+
+    return [newImageFile.path, newThumbnailFile.path]; // return new paths
+  }
+
+
+  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng) async {
+    // Open the database or create it if it doesn't exist
+    final database = openDatabase(
+      p.join(await getDatabasesPath(), 'images_database.db'),
+      onCreate: (db, version) {
+        // Create images table if it doesn't exist
+        return db.execute(
+          "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT)",
+        );
+      },
+      version: 1,
+    );
+
+    final db = await database;
+
+    // Insert the data into the table
+    try {
+      int id = await db.insert(
+        'images',
+        {
+          'imagePath': paths[0], // new image path
+          'thumbnailPath': paths[1], // new thumbnail path
+          'userId': userId,
+          'imageCountry': imageCountry,
+          'imageLat': imageLat,
+          'imageLng': imageLng
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+      print('Inserted row id: $id');
+    } catch (e) {
+      print('Error occurred while inserting into the database: $e');
+    }
+  }
+
 
   Future<void> _uploadImage(String imagePath, String thumbnailPath) async {
     if (_uploading) return; // アップロード中の場合は処理しない
@@ -375,14 +454,9 @@ class _CameraScreenState extends State<CameraScreen> {
     }
   }
 
-
   Future<bool> _checkConnectivity(BuildContext context) async {
     // ここでは仮に常にtrueを返すようにしていますが、実際には通信状況をチェックして結果を返す必要があります。
     return true;
-  }
-
-  Future<void> _saveDataLocally(String imagePath, String photoCountry, String photoLat, String photoLng, String userId) async {
-    // ここでは仮に何もしないようにしていますが、実際にはデータをローカルに保存する処理を実装する必要があります。
   }
 
 
@@ -453,9 +527,21 @@ class _CameraScreenState extends State<CameraScreen> {
                             child: ElevatedButton(
                               child: Text('Send'),
                               onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                                  ? () {
-                                if (_uploadImagePath != null && _uploadThumbnailPath != null)
-                                  _uploadImage(_uploadImagePath!, _uploadThumbnailPath!);
+                                  ? () async {  // make it asynchronous
+                                if (_uploadImagePath != null && _uploadThumbnailPath != null) {
+                                  SharedPreferences prefs = await SharedPreferences.getInstance();
+                                  String userId = prefs.getString('userID') ?? "";
+
+                                  // call _progressUpload with necessary arguments
+                                  _progressUpload(
+                                      _uploadImagePath!,
+                                      _uploadThumbnailPath!,
+                                      userId,
+                                      _imageCountry ?? 'Unknown',
+                                      _imageLat ?? '',
+                                      _imageLng ?? ''
+                                  );
+                                }
                               }
                                   : null,  // Enable the button only if the conversion is completed
                             )
