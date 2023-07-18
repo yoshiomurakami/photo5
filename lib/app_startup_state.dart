@@ -5,7 +5,6 @@ import 'package:sqflite/sqflite.dart';
 import 'dart:math';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'error_dialog.dart';
 import 'package:flutter/material.dart';
 
 class AppStartupState extends ChangeNotifier {

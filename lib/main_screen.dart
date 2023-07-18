@@ -13,11 +13,13 @@ import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:image/image.dart' as img;
 import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'album_screen.dart';
-
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -61,18 +63,81 @@ class CameraButton extends StatelessWidget {
   }
 }
 
+final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
+  return _getTimeline();
+});
+
+Future<List<TimelineItem>> _getTimeline() async {
+  try {
+    // SharedPreferencesからユーザーIDを取得
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String userId = prefs.getString('userID') ?? "";
+
+    // リクエストボディの作成
+    final requestBody = jsonEncode({'userId': userId});
+
+    // APIにPOSTリクエストを送信
+    final response = await http.post(
+      Uri.parse('https://photo5.world/api/timeline/getTimeline'),
+      headers: {'Content-Type': 'application/json'},
+      body: requestBody,
+    );
+
+    // APIからのレスポンスをチェック
+    if (response.statusCode == 200) {
+      // 成功した場合、JSONをパースしてリストに変換
+      List data = jsonDecode(response.body);
+      // デバッグ情報として、取得したデータを出力
+      print('Received data: $data');
+      return data.map((item) => TimelineItem.fromJson(item)).toList();
+    } else {
+      // エラーが発生した場合、エラーをスロー
+      throw Exception('Failed to load timeline');
+    }
+  } catch (e, s) {
+    // print both the exception and the stacktrace
+    print('Exception details:\n $e');
+    print('Stacktrace:\n $s');
+    rethrow;  // throw the error again so it can be handled in the usual way
+  }
+}
+
+class TimelineItem {
+  // タイムラインアイテムのフィールドをここに定義します
+  // 例: final String country;
+
+  TimelineItem.fromJson(Map<String, dynamic> json) {
+    // JSONデータを使用してタイムラインアイテムを作成します
+    // 例: country = json['country'];
+  }
+}
+
 class _MainScreenState extends State<MainScreen> {
   final Completer<GoogleMapController> _controller = Completer();
-  bool _isLoading = true;
 
+  bool _isLoading = true;
+  LatLng _currentLocation = LatLng(0, 0); // Add this line
+  Set<Marker> _markers = {};
   // Camera initialization
   Future<List<CameraDescription>>? _camerasFuture;
+
 
   @override
   void initState() {
     super.initState();
+    _determinePosition();
+    _getTimeline().catchError((error) {
+      print('Error fetching timeline: $error');
+      return <TimelineItem>[];  // Returning an empty list in case of an error
+    });
     _camerasFuture = availableCameras();
   }
+
+  Future<LatLng> _determinePosition() async {
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    return LatLng(position.latitude, position.longitude);
+  }
+
 
   void _openCamera(CameraDescription camera) {
     Navigator.push(
@@ -94,21 +159,53 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Size size = MediaQuery.of(context).size;
+    // final Size size = MediaQuery.of(context).size;
     return Scaffold(
       body: Stack(
         children: <Widget>[
-          GoogleMap(
-            onMapCreated: (GoogleMapController controller) {
-              _controller.complete(controller);
-              setState(() {
-                _isLoading = false;
-              });
+          FutureBuilder<LatLng>(
+            future: _determinePosition(),
+            builder: (BuildContext context, AsyncSnapshot<LatLng> snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.hasData) {
+                  _currentLocation = snapshot.data!;
+                  _markers.add(Marker(
+                    markerId: MarkerId(_currentLocation.toString()),
+                    position: _currentLocation,
+                    infoWindow: InfoWindow(
+                      title: 'Current Location',
+                    ),
+                  ));
+                } else {
+                  // Handle the case where snapshot.data is null
+                  // For example, you might want to return a different widget,
+                  // or assign a default value to _currentLocation.
+                  // This part is up to you.
+                }
+
+                return GoogleMap(
+                  onMapCreated: (GoogleMapController controller) {
+                    if (!_controller.isCompleted) {
+                      _controller.complete(controller);
+                      setState(() {
+                        _isLoading = false;
+                      });
+                    }
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target: _currentLocation,
+                    zoom: 10,
+                  ),
+                  markers: _markers,
+                );
+              } else {
+                return Center(child: CircularProgressIndicator());
+              }
             },
-            initialCameraPosition: CameraPosition(
-              target: LatLng(35.6895, 139.6917),
-              zoom: 10,
-            ),
           ),
           if (_isLoading) Center(child: CircularProgressIndicator()),
           FutureBuilder<List<CameraDescription>>(
@@ -164,6 +261,8 @@ class _CameraScreenState extends State<CameraScreen> {
   String? _imageCountry;
   String? _uploadImagePath; // Add this for the upload image
   String? _uploadThumbnailPath; // Add this for the upload thumbnail
+  String _timestamp ='';
+  String _localTimestamp='';
 
   @override
   void initState() {
@@ -201,10 +300,14 @@ class _CameraScreenState extends State<CameraScreen> {
     Navigator.pop(context);
   }
 
+
+
   Future<void> _takePicture() async {
     final Directory tempDir = await getTemporaryDirectory();
 
-    final int timestamp = DateTime.now().microsecondsSinceEpoch;  // Use microseconds for higher precision
+    _timestamp = DateTime.now().toUtc().millisecondsSinceEpoch.toString();
+    _localTimestamp = DateFormat('EE, d MM, yyyy, HH:mm').format(DateTime.now());
+
     final String randomStr = _getRandomString(5);
 
     try {
@@ -216,8 +319,8 @@ class _CameraScreenState extends State<CameraScreen> {
       final String fileExtension = mimeType != null ? mimeType.substring(mimeType.lastIndexOf('/') + 1) : '.jpg';
 
       // Use 'photo' and 'thumb' as prefixes to distinguish image and thumbnail
-      final String imgFileName = '${timestamp}_${randomStr}_photo.$fileExtension';
-      final String thumbFileName = '${timestamp}_${randomStr}_thumb.$fileExtension';
+      final String imgFileName = '${_timestamp}_${randomStr}_photo.$fileExtension';
+      final String thumbFileName = '${_timestamp}_${randomStr}_thumb.$fileExtension';
 
       final String imgPath = p.join(tempDir.path, imgFileName);
       final String thumbPath = p.join(tempDir.path, thumbFileName);
@@ -244,7 +347,7 @@ class _CameraScreenState extends State<CameraScreen> {
       });
 
       // Call _convertImage() to convert image and thumbnail to webp format in the background
-      _convertImage(imgPath, thumbPath, timestamp, randomStr);
+      _convertImage(imgPath, thumbPath, int.parse(_timestamp), randomStr);
     } catch (e) {
       print(e);
     }
@@ -253,7 +356,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _convertImage(String imgPath, String thumbPath, int timestamp, String randomStr) async {
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
     print('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -271,7 +374,7 @@ class _CameraScreenState extends State<CameraScreen> {
     final Directory tempDir = await getTemporaryDirectory();
 
     // Convert the picture to webp
-    final webpImgFileName = '${timestamp}_${randomStr}_photo.webp';
+    final webpImgFileName = '${_timestamp}_${randomStr}_photo.webp';
     final webpImgPath = p.join(tempDir.path, webpImgFileName);
     await FlutterImageCompress.compressAndGetFile(
       imgPath,
@@ -298,7 +401,7 @@ class _CameraScreenState extends State<CameraScreen> {
     File(thumbPath)..writeAsBytesSync(img.encodeJpg(thumbnail, quality: 90));
 
     // Convert the thumbnail to webp
-    final webpThumbFileName = '${timestamp}_${randomStr}_thumb.webp';
+    final webpThumbFileName = '${_timestamp}_${randomStr}_thumb.webp';
     final webpThumbPath = p.join(tempDir.path, webpThumbFileName);
     await FlutterImageCompress.compressAndGetFile(
       thumbPath,
@@ -318,8 +421,6 @@ class _CameraScreenState extends State<CameraScreen> {
       _conversionCompleted = true;
     });
   }
-
-
 
   Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng) async {
     await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng);
@@ -435,10 +536,15 @@ class _CameraScreenState extends State<CameraScreen> {
     String userId = prefs.getString('userID') ?? "";
 
     // Add the extra data to the request.
+    request.fields['createdAt'] = _timestamp;
     request.fields['photo_u_id'] = userId;
     request.fields['photo_country'] = _imageCountry ?? 'Unknown';
     request.fields['photo_lat'] = _imageLat ?? '';
     request.fields['photo_lng'] = _imageLng ?? '';
+    request.fields['localtime'] = _localTimestamp;
+
+    print('Timestamp: $_timestamp');
+    print('Local timestamp: $_localTimestamp');
 
     // Check the connectivity status.
     if (!await _checkConnectivity(context)) {

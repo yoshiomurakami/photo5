@@ -1,9 +1,18 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
+import 'album_photoview.dart';
+
+class ImageDetail {
+  final Uint8List thumbnail;
+  final String imagePath;
+  final String imageLat;
+  final String imageLng;
+
+  ImageDetail({required this.thumbnail, required this.imagePath, required this.imageLat, required this.imageLng});
+}
 
 
 class AlbumScreen extends StatefulWidget {
@@ -12,7 +21,7 @@ class AlbumScreen extends StatefulWidget {
 }
 
 class _AlbumScreenState extends State<AlbumScreen> {
-  late Future<List<Uint8List>> _imagesFuture;
+  late Future<List<ImageDetail>> _imagesFuture;
 
   @override
   void initState() {
@@ -20,7 +29,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     _imagesFuture = _loadImagesFromDatabase();
   }
 
-  Future<List<Uint8List>> _loadImagesFromDatabase() async {
+  Future<List<ImageDetail>> _loadImagesFromDatabase() async {
     print("Loading images from the database...");
 
     // Open the database
@@ -38,17 +47,23 @@ class _AlbumScreenState extends State<AlbumScreen> {
 
     print("Fetched ${maps.length} records from the database.");
 
-    // Convert the list of maps into a list of Uint8List
-    List<Uint8List> images = [];
+    // Convert the list of maps into a list of ImageDetail
+    List<ImageDetail> images = [];
     for (var map in maps) {
       final Uint8List bytes = await _loadImageAsBytes(map['thumbnailPath']);
-      images.add(bytes);
+      images.add(ImageDetail(
+        thumbnail: bytes,
+        imagePath: map['imagePath'], // Assuming 'imagePath' is the correct column name
+        imageLat:map['imageLat'],
+        imageLng:map['imageLng'],
+      ));
       print("Added image from ${map['thumbnailPath']}.");
     }
     print("Successfully loaded all images.");
 
     return images;
   }
+
 
   Future<Uint8List> _loadImageAsBytes(String path) async {
     final file = File(path);
@@ -65,7 +80,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text('Album')),
-      body: FutureBuilder<List<Uint8List>>(
+      body: FutureBuilder<List<ImageDetail>>(
         future: _imagesFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
@@ -82,12 +97,26 @@ class _AlbumScreenState extends State<AlbumScreen> {
                   crossAxisSpacing: 4.0,
                 ),
                 itemBuilder: (context, index) {
-                  return ClipRRect(
-                    borderRadius: BorderRadius.circular(25.0),
-                    child: Image.memory(
-                      snapshot.data![index],
-                      width: MediaQuery.of(context).size.width * 0.2,
-                      fit: BoxFit.cover,
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => FullScreenImagePage(
+                            snapshot.data![index].imagePath,
+                            double.parse(snapshot.data![index].imageLat),
+                            double.parse(snapshot.data![index].imageLng),
+                          ),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(25.0),
+                      child: Image.memory(
+                        snapshot.data![index].thumbnail,
+                        width: MediaQuery.of(context).size.width * 0.2,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   );
                 },
@@ -102,5 +131,6 @@ class _AlbumScreenState extends State<AlbumScreen> {
       ),
     );
   }
+
 
 }

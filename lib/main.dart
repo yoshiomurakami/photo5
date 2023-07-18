@@ -4,13 +4,15 @@ import 'dart:async';
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
-import 'dart:ui' as ui;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overboard/flutter_overboard.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as path;
+
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -66,7 +68,7 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
         inactiveBulletColor: Colors.blue,
         finishCallback: () async {
           SharedPreferences prefs = await SharedPreferences.getInstance();
-          await prefs.setInt('intro', 0);
+          await prefs.setInt('intro', 1);
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (context) => Startup()),
           );
@@ -192,7 +194,7 @@ class _StartupState extends State<Startup> {
     );
   }
 
-  @override
+  // @override
   Widget _buildLoadingScreen() {
     return Scaffold(
       body: Stack(
@@ -371,7 +373,7 @@ class _StartupState extends State<Startup> {
       try {
         await _showTutorial();
         //便宜上0に上書き。本当は1にする。
-        prefs.setString('status', '0');
+        prefs.setString('status', '1');
       } catch (e) {
         throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
       }
@@ -379,21 +381,42 @@ class _StartupState extends State<Startup> {
       try {
         await _showTutorial();
         //便宜上0に上書き。本当は1にする。
-        prefs.setString('status', '0');
+        prefs.setString('status', '1');
       } catch (e) {
         throw createErrorDialogData('Could not initialize app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
       }
     } else {
-      // status is not '0', so just return
-      //便宜上0に上書き。本当は1にする。
-      prefs.setString('status', '0');
+      // status is not '0', so check permissions
+      PermissionStatus cameraPermission = await Permission.camera.status;
+      PermissionStatus locationPermission = await Permission.location.status;
+
+      if (!cameraPermission.isGranted || !locationPermission.isGranted) {
+        // One or both permissions are not granted, so show tutorial
+        try {
+          await _showTutorial();
+          // Set status to '1' after tutorial
+          prefs.setString('status', '1');
+        } catch (e) {
+          // Handle error during tutorial as before
+          throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+        }
+      } else {
+        // Both permissions are granted, so just set status to '1'
+        prefs.setString('status', '1');
+      }
       debugPrint("Status check completed");
       return;
     }
 
+
     debugPrint("Status check completed");
     return;
   }
+
+
+
+
+
 
   Future<void> _showTutorial() async {
     debugPrint("Start _showTutorial()");
@@ -496,6 +519,7 @@ class _StartupState extends State<Startup> {
       // Wait for both _checkConnectivity(context) and Duration(seconds: 5) to complete
       await Future.wait([
         _checkConnectivity(context),
+        _checkDatabaseTable(), // Your new DB check function
         Future.delayed(Duration(seconds: 5)),
       ]);
       await _checkVersion();
@@ -512,6 +536,25 @@ class _StartupState extends State<Startup> {
       // Add other error handling code as needed
       _startupController.addError(e);
       return false;
+    }
+  }
+
+  Future<void> _checkDatabaseTable() async {
+    final database = openDatabase(
+      path.join(await getDatabasesPath(), 'images_database.db'),
+      version: 1,
+    );
+
+    final db = await database;
+
+    try {
+      // Perform a query to check if the table exists
+      await db.rawQuery('SELECT 1 FROM images LIMIT 1');
+    } catch (e) {
+      // If the table doesn't exist, create it
+      await db.execute(
+        "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT)",
+      );
     }
   }
 

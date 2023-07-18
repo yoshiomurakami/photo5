@@ -1,11 +1,14 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class FullScreenImagePage extends StatefulWidget {
   final String imagePath;
+  final double imageLat;
+  final double imageLng;
 
-  FullScreenImagePage(this.imagePath);
+  FullScreenImagePage(this.imagePath, this.imageLat, this.imageLng);
 
   @override
   _FullScreenImagePageState createState() => _FullScreenImagePageState();
@@ -28,6 +31,9 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
 
   @override
   Widget build(BuildContext context) {
+    final deviceWidth = MediaQuery.of(context).size.width;
+    final mapSize = deviceWidth * 0.2;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: FutureBuilder<Uint8List>(
@@ -49,6 +55,20 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                       onPressed: () {
                         Navigator.pop(context);
                       },
+                    ),
+                  ),
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: mapSize,
+                      height: mapSize,
+                      child: GoogleMap(
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(widget.imageLat, widget.imageLng),
+                          zoom: 10.0,
+                        ),
+                      ),
                     ),
                   ),
                 ],
