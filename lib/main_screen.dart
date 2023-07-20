@@ -102,20 +102,55 @@ Future<List<TimelineItem>> _getTimeline() async {
   }
 }
 
-class TimelineItem {
-  // タイムラインアイテムのフィールドをここに定義します
-  // 例: final String country;
+// class TimelineItem {
+//   // タイムラインアイテムのフィールドをここに定義します
+//   // 例: final String country;
+//
+//   TimelineItem.fromJson(Map<String, dynamic> json) {
+//     // JSONデータを使用してタイムラインアイテムを作成します
+//     // 例: country = json['country'];
+//   }
+// }
 
-  TimelineItem.fromJson(Map<String, dynamic> json) {
-    // JSONデータを使用してタイムラインアイテムを作成します
-    // 例: country = json['country'];
+class TimelineItem {
+  final String id;
+  final String userId;
+  final String country;
+  final double lat;
+  final double lng;
+  final String imageFilename;
+  final String thumbnailFilename;
+  final String localtime;
+
+  TimelineItem({
+    required this.id,
+    required this.userId,
+    required this.country,
+    required this.lat,
+    required this.lng,
+    required this.imageFilename,
+    required this.thumbnailFilename,
+    required this.localtime,
+  });
+
+  factory TimelineItem.fromJson(Map<String, dynamic> json) {
+    return TimelineItem(
+      id: json['_id'],
+      userId: json['userID'],
+      country: json['country'],
+      lat: double.parse(json['lat']),
+      lng: double.parse(json['lng']),
+      imageFilename: json['imageFilename'],
+      thumbnailFilename: json['thumbnailFilename'],
+      localtime: json['localtime'],
+    );
   }
 }
 
 class _MainScreenState extends State<MainScreen> {
-  final Completer<GoogleMapController> _controller = Completer();
+  GoogleMapController? _controller;
 
-  bool _isLoading = true;
+  // bool _isLoading = true;
   LatLng _currentLocation = LatLng(0, 0); // Add this line
   Set<Marker> _markers = {};
   // Camera initialization
@@ -131,6 +166,15 @@ class _MainScreenState extends State<MainScreen> {
       return <TimelineItem>[];  // Returning an empty list in case of an error
     });
     _camerasFuture = availableCameras();
+  }
+
+  Future<void> _updateMapLocation(double lat, double lng) async {
+    print("Updating map location to: $lat, $lng");
+    final controller = _controller!;
+    _currentLocation = LatLng(lat, lng);
+    controller.moveCamera(
+      CameraUpdate.newLatLng(_currentLocation),
+    );
   }
 
   Future<LatLng> _determinePosition() async {
@@ -157,22 +201,31 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  void _onMapCreated(GoogleMapController controller) {
+    _controller = controller;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // final Size size = MediaQuery.of(context).size;
+    final Size size = MediaQuery.of(context).size;
     return Scaffold(
       body: Stack(
         children: <Widget>[
-          FutureBuilder<LatLng>(
-            future: _determinePosition(),
-            builder: (BuildContext context, AsyncSnapshot<LatLng> snapshot) {
+          FutureBuilder<List<dynamic>>(
+            future: Future.wait([
+              _determinePosition(),
+              _getTimeline(),
+            ]),
+            builder: (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
                 if (snapshot.hasError) {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
 
                 if (snapshot.hasData) {
-                  _currentLocation = snapshot.data!;
+                  LatLng _currentLocation = snapshot.data![0] as LatLng;
+                  List<TimelineItem> timelineItems = snapshot.data![1] as List<TimelineItem>;
+
                   _markers.add(Marker(
                     markerId: MarkerId(_currentLocation.toString()),
                     position: _currentLocation,
@@ -180,34 +233,57 @@ class _MainScreenState extends State<MainScreen> {
                       title: 'Current Location',
                     ),
                   ));
-                } else {
-                  // Handle the case where snapshot.data is null
-                  // For example, you might want to return a different widget,
-                  // or assign a default value to _currentLocation.
-                  // This part is up to you.
-                }
 
-                return GoogleMap(
-                  onMapCreated: (GoogleMapController controller) {
-                    if (!_controller.isCompleted) {
-                      _controller.complete(controller);
-                      setState(() {
-                        _isLoading = false;
-                      });
-                    }
-                  },
-                  initialCameraPosition: CameraPosition(
-                    target: _currentLocation,
-                    zoom: 10,
-                  ),
-                  markers: _markers,
-                );
+                  return Stack(
+                    children: <Widget>[
+                      GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        initialCameraPosition: CameraPosition(
+                          target: _currentLocation,
+                          zoom: 10,
+                        ),
+                        markers: _markers,
+                      ),
+                      Positioned(
+                        left: size.width * 0.15,
+                        top: size.height * 0.25,
+                        width: size.width * 0.7,
+                        height: size.height * 0.15,
+                        child: PageView.builder(
+                          itemCount: timelineItems.length,
+                          onPageChanged: (index) async {
+                            _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
+                          },
+
+                          itemBuilder: (context, index) {
+                            return Card(
+                              child: Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Text('Card ${timelineItems[index].id}'),  // idを表示
+                                    Text('This is card from ${timelineItems[index].country}'),  // countryを表示
+                                    Text('lat is ${timelineItems[index].lat}'),  // latを表示
+
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                  );
+                } else {
+                  return Center(child: Text('No data'));
+                }
               } else {
                 return Center(child: CircularProgressIndicator());
               }
             },
           ),
-          if (_isLoading) Center(child: CircularProgressIndicator()),
+
           FutureBuilder<List<CameraDescription>>(
             future: _camerasFuture,
             builder: (context, snapshot) {
@@ -231,6 +307,8 @@ class _MainScreenState extends State<MainScreen> {
       ),
     );
   }
+
+
 
 }
 
