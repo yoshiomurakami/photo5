@@ -67,50 +67,10 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   return _getTimeline();
 });
 
-Future<List<TimelineItem>> _getTimeline() async {
-  try {
-    // SharedPreferencesからユーザーIDを取得
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String userId = prefs.getString('userID') ?? "";
-
-    // リクエストボディの作成
-    final requestBody = jsonEncode({'userId': userId});
-
-    // APIにPOSTリクエストを送信
-    final response = await http.post(
-      Uri.parse('https://photo5.world/api/timeline/getTimeline'),
-      headers: {'Content-Type': 'application/json'},
-      body: requestBody,
-    );
-
-    // APIからのレスポンスをチェック
-    if (response.statusCode == 200) {
-      // 成功した場合、JSONをパースしてリストに変換
-      List data = jsonDecode(response.body);
-      // デバッグ情報として、取得したデータを出力
-      print('Received data: $data');
-      return data.map((item) => TimelineItem.fromJson(item)).toList();
-    } else {
-      // エラーが発生した場合、エラーをスロー
-      throw Exception('Failed to load timeline');
-    }
-  } catch (e, s) {
-    // print both the exception and the stacktrace
-    print('Exception details:\n $e');
-    print('Stacktrace:\n $s');
-    rethrow;  // throw the error again so it can be handled in the usual way
-  }
+Future<LatLng> _determinePosition() async {
+  Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  return LatLng(position.latitude, position.longitude);
 }
-
-// class TimelineItem {
-//   // タイムラインアイテムのフィールドをここに定義します
-//   // 例: final String country;
-//
-//   TimelineItem.fromJson(Map<String, dynamic> json) {
-//     // JSONデータを使用してタイムラインアイテムを作成します
-//     // 例: country = json['country'];
-//   }
-// }
 
 class TimelineItem {
   final String id;
@@ -133,19 +93,87 @@ class TimelineItem {
     required this.localtime,
   });
 
+  // 新しいemptyという名前付きコンストラクタを追加します。
+  // ただし、このコンストラクタは Map<String, dynamic> を返します。
+  static Map<String, dynamic> empty({
+    required double lat,
+    required double lng,
+  }) {
+    return {
+      '_id': '0',
+      'userId': 'dummy',
+      'country': 'dummy',
+      'lat': lat.toString(),
+      'lng': lng.toString(),
+      'imageFilename': 'dummy',
+      'thumbnailFilename': 'dummy',
+      'localtime': 'dummy',
+    };
+  }
+
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
-      id: json['_id'],
-      userId: json['userID'],
-      country: json['country'],
-      lat: double.parse(json['lat']),
-      lng: double.parse(json['lng']),
-      imageFilename: json['imageFilename'],
-      thumbnailFilename: json['thumbnailFilename'],
-      localtime: json['localtime'],
+      id: json['_id'] ?? '0', // Provide a default value in case of null
+      userId: json['userID'] ?? 'dummy', // Provide a default value in case of null
+      country: json['country'] ?? 'dummy', // Provide a default value in case of null
+      lat: json['lat'] != null ? double.parse(json['lat']) : 0.0, // Check for null before parsing
+      lng: json['lng'] != null ? double.parse(json['lng']) : 0.0, // Check for null before parsing
+      imageFilename: json['imageFilename'] ?? 'dummy', // Provide a default value in case of null
+      thumbnailFilename: json['thumbnailFilename'] ?? 'dummy', // Provide a default value in case of null
+      localtime: json['localtime'] ?? 'dummy', // Provide a default value in case of null
     );
   }
+
 }
+
+Future<List<TimelineItem>> _getTimeline() async {
+  try {
+    // SharedPreferencesからユーザーIDを取得
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String userId = prefs.getString('userID') ?? "";
+
+    // リクエストボディの作成
+    final requestBody = jsonEncode({'userId': userId});
+
+    // APIにPOSTリクエストを送信
+    final response = await http.post(
+      Uri.parse('https://photo5.world/api/timeline/getTimeline'),
+      headers: {'Content-Type': 'application/json'},
+      body: requestBody,
+    );
+
+    // APIからのレスポンスをチェック
+    if (response.statusCode == 200) {
+      // 成功した場合、JSONをパースしてリストに変換
+      List data = jsonDecode(response.body);
+
+      // 現在の位置を取得します。
+      Position devicePosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+
+      // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
+      Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
+        lat: devicePosition.latitude,
+        lng: devicePosition.longitude,
+      );
+
+      // 空の TimelineItem をリストの先頭に追加します。
+      data.insert(0, emptyTimelineItem);
+
+      // デバッグ情報として、取得したデータを出力
+      print('Received data: $data');
+      return data.map((item) => TimelineItem.fromJson(item)).toList();
+    } else {
+      // エラーが発生した場合、エラーをスロー
+      throw Exception('Failed to load timeline');
+    }
+  } catch (e, s) {
+    // print both the exception and the stacktrace
+    print('Exception details:\n $e');
+    print('Stacktrace:\n $s');
+    rethrow;  // throw the error again so it can be handled in the usual way
+  }
+}
+
 
 class _MainScreenState extends State<MainScreen> {
   GoogleMapController? _controller;
@@ -153,6 +181,9 @@ class _MainScreenState extends State<MainScreen> {
   // bool _isLoading = true;
   LatLng _currentLocation = LatLng(0, 0); // Add this line
   Set<Marker> _markers = {};
+  final PageController _pageController = PageController(); // add this line
+  bool _programmaticPageChange = false;
+  // final Map<String, int> _markerIdToCardIndex = {}; // add this line
   // Camera initialization
   Future<List<CameraDescription>>? _camerasFuture;
 
@@ -177,10 +208,16 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Future<LatLng> _determinePosition() async {
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    return LatLng(position.latitude, position.longitude);
+  void _onMarkerTapped(int index) async {
+    _programmaticPageChange = true;
+    await _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeInOut,
+    );
+    _programmaticPageChange = false;
   }
+
 
 
   void _openCamera(CameraDescription camera) {
@@ -226,13 +263,16 @@ class _MainScreenState extends State<MainScreen> {
                   LatLng _currentLocation = snapshot.data![0] as LatLng;
                   List<TimelineItem> timelineItems = snapshot.data![1] as List<TimelineItem>;
 
-                  _markers.add(Marker(
-                    markerId: MarkerId(_currentLocation.toString()),
-                    position: _currentLocation,
-                    infoWindow: InfoWindow(
-                      title: 'Current Location',
-                    ),
-                  ));
+
+                  for (var i = 0; i < timelineItems.length; i++) {
+                    _markers.add(
+                      Marker(
+                        markerId: MarkerId(i.toString()), // Use the index as the marker ID
+                        position: LatLng(timelineItems[i].lat, timelineItems[i].lng),
+                        onTap: () => _onMarkerTapped(i),
+                      ),
+                    );
+                  }
 
                   return Stack(
                     children: <Widget>[
@@ -250,9 +290,12 @@ class _MainScreenState extends State<MainScreen> {
                         width: size.width * 0.7,
                         height: size.height * 0.15,
                         child: PageView.builder(
+                          controller: _pageController, // Add this line
                           itemCount: timelineItems.length,
-                          onPageChanged: (index) async {
-                            _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
+                          onPageChanged: (index) {
+                            if (!_programmaticPageChange) {
+                              _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
+                            }
                           },
 
                           itemBuilder: (context, index) {
@@ -263,7 +306,7 @@ class _MainScreenState extends State<MainScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: <Widget>[
                                     Text('Card ${timelineItems[index].id}'),  // idを表示
-                                    Text('This is card from ${timelineItems[index].country}'),  // countryを表示
+                                    Text('No. ${index}'),  // countryを表示
                                     Text('lat is ${timelineItems[index].lat}'),  // latを表示
 
                                   ],
