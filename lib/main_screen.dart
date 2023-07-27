@@ -18,6 +18,7 @@ import 'dart:math' as math;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'album_screen.dart';
+import 'timeline_photoview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -106,7 +107,7 @@ class TimelineItem {
       'lat': lat.toString(),
       'lng': lng.toString(),
       'imageFilename': 'dummy',
-      'thumbnailFilename': 'dummy',
+      'thumbnailFilename': '03.png',
       'localtime': 'dummy',
     };
   }
@@ -119,7 +120,7 @@ class TimelineItem {
       lat: json['lat'] != null ? double.parse(json['lat']) : 0.0, // Check for null before parsing
       lng: json['lng'] != null ? double.parse(json['lng']) : 0.0, // Check for null before parsing
       imageFilename: json['imageFilename'] ?? 'dummy', // Provide a default value in case of null
-      thumbnailFilename: json['thumbnailFilename'] ?? 'dummy', // Provide a default value in case of null
+      thumbnailFilename: json['thumbnailFilename'] ?? '03.png', // Provide a default value in case of null
       localtime: json['localtime'] ?? 'dummy', // Provide a default value in case of null
     );
   }
@@ -181,6 +182,8 @@ class _MainScreenState extends State<MainScreen> {
   // bool _isLoading = true;
   LatLng _currentLocation = LatLng(0, 0); // Add this line
   Set<Marker> _markers = {};
+  double _zoomLevel = 0; // Set the initial zoom level
+  Timer? _zoomTimer;
   final PageController _pageController = PageController(); // add this line
   bool _programmaticPageChange = false;
   // final Map<String, int> _markerIdToCardIndex = {}; // add this line
@@ -242,6 +245,18 @@ class _MainScreenState extends State<MainScreen> {
     _controller = controller;
   }
 
+  void _onZoomLevelChanged(double value) {
+    _controller?.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: _currentLocation, // Set the LatLng you want to remain centered
+          zoom: value,
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -263,61 +278,190 @@ class _MainScreenState extends State<MainScreen> {
                   LatLng _currentLocation = snapshot.data![0] as LatLng;
                   List<TimelineItem> timelineItems = snapshot.data![1] as List<TimelineItem>;
 
-
-                  for (var i = 0; i < timelineItems.length; i++) {
-                    _markers.add(
-                      Marker(
-                        markerId: MarkerId(i.toString()), // Use the index as the marker ID
-                        position: LatLng(timelineItems[i].lat, timelineItems[i].lng),
-                        onTap: () => _onMarkerTapped(i),
-                      ),
-                    );
-                  }
-
                   return Stack(
                     children: <Widget>[
                       GoogleMap(
                         onMapCreated: _onMapCreated,
                         initialCameraPosition: CameraPosition(
                           target: _currentLocation,
-                          zoom: 10,
+                          zoom: _zoomLevel,
                         ),
                         markers: _markers,
+                        zoomControlsEnabled: false,
+                        zoomGesturesEnabled: false,
+                        scrollGesturesEnabled: false,
+                        padding: EdgeInsets.only(bottom: 0),
                       ),
                       Positioned(
-                        left: size.width * 0.15,
-                        top: size.height * 0.25,
-                        width: size.width * 0.7,
-                        height: size.height * 0.15,
+                        top: size.height * 0.3,
+                        left: size.width *0.1,
+                        height: size.height * 0.3,
+                        width: size.width*0.8,
                         child: PageView.builder(
-                          controller: _pageController, // Add this line
+                          controller: _pageController,
                           itemCount: timelineItems.length,
                           onPageChanged: (index) {
                             if (!_programmaticPageChange) {
                               _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
                             }
                           },
-
                           itemBuilder: (context, index) {
-                            return Card(
-                              child: Padding(
-                                padding: EdgeInsets.all(8.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: <Widget>[
-                                    Text('Card ${timelineItems[index].id}'),  // idを表示
-                                    Text('No. ${index}'),  // countryを表示
-                                    Text('lat is ${timelineItems[index].lat}'),  // latを表示
-
-                                  ],
-                                ),
+                            return GestureDetector(
+                              onTap: () {
+                                print('Navigating to image: ${timelineItems[index].imageFilename}'); // Add this
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => TimelineFullScreenImagePage(
+                                      timelineItems[index].imageFilename,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Container(
+                                    width: size.width,
+                                    height: size.height * 0.15,
+                                    child: Card(
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10.0),
+                                      ), // ここで角を丸く指定
+                                      child: Padding(
+                                        padding: EdgeInsets.all(8.0),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.start,
+                                          children: <Widget>[
+                                            Text('Card ${timelineItems[index].id}'),
+                                            Text('No. ${index}'),
+                                            Text('lat is ${timelineItems[index].lat}'),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: size.height * 0.2 - size.width * 0.1,
+                                    left: size.width * 0.3,
+                                    child: Container(
+                                      width: size.width * 0.2,
+                                      height: size.width * 0.2,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(size.width * 0.04),
+                                        image: DecorationImage(
+                                          image: NetworkImage('https://photo5.world/${timelineItems[index].thumbnailFilename}'),
+                                          fit: BoxFit.cover,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
                         ),
                       ),
+
+                      Positioned(
+                        right: size.width * 0.05,
+                        top: size.height * 0.5 + (size.height * 0.2),
+                        child: Column(
+                          children: [
+                            GestureDetector(
+                              onLongPress: () {
+                                _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+                                  if (_zoomLevel < 15) {
+                                    _zoomLevel += 1;
+                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
+                                      CameraPosition(
+                                        target: LatLng(
+                                            timelineItems[_pageController.page!.round()].lat,
+                                            timelineItems[_pageController.page!.round()].lng
+                                        ),
+                                        zoom: _zoomLevel,
+                                      ),
+                                    ));
+                                  } else {
+                                    timer.cancel();
+                                  }
+                                });
+                              },
+                              onLongPressEnd: (details) {
+                                _zoomTimer?.cancel();
+                              },
+                              child: FloatingActionButton(
+                                heroTag: "mapZoomIn", // HeroTag設定
+                                onPressed: () {
+                                  if (_zoomLevel < 15) {
+                                    _zoomLevel += 1;
+                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
+                                      CameraPosition(
+                                        target: LatLng(
+                                            timelineItems[_pageController.page!.round()].lat,
+                                            timelineItems[_pageController.page!.round()].lng
+                                        ),
+                                        zoom: _zoomLevel,
+                                      ),
+                                    ));
+                                  }
+                                },
+                                child: Icon(Icons.add),
+                                mini: true,
+                              ),
+                            ),
+                            SizedBox(height: 10),
+                            GestureDetector(
+                              onLongPress: () {
+                                _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+                                  if (_zoomLevel > 3) {
+                                    _zoomLevel -= 1;
+                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
+                                      CameraPosition(
+                                        target: LatLng(
+                                            timelineItems[_pageController.page!.round()].lat,
+                                            timelineItems[_pageController.page!.round()].lng
+                                        ),
+                                        zoom: _zoomLevel,
+                                      ),
+                                    ));
+                                  } else {
+                                    timer.cancel();
+                                  }
+                                });
+                              },
+                              onLongPressEnd: (details) {
+                                _zoomTimer?.cancel();
+                              },
+                              child: FloatingActionButton(
+                                heroTag: "mapZoomOut", // HeroTag設定
+                                onPressed: () {
+                                  if (_zoomLevel > 3) {
+                                    _zoomLevel -= 1;
+                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
+                                      CameraPosition(
+                                        target: LatLng(
+                                            timelineItems[_pageController.page!.round()].lat,
+                                            timelineItems[_pageController.page!.round()].lng
+                                        ),
+                                        zoom: _zoomLevel,
+                                      ),
+                                    ));
+                                  }
+                                },
+                                child: Icon(Icons.remove),
+                                mini: true,
+                              ),
+                            ),
+                     ],
+                        ),
+                      ),
+
+
+
                     ],
                   );
+
                 } else {
                   return Center(child: Text('No data'));
                 }

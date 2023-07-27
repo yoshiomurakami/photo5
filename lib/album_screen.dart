@@ -103,12 +103,11 @@ class _AlbumScreenState extends State<AlbumScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) => FullScreenImagePage(
-                            snapshot.data![index].imagePath,
-                            double.parse(snapshot.data![index].imageLat),
-                            double.parse(snapshot.data![index].imageLng),
+                            snapshot.data![index].imagePath,  // We only provide the image path now.
                           ),
                         ),
                       );
+
                     },
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(25.0),

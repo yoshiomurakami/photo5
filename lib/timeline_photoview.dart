@@ -1,29 +1,30 @@
-import 'dart:io';
+import 'package:http/http.dart' as http;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
-class FullScreenImagePage extends StatefulWidget {
-  final String imagePath;
+class TimelineFullScreenImagePage extends StatefulWidget {
+  final String imageFilename;
 
-  FullScreenImagePage(this.imagePath);
+  TimelineFullScreenImagePage(this.imageFilename);
 
   @override
-  _FullScreenImagePageState createState() => _FullScreenImagePageState();
+  _TimelineFullScreenImagePageState createState() => _TimelineFullScreenImagePageState();
 }
 
-class _FullScreenImagePageState extends State<FullScreenImagePage> {
+class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePage> {
   Future<Uint8List>? imageBytes;
 
   @override
   void initState() {
     super.initState();
-    imageBytes = _loadImageAsBytes(widget.imagePath);
+    imageBytes = _loadImageAsBytes(widget.imageFilename);
   }
 
-  Future<Uint8List> _loadImageAsBytes(String path) async {
-    final file = File(path);
-    Uint8List bytes = await file.readAsBytes();
-    return bytes;
+  Future<Uint8List> _loadImageAsBytes(String filename) async {
+    final url = 'https://photo5.world/$filename';
+    print('Loading image from URL: $url'); // Add this
+    final response = await http.get(Uri.parse(url));
+    return response.bodyBytes;
   }
 
   @override
@@ -65,5 +66,4 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
       ),
     );
   }
-
 }
