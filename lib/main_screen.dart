@@ -19,8 +19,10 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'album_screen.dart';
 import 'timeline_photoview.dart';
+// import 'riverpod.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'dart:typed_data';
 
 class MainScreen extends StatefulWidget {
   @override
@@ -190,6 +192,13 @@ class _MainScreenState extends State<MainScreen> {
   // Camera initialization
   Future<List<CameraDescription>>? _camerasFuture;
 
+  Future<Uint8List> _loadImageAsBytes(String filename) async {
+    final url = 'https://photo5.world/$filename';
+    print('Loading image from URL: $url');
+    final response = await http.get(Uri.parse(url));
+    return response.bodyBytes;
+  }
+
 
   @override
   void initState() {
@@ -257,6 +266,8 @@ class _MainScreenState extends State<MainScreen> {
   }
 
 
+
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -308,14 +319,16 @@ class _MainScreenState extends State<MainScreen> {
                           itemBuilder: (context, index) {
                             return GestureDetector(
                               onTap: () {
-                                print('Navigating to image: ${timelineItems[index].imageFilename}'); // Add this
+                                print('Navigating to image: ${timelineItems[index].imageFilename}');
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) => TimelineFullScreenImagePage(
-                                      timelineItems[index].imageFilename,
+                                      timelineItems.map((item) => item.imageFilename).toList(),
+                                      index,
                                     ),
                                   ),
+
                                 );
                               },
                               child: Stack(

@@ -51,6 +51,7 @@ dependencies:
   path: any
   intl: ^0.18.1
   google_maps_flutter: ^2.3.1
+  photo_view: ^0.14.0
 
 
   # The following adds the Cupertino Icons font to your application.
