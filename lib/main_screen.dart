@@ -22,7 +22,10 @@ class _MainScreenState extends State<MainScreen> {
   Set<Marker> _markers = {};
   double _zoomLevel = 0; // Set the initial zoom level
   Timer? _zoomTimer;
-  final PageController _pageController = PageController(); // add this line
+  PageController _pageController = PageController(
+    viewportFraction: 0.8,
+    keepPage: true,
+  );
   bool _programmaticPageChange = false;
   Future<List<CameraDescription>>? _camerasFuture;
 
@@ -115,14 +118,14 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       Positioned(
                         top: size.height * 0.3,
-                        left: size.width *0.0,
+                        left: size.width * 0,
+                        right: size.width * 0,
                         height: size.height * 0.3,
-                        width: size.width,
                         child: PageView.builder(
-                          controller: _pageController,
+                          controller: _pageController,  // ここを修正
                           itemCount: timelineItems.length,
                           onPageChanged: (index) {
-                            if (!_programmaticPageChange) { // このフラグがfalseの場合だけマップの位置を更新します。
+                            if (!_programmaticPageChange) {
                               _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
                             }
                           },
