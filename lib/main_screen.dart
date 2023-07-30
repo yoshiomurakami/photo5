@@ -40,7 +40,7 @@ class _MainScreenState extends State<MainScreen> {
     print("Updating map location to: $lat, $lng");
     final controller = _controller!;
     _currentLocation = LatLng(lat, lng);
-    controller.moveCamera(
+    controller.animateCamera(
       CameraUpdate.newLatLng(_currentLocation),
     );
   }
@@ -112,7 +112,7 @@ class _MainScreenState extends State<MainScreen> {
                           controller: _pageController,
                           itemCount: timelineItems.length,
                           onPageChanged: (index) {
-                            if (!_programmaticPageChange) {
+                            if (!_programmaticPageChange) { // このフラグがfalseの場合だけマップの位置を更新します。
                               _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
                             }
                           },
@@ -134,12 +134,18 @@ class _MainScreenState extends State<MainScreen> {
                                   final lat = timelineItems[result].lat;
                                   final lng = timelineItems[result].lng;
                                   _updateMapLocation(lat, lng);
+
+                                  _programmaticPageChange = true; // プログラムによるページ変更の開始を示すフラグを設定します。
+
                                   _pageController.animateToPage(
                                     result,
-                                    duration: Duration(milliseconds: 500),
+                                    duration: Duration(milliseconds: 1000),
                                     curve: Curves.ease,
-                                  );
+                                  ).then((_) {
+                                    _programmaticPageChange = false; // アニメーションが終了したらフラグを解除します。
+                                  });
                                 }
+
 
                               },
                               child: Stack(
