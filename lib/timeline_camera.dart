@@ -1,10 +1,7 @@
 import 'dart:io';
 import 'dart:async';
-// import 'dart:convert';
 import 'dart:math' as math;
-// import 'dart:typed_data';
 import 'package:flutter/material.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
@@ -18,11 +15,7 @@ import 'package:mime/mime.dart';
 import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
-// import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-// import 'album_screen.dart';
-// import 'timeline_photoview.dart';
-// import 'timeline_screen.dart';
 
 class CameraButton extends StatelessWidget {
   final VoidCallback onPressed;

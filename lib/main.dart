@@ -1,17 +1,17 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'dart:async';
-import 'error_dialog.dart';
-import 'error_dialog_data.dart';
-import 'main_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_overboard/flutter_overboard.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as path;
+import 'error_dialog.dart';
+import 'error_dialog_data.dart';
+import 'main_screen.dart';
 
 
 void main() {

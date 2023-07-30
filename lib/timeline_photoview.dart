@@ -12,14 +12,18 @@ class TimelineFullScreenImagePage extends StatefulWidget {
 }
 
 class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePage> {
-
   late PageController _pageController;
   Widget? imageWidget;
+  int currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _pageController = PageController(initialPage: widget.initialIndex);
+    _pageController = PageController(initialPage: widget.initialIndex)
+      ..addListener(() {
+        currentIndex = _pageController.page!.round();
+      });
+    currentIndex = widget.initialIndex;
     imageWidget = buildImageWidget();
   }
 
@@ -66,7 +70,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
               child: Icon(Icons.arrow_back, color: Colors.white),
               backgroundColor: Colors.transparent,
               onPressed: () {
-                Navigator.pop(context);
+                Navigator.pop(context, currentIndex);
               },
             ),
           ),
