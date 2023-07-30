@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 class TimelineFullScreenImagePage extends StatefulWidget {
   final List<String> imageFilenames;
   final int initialIndex;
+  final Key key;
 
-  TimelineFullScreenImagePage(this.imageFilenames, this.initialIndex);
+  TimelineFullScreenImagePage(this.imageFilenames, this.initialIndex, {required this.key}): super(key: key);
 
   @override
   _TimelineFullScreenImagePageState createState() => _TimelineFullScreenImagePageState();
@@ -13,11 +14,41 @@ class TimelineFullScreenImagePage extends StatefulWidget {
 class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePage> {
 
   late PageController _pageController;
+  Widget? imageWidget;
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController(initialPage: widget.initialIndex);
+    imageWidget = buildImageWidget();
+  }
+
+  Widget buildImageWidget() {
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: widget.imageFilenames.length,
+      itemBuilder: (context, index) {
+        return Image.network(
+          'https://photo5.world/${widget.imageFilenames[index]}',
+          fit: BoxFit.cover,
+          loadingBuilder:(BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+            if (loadingProgress == null) return child;
+            return Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null ?
+                loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                    : null,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   @override
@@ -27,26 +58,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
       body: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          PageView.builder(
-            controller: _pageController,
-            itemCount: widget.imageFilenames.length,
-            itemBuilder: (context, index) {
-              return Image.network(
-                'https://photo5.world/${widget.imageFilenames[index]}',
-                fit: BoxFit.cover,
-                loadingBuilder:(BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Center(
-                    child: CircularProgressIndicator(
-                      value: loadingProgress.expectedTotalBytes != null ?
-                      loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                          : null,
-                    ),
-                  );
-                },
-              );
-            },
-          ),
+          imageWidget ?? Container(),
           Positioned(
             left: 15.0,
             bottom: 15.0,
@@ -63,4 +75,3 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
     );
   }
 }
-

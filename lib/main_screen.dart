@@ -330,6 +330,7 @@ class _MainScreenState extends State<MainScreen> {
                                     builder: (context) => TimelineFullScreenImagePage(
                                       timelineItems.map((item) => item.imageFilename).toList(),
                                       index,
+                                      key: UniqueKey(), // generate a new unique key
                                     ),
                                   ),
 
