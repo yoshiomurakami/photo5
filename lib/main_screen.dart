@@ -105,9 +105,9 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       Positioned(
                         top: size.height * 0.3,
-                        left: size.width *0.1,
+                        left: size.width *0.0,
                         height: size.height * 0.3,
-                        width: size.width*0.8,
+                        width: size.width,
                         child: PageView.builder(
                           controller: _pageController,
                           itemCount: timelineItems.length,
@@ -146,7 +146,7 @@ class _MainScreenState extends State<MainScreen> {
                                 clipBehavior: Clip.none,
                                 children: [
                                   Container(
-                                    width: size.width,
+                                    width: size.width*0.8,
                                     height: size.height * 0.15,
                                     child: Card(
                                       shape: RoundedRectangleBorder(
