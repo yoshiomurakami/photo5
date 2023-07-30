@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:camera/camera.dart';
+import 'package:flag/flag.dart';
 import 'album_screen.dart';
 import 'timeline_photoview.dart';
 import 'timeline_screen.dart';
@@ -65,6 +66,15 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onMapCreated(GoogleMapController controller) {
     _controller = controller;
+  }
+
+  FlagsCode? getFlagCode(String countryCode) {
+    try {
+      return FlagsCode.values.firstWhere(
+              (e) => e.toString().split('.')[1].toUpperCase() == countryCode.toUpperCase());
+    } catch (e) {
+      return null;  // No matching country code found
+    }
   }
 
 
@@ -166,11 +176,20 @@ class _MainScreenState extends State<MainScreen> {
                                             Text('Card ${timelineItems[index].id}'),
                                             Text('No. ${index}'),
                                             Text('lat is ${timelineItems[index].lat}'),
+                                            Text(timelineItems[index].country),
+                                            getFlagCode(timelineItems[index].country) != null
+                                                ? Flag.fromCode(
+                                              getFlagCode(timelineItems[index].country)!,
+                                              height: 20,
+                                              width: 30,
+                                            )
+                                                : Container(),  // If getFlagCode returns null, return an empty container
                                           ],
                                         ),
                                       ),
                                     ),
                                   ),
+
                                   Positioned(
                                     top: size.height * 0.2 - size.width * 0.1,
                                     left: size.width * 0.3,
