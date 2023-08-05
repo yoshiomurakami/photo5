@@ -33,10 +33,10 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     determinePosition();
-    getTimeline().catchError((error) {
-      print('Error fetching timeline: $error');
-      return <TimelineItem>[];  // Returning an empty list in case of an error
-    });
+    // getTimeline().catchError((error) {
+    //   print('Error fetching timeline: $error');
+    //   return <TimelineItem>[];  // Returning an empty list in case of an error
+    // });
     _camerasFuture = availableCameras();
   }
 
@@ -81,6 +81,7 @@ class _MainScreenState extends State<MainScreen> {
   }
 
 
+
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
@@ -90,7 +91,7 @@ class _MainScreenState extends State<MainScreen> {
           FutureBuilder<List<dynamic>>(
             future: Future.wait([
               determinePosition(),
-              getTimeline(),
+              getTimelineWithGeocoding()
             ]),
             builder: (BuildContext context, AsyncSnapshot<List<dynamic>> snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
@@ -124,9 +125,12 @@ class _MainScreenState extends State<MainScreen> {
                         child: PageView.builder(
                           controller: _pageController,  // ここを修正
                           itemCount: timelineItems.length,
-                          onPageChanged: (index) {
+                          onPageChanged: (index) async {
                             if (!_programmaticPageChange) {
-                              _updateMapLocation(timelineItems[index].lat, timelineItems[index].lng);
+                              final item = timelineItems[index];
+                              _updateMapLocation(item.lat, item.lng);
+
+                              await updateGeocodedLocation(timelineItems);
                             }
                           },
                           itemBuilder: (context, index) {
@@ -176,10 +180,11 @@ class _MainScreenState extends State<MainScreen> {
                                         child: Column(
                                           mainAxisAlignment: MainAxisAlignment.start,
                                           children: <Widget>[
-                                            Text('Card ${timelineItems[index].id}'),
+                                            // Text('Card ${timelineItems[index].id}'),
                                             Text('No. ${index}'),
-                                            Text('lat is ${timelineItems[index].lat}'),
-                                            Text(timelineItems[index].country),
+                                            // Text('lat is ${timelineItems[index].lat}'),
+                                            Text(timelineItems[index].geocodedCountry ?? 'Unknown'),
+                                            Text(timelineItems[index].geocodedCity ?? 'Unknown'),
                                             getFlagCode(timelineItems[index].country) != null
                                                 ? Flag.fromCode(
                                               getFlagCode(timelineItems[index].country)!,

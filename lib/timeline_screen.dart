@@ -4,16 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 class TimelineItem {
   final String id;
   final String userId;
-  final String country;
+  final String country;  // This is from DB
   final double lat;
   final double lng;
   final String imageFilename;
   final String thumbnailFilename;
   final String localtime;
+  String? geocodedCountry;  // This is from geocoding
+  String? geocodedCity;  // This is from geocoding
 
   TimelineItem({
     required this.id,
@@ -24,10 +25,10 @@ class TimelineItem {
     required this.imageFilename,
     required this.thumbnailFilename,
     required this.localtime,
+    this.geocodedCountry,
+    this.geocodedCity,
   });
 
-  // 新しいemptyという名前付きコンストラクタを追加します。
-  // ただし、このコンストラクタは Map<String, dynamic> を返します。
   static Map<String, dynamic> empty({
     required double lat,
     required double lng,
@@ -46,18 +47,21 @@ class TimelineItem {
 
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
-      id: json['_id'] ?? '0', // Provide a default value in case of null
-      userId: json['userID'] ?? 'dummy', // Provide a default value in case of null
-      country: json['country'] ?? 'dummy', // Provide a default value in case of null
-      lat: json['lat'] != null ? double.parse(json['lat']) : 0.0, // Check for null before parsing
-      lng: json['lng'] != null ? double.parse(json['lng']) : 0.0, // Check for null before parsing
-      imageFilename: json['imageFilename'] ?? 'dummy', // Provide a default value in case of null
-      thumbnailFilename: json['thumbnailFilename'] ?? '03.png', // Provide a default value in case of null
-      localtime: json['localtime'] ?? 'dummy', // Provide a default value in case of null
+      id: json['_id'] ?? '0',
+      userId: json['userID'] ?? 'dummy',
+      country: json['country'] ?? 'dummy',
+      lat: json['lat'] != null ? double.parse(json['lat']) : 0.0,
+      lng: json['lng'] != null ? double.parse(json['lng']) : 0.0,
+      imageFilename: json['imageFilename'] ?? 'dummy',
+      thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
+      localtime: json['localtime'] ?? 'dummy',
+      geocodedCountry: null,  // Set null as default
+      geocodedCity: null,  // Set null as default
     );
   }
-
 }
+
+
 
 Future<List<TimelineItem>> getTimeline() async {
   try {

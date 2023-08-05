@@ -12,6 +12,8 @@ import 'package:path/path.dart' as path;
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
+import 'timeline_screen.dart';
+import 'riverpod.dart';
 
 
 void main() {
@@ -251,6 +253,36 @@ class _StartupState extends State<Startup> {
     );
   }
 
+
+  Future<bool> _startupProcedures(BuildContext context) async {
+    debugPrint("Startup procedures starting");
+    try {
+      // Wait for both _checkConnectivity(context) and Duration(seconds: 5) to complete
+      await Future.wait([
+        _checkConnectivity(context),
+        _checkDatabaseTable(), // Your new DB check function
+        Future.delayed(Duration(seconds: 5)),
+      ]);
+      await _checkVersion();
+      await _checkUserId();
+      await _checkStatus();
+      await determinePosition();
+      await getTimeline();
+
+
+      debugPrint("Startup procedures completed");
+      _startupController.add(true);
+      return true;
+    } catch (e) {
+      if (e is ErrorDialogData) {
+        _showErrorDialog(e);
+      }
+      // Add other error handling code as needed
+      _startupController.addError(e);
+      return false;
+    }
+  }
+
   Future<void> _checkConnectivity(BuildContext context) async {
     // await Future.delayed(Duration(seconds: 5));
     debugPrint("Connectivity check starting");
@@ -416,8 +448,6 @@ class _StartupState extends State<Startup> {
 
 
 
-
-
   Future<void> _showTutorial() async {
     debugPrint("Start _showTutorial()");
 
@@ -513,31 +543,7 @@ class _StartupState extends State<Startup> {
     return true;
   }
 
-  Future<bool> _startupProcedures(BuildContext context) async {
-    debugPrint("Startup procedures starting");
-    try {
-      // Wait for both _checkConnectivity(context) and Duration(seconds: 5) to complete
-      await Future.wait([
-        _checkConnectivity(context),
-        _checkDatabaseTable(), // Your new DB check function
-        Future.delayed(Duration(seconds: 5)),
-      ]);
-      await _checkVersion();
-      await _checkUserId();
-      await _checkStatus();
 
-      debugPrint("Startup procedures completed");
-      _startupController.add(true);
-      return true;
-    } catch (e) {
-      if (e is ErrorDialogData) {
-        _showErrorDialog(e);
-      }
-      // Add other error handling code as needed
-      _startupController.addError(e);
-      return false;
-    }
-  }
 
   Future<void> _checkDatabaseTable() async {
     final database = openDatabase(
