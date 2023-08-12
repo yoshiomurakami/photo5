@@ -14,6 +14,7 @@ import 'error_dialog_data.dart';
 import 'main_screen.dart';
 import 'timeline_screen.dart';
 import 'riverpod.dart';
+import 'chat_connection.dart';
 
 
 void main() {
@@ -268,6 +269,11 @@ class _StartupState extends State<Startup> {
       await _checkStatus();
       await determinePosition();
       await getTimeline();
+
+      ChatConnection chatConnection = ChatConnection();
+      // print('Creating ChatConnection instance'); // この行を追加
+      chatConnection.connect(); // チャットサーバーへの接続を開始
+      // print('Connecting to chat server'); // この行を追加
 
 
       debugPrint("Startup procedures completed");
