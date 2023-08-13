@@ -8,6 +8,8 @@ import 'timeline_photoview.dart';
 import 'timeline_screen.dart';
 import 'timeline_camera.dart';
 import 'riverpod.dart';
+import 'chat_connection.dart';
+
 
 
 class MainScreen extends StatefulWidget {
@@ -15,6 +17,35 @@ class MainScreen extends StatefulWidget {
   _MainScreenState createState() => _MainScreenState();
 }
 
+
+
+class ConnectionNumber extends StatefulWidget {
+  @override
+  _ConnectionNumberState createState() => _ConnectionNumberState();
+}
+
+class _ConnectionNumberState extends State<ConnectionNumber> {
+  int totalConnections = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    socket?.on('connections', (connections) {
+      setState(() {
+        totalConnections = connections;
+      });
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(8),
+      color: Colors.black.withOpacity(0.5),
+      child: Text('Connections: $totalConnections', style: TextStyle(color: Colors.white)),
+    );
+  }
+}
 
 class _MainScreenState extends State<MainScreen> {
   GoogleMapController? _controller;
@@ -28,16 +59,24 @@ class _MainScreenState extends State<MainScreen> {
   );
   bool _programmaticPageChange = false;
   Future<List<CameraDescription>>? _camerasFuture;
+  // int totalConnections = 0;
 
   @override
   void initState() {
     super.initState();
-    determinePosition();
+    // determinePosition();
     // getTimeline().catchError((error) {
     //   print('Error fetching timeline: $error');
     //   return <TimelineItem>[];  // Returning an empty list in case of an error
     // });
     _camerasFuture = availableCameras();
+
+    // socket?.on('connections', (connections) {
+    //   // コネクション数を更新する
+    //   setState(() {
+    //     totalConnections = connections;
+    //   });
+    // });
   }
 
   Future<void> _updateMapLocation(double lat, double lng) async {
@@ -342,12 +381,18 @@ class _MainScreenState extends State<MainScreen> {
               }
             },
           ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: ConnectionNumber(),
+          ),
         ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: "album", // HeroTag設定
         onPressed: _openAlbum,
         child: Icon(Icons.photo_album),
+        // child: Text('Connections: $totalConnections'), // 例としてここに表示
       ),
     );
   }

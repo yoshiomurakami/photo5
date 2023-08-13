@@ -271,9 +271,7 @@ class _StartupState extends State<Startup> {
       await getTimeline();
 
       ChatConnection chatConnection = ChatConnection();
-      // print('Creating ChatConnection instance'); // この行を追加
       chatConnection.connect(); // チャットサーバーへの接続を開始
-      // print('Connecting to chat server'); // この行を追加
 
 
       debugPrint("Startup procedures completed");
