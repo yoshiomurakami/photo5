@@ -11,13 +11,10 @@ import 'riverpod.dart';
 import 'chat_connection.dart';
 
 
-
 class MainScreen extends StatefulWidget {
   @override
   _MainScreenState createState() => _MainScreenState();
 }
-
-
 
 class ConnectionNumber extends StatefulWidget {
   @override
@@ -47,45 +44,86 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
   }
 }
 
-class _MainScreenState extends State<MainScreen> {
+class MapController {
   GoogleMapController? _controller;
-  LatLng _currentLocation = LatLng(0, 0); // Add this line
+  LatLng _currentLocation = LatLng(0, 0);
   Set<Marker> _markers = {};
-  double _zoomLevel = 0; // Set the initial zoom level
+  double _zoomLevel = 10; // 既存のズームレベル値をセット
   Timer? _zoomTimer;
-  PageController _pageController = PageController(
-    viewportFraction: 0.8,
-    keepPage: true,
-  );
-  bool _programmaticPageChange = false;
-  Future<List<CameraDescription>>? _camerasFuture;
-  // int totalConnections = 0;
 
-  @override
-  void initState() {
-    super.initState();
-    // determinePosition();
-    // getTimeline().catchError((error) {
-    //   print('Error fetching timeline: $error');
-    //   return <TimelineItem>[];  // Returning an empty list in case of an error
-    // });
-    _camerasFuture = availableCameras();
-
-    // socket?.on('connections', (connections) {
-    //   // コネクション数を更新する
-    //   setState(() {
-    //     totalConnections = connections;
-    //   });
-    // });
+  void onMapCreated(GoogleMapController controller) {
+    _controller = controller;
   }
 
-  Future<void> _updateMapLocation(double lat, double lng) async {
-    print("Updating map location to: $lat, $lng");
+  Future<void> updateMapLocation(double lat, double lng) async {
     final controller = _controller!;
     _currentLocation = LatLng(lat, lng);
     controller.animateCamera(
       CameraUpdate.newLatLng(_currentLocation),
     );
+  }
+
+  void zoomIn(LatLng target) {
+    if (_zoomLevel < 15) {
+      _zoomLevel += 1;
+      _controller?.animateCamera(CameraUpdate.zoomIn());
+    }
+  }
+
+  void zoomOut(LatLng target) {
+    if (_zoomLevel > 3) {
+      _zoomLevel -= 1;
+      _controller?.animateCamera(CameraUpdate.zoomOut());
+    }
+  }
+
+  void startZoomingIn(LatLng target) {
+    _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      if (_zoomLevel < 15) {
+        _zoomLevel += 1;
+        _controller?.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: target,
+            zoom: _zoomLevel,
+          ),
+        ));
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void startZoomingOut(LatLng target) {
+    _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      if (_zoomLevel > 3) {
+        _zoomLevel -= 1;
+        _controller?.animateCamera(CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: target,
+            zoom: _zoomLevel,
+          ),
+        ));
+      } else {
+        timer.cancel();
+      }
+    });
+  }
+
+  void stopZooming() {
+    _zoomTimer?.cancel();
+  }
+}
+
+class _MainScreenState extends State<MainScreen> {
+  final MapController _mapController = MapController(); // 新規MapControllerのインスタンスを生成
+  final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
+  bool _programmaticPageChange = false;
+  Future<List<CameraDescription>>? _camerasFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _camerasFuture = availableCameras();
   }
 
   void _openCamera(CameraDescription camera) {
@@ -104,10 +142,6 @@ class _MainScreenState extends State<MainScreen> {
         builder: (context) => AlbumScreen(),
       ),
     );
-  }
-
-  void _onMapCreated(GoogleMapController controller) {
-    _controller = controller;
   }
 
   FlagsCode? getFlagCode(String countryCode) {
@@ -145,12 +179,12 @@ class _MainScreenState extends State<MainScreen> {
                   return Stack(
                     children: <Widget>[
                       GoogleMap(
-                        onMapCreated: _onMapCreated,
+                        onMapCreated: _mapController.onMapCreated, // ここでMapControllerを使用
                         initialCameraPosition: CameraPosition(
                           target: _currentLocation,
-                          zoom: _zoomLevel,
+                          zoom: 10,
                         ),
-                        markers: _markers,
+                        markers: _mapController._markers,
                         zoomControlsEnabled: false,
                         zoomGesturesEnabled: false,
                         scrollGesturesEnabled: false,
@@ -158,8 +192,8 @@ class _MainScreenState extends State<MainScreen> {
                       ),
                       Positioned(
                         top: size.height * 0.3,
-                        left: size.width * 0,
-                        right: size.width * 0,
+                        left: 0, // 左右中央の調整を削除
+                        right: 0, // 左右中央の調整を削除
                         height: size.height * 0.3,
                         child: PageView.builder(
                           controller: _pageController,  // ここを修正
@@ -167,7 +201,7 @@ class _MainScreenState extends State<MainScreen> {
                           onPageChanged: (index) async {
                             if (!_programmaticPageChange) {
                               final item = timelineItems[index];
-                              _updateMapLocation(item.lat, item.lng);
+                              _mapController.updateMapLocation(item.lat, item.lng);
 
                               await updateGeocodedLocation(timelineItems);
                             }
@@ -189,7 +223,7 @@ class _MainScreenState extends State<MainScreen> {
                                 if (result is int) {
                                   final lat = timelineItems[result].lat;
                                   final lng = timelineItems[result].lng;
-                                  _updateMapLocation(lat, lng);
+                                  _mapController.updateMapLocation(lat, lng);
 
                                   _programmaticPageChange = true; // プログラムによるページ変更の開始を示すフラグを設定します。
 
@@ -208,7 +242,7 @@ class _MainScreenState extends State<MainScreen> {
                                 clipBehavior: Clip.none,
                                 children: [
                                   Container(
-                                    width: size.width*0.8,
+                                    width: size.width*1.0,
                                     height: size.height * 0.15,
                                     child: Card(
                                       shape: RoundedRectangleBorder(
@@ -266,41 +300,15 @@ class _MainScreenState extends State<MainScreen> {
                           children: [
                             GestureDetector(
                               onLongPress: () {
-                                _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-                                  if (_zoomLevel < 15) {
-                                    _zoomLevel += 1;
-                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
-                                      CameraPosition(
-                                        target: LatLng(
-                                            timelineItems[_pageController.page!.round()].lat,
-                                            timelineItems[_pageController.page!.round()].lng
-                                        ),
-                                        zoom: _zoomLevel,
-                                      ),
-                                    ));
-                                  } else {
-                                    timer.cancel();
-                                  }
-                                });
+                                _mapController.startZoomingIn(_currentLocation);
                               },
                               onLongPressEnd: (details) {
-                                _zoomTimer?.cancel();
+                                _mapController.stopZooming();
                               },
                               child: FloatingActionButton(
-                                heroTag: "mapZoomIn", // HeroTag設定
+                                heroTag: "mapZoomIn",
                                 onPressed: () {
-                                  if (_zoomLevel < 15) {
-                                    _zoomLevel += 1;
-                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
-                                      CameraPosition(
-                                        target: LatLng(
-                                            timelineItems[_pageController.page!.round()].lat,
-                                            timelineItems[_pageController.page!.round()].lng
-                                        ),
-                                        zoom: _zoomLevel,
-                                      ),
-                                    ));
-                                  }
+                                  _mapController.zoomIn(_currentLocation);
                                 },
                                 child: Icon(Icons.add),
                                 mini: true,
@@ -309,52 +317,23 @@ class _MainScreenState extends State<MainScreen> {
                             SizedBox(height: 10),
                             GestureDetector(
                               onLongPress: () {
-                                _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-                                  if (_zoomLevel > 3) {
-                                    _zoomLevel -= 1;
-                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
-                                      CameraPosition(
-                                        target: LatLng(
-                                            timelineItems[_pageController.page!.round()].lat,
-                                            timelineItems[_pageController.page!.round()].lng
-                                        ),
-                                        zoom: _zoomLevel,
-                                      ),
-                                    ));
-                                  } else {
-                                    timer.cancel();
-                                  }
-                                });
+                                _mapController.startZoomingOut(_currentLocation);
                               },
                               onLongPressEnd: (details) {
-                                _zoomTimer?.cancel();
+                                _mapController.stopZooming();
                               },
                               child: FloatingActionButton(
                                 heroTag: "mapZoomOut", // HeroTag設定
                                 onPressed: () {
-                                  if (_zoomLevel > 3) {
-                                    _zoomLevel -= 1;
-                                    _controller?.animateCamera(CameraUpdate.newCameraPosition(
-                                      CameraPosition(
-                                        target: LatLng(
-                                            timelineItems[_pageController.page!.round()].lat,
-                                            timelineItems[_pageController.page!.round()].lng
-                                        ),
-                                        zoom: _zoomLevel,
-                                      ),
-                                    ));
-                                  }
+                                  _mapController.zoomOut(_currentLocation);
                                 },
                                 child: Icon(Icons.remove),
                                 mini: true,
                               ),
                             ),
-                     ],
+                          ],
                         ),
                       ),
-
-
-
                     ],
                   );
 
