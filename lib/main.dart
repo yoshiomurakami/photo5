@@ -12,18 +12,23 @@ import 'package:path/path.dart' as path;
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
-import 'timeline_screen.dart';
-import 'riverpod.dart';
+import 'timeline_providers.dart';
 import 'chat_connection.dart';
-
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.getInstance().then((prefs) {
     final int? introStatus = prefs.getInt('intro') ?? 0;
-    runApp(MyApp(home: introStatus == 1 ? Startup() : IntroductionScreen()));
+    runApp(
+      ProviderScope(
+        child: MyApp(home: introStatus == 1 ? Startup() : IntroductionScreen()),
+      ),
+    );
   });
 }
+
 class MyApp extends StatelessWidget {
   final Widget home;
 
@@ -148,6 +153,8 @@ class _StartupState extends State<Startup> {
   late StreamController<bool> _startupController;
   String loadingText = 'Now Loading';
   String latestVersion = "";
+  LatLng? _currentLocation;
+  List<TimelineItem>? _timelineItems;
 
   @override
   void initState() {
@@ -254,7 +261,6 @@ class _StartupState extends State<Startup> {
     );
   }
 
-
   Future<bool> _startupProcedures(BuildContext context) async {
     debugPrint("Startup procedures starting");
     try {
@@ -262,13 +268,15 @@ class _StartupState extends State<Startup> {
       await Future.wait([
         _checkConnectivity(context),
         _checkDatabaseTable(), // Your new DB check function
-        Future.delayed(Duration(seconds: 5)),
+        // Future.delayed(Duration(seconds: 5)),
       ]);
       await _checkVersion();
       await _checkUserId();
       await _checkStatus();
-      await determinePosition();
-      await getTimeline();
+      await _checkPermission();
+
+        _currentLocation = await determinePosition();
+        _timelineItems = await getTimelineWithGeocoding();
 
       ChatConnection chatConnection = ChatConnection();
       chatConnection.connect(); // チャットサーバーへの接続を開始
@@ -407,7 +415,7 @@ class _StartupState extends State<Startup> {
 
     if (status == '0') {
       try {
-        await _showTutorial();
+        await _getPermission();
         //便宜上0に上書き。本当は1にする。
         prefs.setString('status', '1');
       } catch (e) {
@@ -415,7 +423,7 @@ class _StartupState extends State<Startup> {
       }
     } else if (status.isEmpty) {
       try {
-        await _showTutorial();
+        await _getPermission();
         //便宜上0に上書き。本当は1にする。
         prefs.setString('status', '1');
       } catch (e) {
@@ -429,7 +437,7 @@ class _StartupState extends State<Startup> {
       if (!cameraPermission.isGranted || !locationPermission.isGranted) {
         // One or both permissions are not granted, so show tutorial
         try {
-          await _showTutorial();
+          await _getPermission();
           // Set status to '1' after tutorial
           prefs.setString('status', '1');
         } catch (e) {
@@ -449,18 +457,29 @@ class _StartupState extends State<Startup> {
     return;
   }
 
+  Future<void> _checkPermission() async {
+    debugPrint("Permission check starting");
 
+    PermissionStatus cameraPermission = await Permission.camera.status;
+    PermissionStatus locationPermission = await Permission.location.status;
 
+    if (!cameraPermission.isGranted || !locationPermission.isGranted) {
+      await _getPermission();
+    }
 
-  Future<void> _showTutorial() async {
-    debugPrint("Start _showTutorial()");
+    debugPrint("Permission check completed");
+    return;
+  }
+
+  Future<void> _getPermission() async {
+    debugPrint("Start _getPermission()");
 
     // Check for location and camera permissions.
     var locationStatus = await Permission.location.status;
     var cameraStatus = await Permission.camera.status;
 
     // Only show the tutorial if at least one permission is not granted.
-    if (locationStatus.isDenied || cameraStatus.isDenied) {
+    // if (locationStatus.isDenied || cameraStatus.isDenied) {
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -480,9 +499,9 @@ class _StartupState extends State<Startup> {
           );
         },
       );
-    } else {
-      _navigateToMainScreen();
-    }
+    // } else {
+    //   _navigateToMainScreen();
+    // }
   }
 
   Widget _tutorialPage(String imagePath, String text, Permission permission, {bool showButton = false}) {
@@ -541,8 +560,10 @@ class _StartupState extends State<Startup> {
     var cameraStatus = await Permission.camera.status;
     if (locationStatus.isGranted && cameraStatus.isGranted) {
       Navigator.of(context).pop(); // This will close the tutorial dialog.
-      _navigateToMainScreen();
+      // _navigateToMainScreen();
+      return true;
     }
+
 
     return true;
   }
