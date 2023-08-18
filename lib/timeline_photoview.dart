@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'timeline_providers.dart';
 
 class TimelineFullScreenImagePage extends StatefulWidget {
   final List<String> imageFilenames;
@@ -31,6 +32,20 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
     return PageView.builder(
       controller: _pageController,
       itemCount: widget.imageFilenames.length,
+      onPageChanged: (index) async {
+        if (index == widget.imageFilenames.length - 1) {
+          print("more timelineItems");
+          getMoreTimelineItems().then((newItems) {
+            // TimelineItemオブジェクトから画像ファイル名を抽出
+            List<String> newImageFilenames = newItems.map((item) => item.imageFilename).toList();
+            setState(() {
+              widget.imageFilenames.addAll(newImageFilenames); // 新しい画像ファイル名を現在のリストに追加
+              imageWidget = buildImageWidget(); // これを追加して再構築する
+            });
+          });
+        }
+      },
+
       itemBuilder: (context, index) {
         return Image.network(
           'https://photo5.world/${widget.imageFilenames[index]}',
@@ -49,6 +64,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
       },
     );
   }
+
 
   @override
   void dispose() {

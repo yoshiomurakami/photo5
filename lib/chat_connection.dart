@@ -17,9 +17,9 @@ class ChatConnection {
     });
 
     // 接続数のイベントリスナー
-    socket?.on('connections', (connections) {
-      print('Total connections: $connections');
-    });
+    // socket?.on('connections', (connections) {
+    //   print('Total connections: $connections');
+    // });
 
     socket?.on('connect_error', (error) {
       print('Connection Error: $error');

@@ -275,7 +275,7 @@ class _StartupState extends State<Startup> {
       await _checkStatus();
       await _checkPermission();
 
-        _currentLocation = await determinePosition();
+        // _currentLocation = await determinePosition();
         _timelineItems = await getTimelineWithGeocoding();
 
       ChatConnection chatConnection = ChatConnection();

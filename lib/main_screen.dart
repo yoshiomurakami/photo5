@@ -126,9 +126,6 @@ class TimelineMapWidget extends ConsumerWidget {
   }
 }
 
-
-
-
 class MapController {
   GoogleMapController? _controller;
   LatLng _currentLocation = LatLng(0, 0);
@@ -204,7 +201,7 @@ class MapController {
   }
 }
 
-class MapDisplay extends StatelessWidget {
+class MapDisplay extends StatefulWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
   final Size size;
@@ -222,13 +219,18 @@ class MapDisplay extends StatelessWidget {
   });
 
   @override
+  _MapDisplayState createState() => _MapDisplayState();
+}
+
+class _MapDisplayState extends State<MapDisplay> {
+  @override
   Widget build(BuildContext context) {
     return Stack(
       children: <Widget>[
         GoogleMap(
           onMapCreated: MapController.instance.onMapCreated,
           initialCameraPosition: CameraPosition(
-            target: currentLocation,
+            target: widget.currentLocation,
             zoom: MapController.instance.zoomLevel,
           ),
           markers: MapController.instance._markers,
@@ -238,56 +240,67 @@ class MapDisplay extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 0),
         ),
         Positioned(
-          top: size.height * 0.3,
+          top: widget.size.height * 0.3,
           left: 0,
           right: 0,
-          height: size.height * 0.3,
+          height: widget.size.height * 0.3,
           child: PageView.builder(
-            controller: pageController,
-            itemCount: timelineItems.length,
+            controller: widget.pageController,
+            itemCount: widget.timelineItems.length,
             onPageChanged: (index) async {
-              if (!programmaticPageChange) {
-                final item = timelineItems[index];
+              if (!widget.programmaticPageChange) {
+                final item = widget.timelineItems[index];
                 MapController.instance.updateMapLocation(item.lat, item.lng);
 
-                await updateTimeline(timelineItems);
+                await widget.updateTimeline(widget.timelineItems);
+
+                if (index == widget.timelineItems.length - 1) {
+                  print("more timelineItems");
+                  getMoreTimelineItems().then((newItems) {
+                    setState(() {
+                      widget.timelineItems.addAll(newItems); // 新しいアイテムを現在のリストに追加
+                    });
+                  });
+                }
               }
             },
             itemBuilder: (context, index) {
               return GestureDetector(
                 onTap: () async {
-                  print('Navigating to image: ${timelineItems[index].imageFilename}');
+                  print('Navigating to image: ${widget.timelineItems[index].imageFilename}');
                   final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => TimelineFullScreenImagePage(
-                        timelineItems.map((item) => item.imageFilename).toList(),
+                        widget.timelineItems.map((item) => item.imageFilename).toList(),
                         index,
                         key: UniqueKey(),
                       ),
                     ),
                   );
                   if (result is int) {
-                    final lat = timelineItems[result].lat;
-                    final lng = timelineItems[result].lng;
+                    final lat = widget.timelineItems[result].lat;
+                    final lng = widget.timelineItems[result].lng;
                     MapController.instance.updateMapLocation(lat, lng);
+
+                    widget.pageController.jumpToPage(result);
                   }
                 },
-                child: TimelineCard(item: timelineItems[index], size: size),
+                child: TimelineCard(item: widget.timelineItems[index], size: widget.size),
               );
             },
           ),
         ),
         Positioned(
-          right: size.width * 0.05,
-          top: size.height * 0.5 + (size.height * 0.2),
+          right: widget.size.width * 0.05,
+          top: widget.size.height * 0.5 + (widget.size.height * 0.2),
           child: Column(
             children: [
               GestureDetector(
                 child: FloatingActionButton(
                   heroTag: "mapZoomIn",
                   onPressed: () {
-                    MapController.instance.zoomIn(currentLocation);
+                    MapController.instance.zoomIn(widget.currentLocation);
                   },
                   child: Icon(Icons.add),
                   mini: true,
@@ -298,7 +311,7 @@ class MapDisplay extends StatelessWidget {
                 child: FloatingActionButton(
                   heroTag: "mapZoomOut",
                   onPressed: () {
-                    MapController.instance.zoomOut(currentLocation);
+                    MapController.instance.zoomOut(widget.currentLocation);
                   },
                   child: Icon(Icons.remove),
                   mini: true,
@@ -311,6 +324,7 @@ class MapDisplay extends StatelessWidget {
     );
   }
 }
+
 
 class TimelineCard extends StatelessWidget {
   final TimelineItem item;
@@ -395,6 +409,7 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
         totalConnections = connections;
       });
     });
+
   }
 
   @override
