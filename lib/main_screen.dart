@@ -254,7 +254,7 @@ class _MapDisplayState extends State<MapDisplay> {
 
                 await widget.updateTimeline(widget.timelineItems);
 
-                if (index == widget.timelineItems.length - 5) {
+                if (index == widget.timelineItems.length - 1) {
                   print("more timelineItems");
                   getMoreTimelineItems().then((newItems) {
                     setState(() {

@@ -42,7 +42,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
       controller: _pageController,
       itemCount: widget.imageFilenames.length,
       onPageChanged: (index) async {
-        if (index == widget.imageFilenames.length - 5) {
+        if (index == widget.imageFilenames.length - 1) {
           print("more timelineItems");
           getMoreTimelineItems().then((newItems) {
             widget.onTimelineItemsAdded(newItems); // コールバックの呼び出し
@@ -97,7 +97,6 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
               backgroundColor: Colors.transparent,
               onPressed: (){
                 Navigator.pop(context, currentIndex);
-                // Navigator.pop(context, widget.imageFilenames[currentIndex]);
               },
             ),
           ),

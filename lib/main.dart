@@ -153,7 +153,7 @@ class _StartupState extends State<Startup> {
   late StreamController<bool> _startupController;
   String loadingText = 'Now Loading';
   String latestVersion = "";
-  LatLng? _currentLocation;
+  // LatLng? _currentLocation;
   List<TimelineItem>? _timelineItems;
 
   @override
@@ -276,7 +276,7 @@ class _StartupState extends State<Startup> {
       await _checkPermission();
 
         // _currentLocation = await determinePosition();
-        _timelineItems = await getTimelineWithGeocoding();
+        // _timelineItems = await getTimelineWithGeocoding();
 
       ChatConnection chatConnection = ChatConnection();
       chatConnection.connect(); // チャットサーバーへの接続を開始

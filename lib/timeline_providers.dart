@@ -109,7 +109,7 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     if (response.statusCode == 200) {
       // 成功した場合、JSONをパースしてリストに変換
       List data = jsonDecode(response.body);
-      print('取得したばかりのReceived data: ${data.length} items. Details: $data');
+      // print('取得したばかりのReceived data: ${data.length} items. Details: $data');
 
       if (page == 0) { // 最初のページの場合のみ、現在地を取得
         // 現在の位置を取得します。
@@ -128,7 +128,13 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
 
       // デバッグ情報として、取得したデータを出力
       print('Received data: ${data.length} items. Details: $data');
-      return data.map((item) => TimelineItem.fromJson(item)).toList();
+
+      List<TimelineItem> timelineItems = data.map((item) => TimelineItem.fromJson(item)).toList();
+
+      // ジオコーディング処理の追加
+      await updateGeocodedLocation(timelineItems);
+
+      return timelineItems;
     } else {
       // エラーが発生した場合、エラーをスロー
       throw Exception('Failed to load timeline');
@@ -163,6 +169,7 @@ Future<List<TimelineItem>> getTimelineWithGeocoding() async {
 
 final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
   List<TimelineItem> timelineItems = await getTimeline();
+  // timelineItems = await getTimelineWithGeocoding();
 
   await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
 
