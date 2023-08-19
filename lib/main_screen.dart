@@ -254,7 +254,7 @@ class _MapDisplayState extends State<MapDisplay> {
 
                 await widget.updateTimeline(widget.timelineItems);
 
-                if (index == widget.timelineItems.length - 1) {
+                if (index == widget.timelineItems.length - 5) {
                   print("more timelineItems");
                   getMoreTimelineItems().then((newItems) {
                     setState(() {
@@ -274,7 +274,13 @@ class _MapDisplayState extends State<MapDisplay> {
                       builder: (context) => TimelineFullScreenImagePage(
                         widget.timelineItems.map((item) => item.imageFilename).toList(),
                         index,
+                        // widget.timelineItems,
                         key: UniqueKey(),
+                        onTimelineItemsAdded: (newItems) {
+                          setState(() {
+                            widget.timelineItems.addAll(newItems);
+                          });
+                        },
                       ),
                     ),
                   );

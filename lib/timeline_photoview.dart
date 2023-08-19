@@ -5,12 +5,21 @@ class TimelineFullScreenImagePage extends StatefulWidget {
   final List<String> imageFilenames;
   final int initialIndex;
   final Key key;
+  // final List<TimelineItem> timelineItems;
+  final Function(List<TimelineItem>) onTimelineItemsAdded; // 追加
 
-  TimelineFullScreenImagePage(this.imageFilenames, this.initialIndex, {required this.key}): super(key: key);
+  TimelineFullScreenImagePage(
+      this.imageFilenames,
+      this.initialIndex,
+      // this.timelineItems,
+      {required this.key, required this.onTimelineItemsAdded})
+      : super(key: key);
 
   @override
-  _TimelineFullScreenImagePageState createState() => _TimelineFullScreenImagePageState();
+  _TimelineFullScreenImagePageState createState() =>
+      _TimelineFullScreenImagePageState();
 }
+
 
 class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePage> {
   late PageController _pageController;
@@ -33,9 +42,10 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
       controller: _pageController,
       itemCount: widget.imageFilenames.length,
       onPageChanged: (index) async {
-        if (index == widget.imageFilenames.length - 1) {
+        if (index == widget.imageFilenames.length - 5) {
           print("more timelineItems");
           getMoreTimelineItems().then((newItems) {
+            widget.onTimelineItemsAdded(newItems); // コールバックの呼び出し
             // TimelineItemオブジェクトから画像ファイル名を抽出
             List<String> newImageFilenames = newItems.map((item) => item.imageFilename).toList();
             setState(() {
@@ -85,8 +95,9 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
             child: FloatingActionButton(
               child: Icon(Icons.arrow_back, color: Colors.white),
               backgroundColor: Colors.transparent,
-              onPressed: () {
+              onPressed: (){
                 Navigator.pop(context, currentIndex);
+                // Navigator.pop(context, widget.imageFilenames[currentIndex]);
               },
             ),
           ),

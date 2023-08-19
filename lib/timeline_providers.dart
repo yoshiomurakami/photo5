@@ -82,54 +82,6 @@ Future<LatLng> determinePosition() async {
   return LatLng(position.latitude, position.longitude);
 }
 
-// Future<List<TimelineItem>> getTimeline() async {
-//   try {
-//     // SharedPreferencesからユーザーIDを取得
-//     SharedPreferences prefs = await SharedPreferences.getInstance();
-//     String userId = prefs.getString('userID') ?? "";
-//
-//     // リクエストボディの作成
-//     final requestBody = jsonEncode({'userId': userId});
-//
-//     // APIにPOSTリクエストを送信
-//     final response = await http.post(
-//       Uri.parse('https://photo5.world/api/timeline/getTimeline'),
-//       headers: {'Content-Type': 'application/json'},
-//       body: requestBody,
-//     );
-//
-//     // APIからのレスポンスをチェック
-//     if (response.statusCode == 200) {
-//       // 成功した場合、JSONをパースしてリストに変換
-//       List data = jsonDecode(response.body);
-//
-//       // 現在の位置を取得します。
-//       Position devicePosition = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-//
-//       // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
-//       Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
-//         lat: devicePosition.latitude,
-//         lng: devicePosition.longitude,
-//       );
-//
-//       // 空の TimelineItem をリストの先頭に追加します。
-//       data.insert(0, emptyTimelineItem);
-//
-//       // デバッグ情報として、取得したデータを出力
-//       print('Received data: $data');
-//       return data.map((item) => TimelineItem.fromJson(item)).toList();
-//     } else {
-//       // エラーが発生した場合、エラーをスロー
-//       throw Exception('Failed to load timeline');
-//     }
-//   } catch (e, s) {
-//     // print both the exception and the stacktrace
-//     print('Exception details:\n $e');
-//     print('Stacktrace:\n $s');
-//     rethrow;  // throw the error again so it can be handled in the usual way
-//   }
-// }
-
 Future<List<TimelineItem>> getMoreTimelineItems() async {
   currentPage++; // ページ番号を増やす
   print('currentPage is $currentPage');
@@ -217,14 +169,3 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   print('Timeline Items: $timelineItems');
   return timelineItems;
 });
-
-
-
-
-
-
-
-
-
-
-
