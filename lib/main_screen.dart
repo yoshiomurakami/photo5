@@ -47,54 +47,75 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final Size size = MediaQuery.of(context).size;
+    return Consumer(builder: (context, ref, child) {
+      final Size size = MediaQuery.of(context).size;
+      final timelineItemsAsyncValue = ref.watch(timelineProvider); // ここを修正
+      Widget timelineMapWidget = Center(child: CircularProgressIndicator()); // 初期値を設定
 
-    return Scaffold(
-      body: Stack(
-        children: <Widget>[
-          TimelineMapWidget(
+      timelineItemsAsyncValue.when(
+        data: (items) {
+          final timelineItems = items;
+          final currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
+          timelineMapWidget = TimelineMapWidget(
             size: size,
+            currentLocation: currentLocation,
+            timelineItems: timelineItems,
             pageController: _pageController,
             programmaticPageChange: _programmaticPageChange,
             updateGeocodedLocation: updateGeocodedLocation,
-          ),
-          FutureBuilder<List<CameraDescription>>(
-            future: _camerasFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.done) {
-                if (snapshot.hasData) {
-                  return CameraButton(onPressed: () => _openCamera(snapshot.data!.first));
+          );
+        },
+        loading: () => timelineMapWidget = Center(child: CircularProgressIndicator()),
+        error: (error, stack) => timelineMapWidget = Center(child: Text('Error: $error')),
+      );
+
+      return Scaffold(
+        body: Stack(
+          children: <Widget>[
+            timelineMapWidget, // ここを修正しました
+            FutureBuilder<List<CameraDescription>>(
+              future: _camerasFuture,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.done) {
+                  if (snapshot.hasData) {
+                    return CameraButton(onPressed: () => _openCamera(snapshot.data!.first));
+                  } else {
+                    return Text('No camera found');
+                  }
                 } else {
-                  return Text('No camera found');
+                  return CircularProgressIndicator();
                 }
-              } else {
-                return CircularProgressIndicator();
-              }
-            },
-          ),
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: ConnectionNumber(),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        heroTag: "album",
-        onPressed: _openAlbum,
-        child: Icon(Icons.photo_album),
-      ),
-    );
+              },
+            ),
+            Positioned(
+              left: 0,
+              bottom: 0,
+              child: ConnectionNumber(),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          heroTag: "album",
+          onPressed: _openAlbum,
+          child: Icon(Icons.photo_album),
+        ),
+      );
+    });
   }
+
 }
 
-class TimelineMapWidget extends ConsumerWidget {
+class TimelineMapWidget extends StatelessWidget {
+  final List<TimelineItem> timelineItems; // コンストラクタで受け取る
+  final LatLng currentLocation;
   final Size size;
   final PageController pageController;
-  final bool  programmaticPageChange;
+  final bool programmaticPageChange;
   final Function updateGeocodedLocation;
 
   TimelineMapWidget({
+    required this.timelineItems,
+    required this.currentLocation,
     required this.size,
     required this.pageController,
     required this.programmaticPageChange,
@@ -102,29 +123,21 @@ class TimelineMapWidget extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, ref) {
-    final timelineItemsAsyncValue = ref.watch(timelineProvider); // ref.watchを使用してプロバイダーからデータを取得
+  Widget build(BuildContext context) {
+    // カレントロケーションの設定
+    MapController.instance.setCurrentLocation(currentLocation);
 
-
-    return timelineItemsAsyncValue.when(
-      data: (timelineItems) {
-        LatLng _currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
-        MapController.instance.setCurrentLocation(_currentLocation);
-
-        return MapDisplay(
-          currentLocation: _currentLocation,
-          timelineItems: timelineItems,
-          size: size,
-          pageController: pageController,
-          programmaticPageChange: programmaticPageChange,
-          updateTimeline: updateGeocodedLocation,
-        );
-      },
-      loading: () => Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
+    return MapDisplay(
+      currentLocation: currentLocation,
+      timelineItems: timelineItems,
+      size: size,
+      pageController: pageController,
+      programmaticPageChange: programmaticPageChange,
+      updateTimeline: updateGeocodedLocation,
     );
   }
 }
+
 
 class MapController {
   GoogleMapController? _controller;

@@ -278,6 +278,11 @@ class _StartupState extends State<Startup> {
         // _currentLocation = await determinePosition();
         // _timelineItems = await getTimelineWithGeocoding();
 
+      // ProviderContainerを作成し、timelineProviderからデータを取得
+      final container = ProviderContainer();
+      final timelineItems = await container.read(timelineProvider.future);
+      container.dispose();
+
       ChatConnection chatConnection = ChatConnection();
       chatConnection.connect(); // チャットサーバーへの接続を開始
 
