@@ -285,11 +285,10 @@ class _MapDisplayState extends State<MapDisplay> {
                     ),
                   );
                   if (result is int) {
+                    widget.pageController.jumpToPage(result);
                     final lat = widget.timelineItems[result].lat;
                     final lng = widget.timelineItems[result].lng;
                     MapController.instance.updateMapLocation(lat, lng);
-
-                    widget.pageController.jumpToPage(result);
                   }
                 },
                 child: TimelineCard(item: widget.timelineItems[index], size: widget.size),
