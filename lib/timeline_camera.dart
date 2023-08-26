@@ -16,6 +16,8 @@ import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
+import 'chat_connection.dart';
+import 'dart:convert';
 
 class CameraButton extends StatelessWidget {
   final VoidCallback onPressed;
@@ -83,6 +85,10 @@ class _CameraScreenState extends State<CameraScreen> {
   String? _uploadThumbnailPath; // Add this for the upload thumbnail
   String _timestamp ='';
   String _localTimestamp='';
+
+  // final ChatConnection chatConnection = ChatConnection();
+  final ChatConnection chatConnection = ChatConnection()..connect();
+
 
   @override
   void initState() {
@@ -380,10 +386,24 @@ class _CameraScreenState extends State<CameraScreen> {
     try {
       var response = await http.Response.fromStream(await request.send());
       print('Status code: ${response.statusCode}');
+      print('Status reason: ${response.reasonPhrase}');  // 追加
       print('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         print('Uploaded successfully.');
+        // APIの応答から新しい写真情報を取得
+        Map<String, dynamic> responseBody = jsonDecode(response.body);
+        Map<String, dynamic> newPhotoInfo = {
+          'createdAt': responseBody['photo']['createdAt'],
+          'userID': responseBody['photo']['userID'],
+          'country': responseBody['photo']['country'],
+          'lat': responseBody['photo']['lat'],
+          'lng': responseBody['photo']['lng'],
+          'localtime': responseBody['photo']['localtime'],
+          'imageFilename': responseBody['photo']['imageFilename'],
+          'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
+        };
+        chatConnection.sendNewPhotoInfo(newPhotoInfo);
       } else {
         print('Upload failed.');
       }

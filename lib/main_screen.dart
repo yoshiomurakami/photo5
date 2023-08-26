@@ -20,11 +20,26 @@ class _MainScreenState extends State<MainScreen> {
   final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
   Future<List<CameraDescription>>? _camerasFuture;
+  ChatConnection? chatConnection;
+  // String? latestPhotoChange;
+
 
   @override
   void initState() {
     super.initState();
     _camerasFuture = availableCameras();
+    chatConnection = ChatConnection();
+    // 新しい写真情報をリッスン
+    chatConnection?.onNewPhoto((data) {
+      print("New photo info received: $data");
+      // 必要な処理をここに追加
+    });
+  }
+
+  @override
+  void dispose() {
+    chatConnection?.disconnect(); // ここで disconnect メソッドを使用
+    super.dispose();
   }
 
   void _openCamera(CameraDescription camera) {
@@ -49,9 +64,9 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
       final Size size = MediaQuery.of(context).size;
-      final timelineItemsAsyncValue = ref.watch(timelineProvider); // ここを修正
       Widget timelineMapWidget = Center(child: CircularProgressIndicator()); // 初期値を設定
 
+      final timelineItemsAsyncValue = ref.watch(timelineProvider); // ここを修正
       timelineItemsAsyncValue.when(
         data: (items) {
           final timelineItems = items;
@@ -92,6 +107,12 @@ class _MainScreenState extends State<MainScreen> {
               bottom: 0,
               child: ConnectionNumber(),
             ),
+            // if (latestPhotoChange != null)
+            //   Positioned(
+            //     top: 10,
+            //     left: 10,
+            //     child: Text(latestPhotoChange!),
+            //   ),
           ],
         ),
         floatingActionButton: FloatingActionButton(
@@ -439,8 +460,5 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
     );
   }
 }
-
-
-
 
 

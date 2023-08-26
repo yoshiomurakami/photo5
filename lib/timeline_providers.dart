@@ -96,7 +96,7 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     String userId = prefs.getString('userID') ?? "";
 
     // リクエストボディの作成
-    final requestBody = jsonEncode({'userId': userId});
+    // final requestBody = jsonEncode({'userId': userId});
 
     // APIにPOSTリクエストを送信
     final response = await http.post(
@@ -173,6 +173,6 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
 
   await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
 
-  print('Timeline Items: $timelineItems');
+  // print('Timeline Items: $timelineItems');
   return timelineItems;
 });

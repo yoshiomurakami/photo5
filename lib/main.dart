@@ -12,9 +12,9 @@ import 'package:path/path.dart' as path;
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
-import 'timeline_providers.dart';
+// import 'timeline_providers.dart';
 import 'chat_connection.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+// import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 void main() {
@@ -154,7 +154,7 @@ class _StartupState extends State<Startup> {
   String loadingText = 'Now Loading';
   String latestVersion = "";
   // LatLng? _currentLocation;
-  List<TimelineItem>? _timelineItems;
+  // List<TimelineItem>? _timelineItems;
 
   @override
   void initState() {
@@ -279,9 +279,9 @@ class _StartupState extends State<Startup> {
         // _timelineItems = await getTimelineWithGeocoding();
 
       // ProviderContainerを作成し、timelineProviderからデータを取得
-      final container = ProviderContainer();
-      final timelineItems = await container.read(timelineProvider.future);
-      container.dispose();
+      // final container = ProviderContainer();
+      // final timelineItems = await container.read(timelineProvider.future);
+      // container.dispose();
 
       ChatConnection chatConnection = ChatConnection();
       chatConnection.connect(); // チャットサーバーへの接続を開始
