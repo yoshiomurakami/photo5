@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter/foundation.dart';
 
 int currentPage = 0; // これで現在のページを追跡します
 
@@ -55,14 +56,19 @@ class TimelineItem {
       id: json['_id'] ?? '0',
       userId: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
-      lat: json['lat'] != null ? double.parse(json['lat']) : 0.0,
-      lng: json['lng'] != null ? double.parse(json['lng']) : 0.0,
+      lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),
+      lng: (json['lng'] is String) ? double.parse(json['lng']) : (json['lng'] as double? ?? 0.0),
       imageFilename: json['imageFilename'] ?? 'dummy',
       thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
       localtime: json['localtime'] ?? 'dummy',
       geocodedCountry: null,  // Set null as default
       geocodedCity: null,  // Set null as default
     );
+  }
+
+  @override
+  String toString() {
+    return 'TimelineItem(id: $id, userId: $userId, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
   }
 }
 
@@ -176,3 +182,25 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   // print('Timeline Items: $timelineItems');
   return timelineItems;
 });
+
+// class TimelineNotifier extends ChangeNotifier {
+//   List<TimelineItem> _timelineItems = [];
+//
+//   List<TimelineItem> get timelineItems => _timelineItems;
+//
+//   void setTimelineItems(List<TimelineItem> items) {
+//     _timelineItems = items;
+//     notifyListeners();
+//   }
+//
+//   void addNewItem(TimelineItem newItem) {
+//     print("Before adding item - timelineItems length: ${_timelineItems.length}");
+//     _timelineItems.forEach((item) => print(item));  // 各アイテムの情報を出力
+//     // 2番目の位置に新しいアイテムを挿入
+//     _timelineItems.insert(1, newItem);
+//     print("After adding item - timelineItems length: ${_timelineItems.length}");
+//     notifyListeners();
+//   }
+// }
+//
+// final timelineNotifierProvider = ChangeNotifierProvider((ref) => TimelineNotifier());
