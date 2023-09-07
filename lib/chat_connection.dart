@@ -81,14 +81,17 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
 
 
 class TimelineNotifier extends ChangeNotifier {
-  // ... 他のプロパティや変数 ...
+
+  final ChangeNotifierProviderRef<Object?> ref;
+
+  TimelineNotifier(this.ref);
 
   final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
-  List<TimelineItem> _timelineItems = [];
+  // List<TimelineItem> _timelineItems = [];
 
   // Getter for timelineItems
-  List<TimelineItem> get timelineItems => _timelineItems;
+  // List<TimelineItem> get timelineItems => _timelineItems;
 
   void addPostedPhoto() {
     chatConnection.connect();
@@ -116,12 +119,17 @@ class TimelineNotifier extends ChangeNotifier {
           TimelineItem newItem = TimelineItem.fromJson(data);
           print("maked_TimelineItem newItem=$newItem");
 
+          // printTimelineItems();
+          final timelineItems = await ref.read(timelineProvider.future);
+
           // Add the new item to the beginning of the list
-          _timelineItems.insert(0, newItem);
-          print("added_timelineItems=$_timelineItems");
+          timelineItems.insert(1, newItem);
+          print("added_timelineItems=$timelineItems");
 
           // Notify listeners about the change
           notifyListeners();
+
+
 
         } else {
           print("Geocoding returned no results.");
@@ -131,23 +139,9 @@ class TimelineNotifier extends ChangeNotifier {
       }
     });
   }
-
-  // void addNewItem(TimelineItem item) {
-  //   print('Number of items in timelineItems: ${timelineItems.length}');
-  //   // 2番目の位置に新しいアイテムを追加
-  //   timelineItems.insert(1, item);
-  //   notifyListeners();
-  //   // 状態が変更されたことを通知
-  //   // notifyListeners();
-  //   // 確認のためにtimelineItemsの内容を表示
-  //   print('Updated timelineItems:');
-  //   for (int i = 0; i < timelineItems.length; i++) {
-  //     print('${i + 1}. ${timelineItems[i].id} ${timelineItems[i].userId} ${timelineItems[i].geocodedCity} ${timelineItems[i].geocodedCountry}');
-  //   }
-  // }
-
 }
 
-// final timelineNotifierProvider = ChangeNotifierProvider<TimelineNotifier>((ref) => TimelineNotifier());
+final timelineNotifierProvider = ChangeNotifierProvider<TimelineNotifier>((ref) => TimelineNotifier(ref));
+
 
 

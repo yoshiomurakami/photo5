@@ -4,6 +4,9 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_card.dart';
+import 'chat_connection.dart';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class MapController {
   GoogleMapController? _controller;
@@ -52,7 +55,6 @@ class MapController {
     }
   }
 
-
   void startZoomingIn(LatLng target) {
     _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
       if (_zoomLevel < 15) {
@@ -80,7 +82,7 @@ class MapController {
   }
 }
 
-class MapDisplay extends StatefulWidget {
+class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
   final Size size;
@@ -98,10 +100,48 @@ class MapDisplay extends StatefulWidget {
   });
 
   @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final timelineNotifier = ref.read(timelineNotifierProvider);
+    return _MapDisplayStateful(
+      currentLocation: currentLocation,
+      timelineItems: timelineItems,
+      size: size,
+      pageController: pageController,
+      programmaticPageChange: programmaticPageChange,
+      updateTimeline: updateTimeline,
+    );
+  }
+}
+
+class _MapDisplayStateful extends ConsumerStatefulWidget {
+  final LatLng currentLocation;
+  final List<TimelineItem> timelineItems;
+  final Size size;
+  final PageController pageController;
+  final bool programmaticPageChange;
+  final Function updateTimeline;
+
+  _MapDisplayStateful({
+    required this.currentLocation,
+    required this.timelineItems,
+    required this.size,
+    required this.pageController,
+    required this.programmaticPageChange,
+    required this.updateTimeline,
+  });
+
+  @override
   _MapDisplayState createState() => _MapDisplayState();
 }
 
-class _MapDisplayState extends State<MapDisplay> {
+class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
+  @override
+  void initState() {
+    super.initState();
+
+    final timelineNotifier = ref.read(timelineNotifierProvider);
+    timelineNotifier.addPostedPhoto();
+  }
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -153,7 +193,6 @@ class _MapDisplayState extends State<MapDisplay> {
                       builder: (context) => TimelineFullScreenImagePage(
                         widget.timelineItems.map((item) => item.imageFilename).toList(),
                         index,
-                        // widget.timelineItems,
                         key: UniqueKey(),
                         onTimelineItemsAdded: (newItems) {
                           setState(() {

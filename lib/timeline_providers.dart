@@ -183,24 +183,4 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   return timelineItems;
 });
 
-// class TimelineNotifier extends ChangeNotifier {
-//   List<TimelineItem> _timelineItems = [];
-//
-//   List<TimelineItem> get timelineItems => _timelineItems;
-//
-//   void setTimelineItems(List<TimelineItem> items) {
-//     _timelineItems = items;
-//     notifyListeners();
-//   }
-//
-//   void addNewItem(TimelineItem newItem) {
-//     print("Before adding item - timelineItems length: ${_timelineItems.length}");
-//     _timelineItems.forEach((item) => print(item));  // 各アイテムの情報を出力
-//     // 2番目の位置に新しいアイテムを挿入
-//     _timelineItems.insert(1, newItem);
-//     print("After adding item - timelineItems length: ${_timelineItems.length}");
-//     notifyListeners();
-//   }
-// }
-//
-// final timelineNotifierProvider = ChangeNotifierProvider((ref) => TimelineNotifier());
+

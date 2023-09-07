@@ -33,8 +33,6 @@ class _MainScreenState extends State<_MainScreenContent> {
   void initState() {
     super.initState();
     _camerasFuture = availableCameras();
-    final timelineNotifier = TimelineNotifier();
-    timelineNotifier.addPostedPhoto();
   }
 
   @override
