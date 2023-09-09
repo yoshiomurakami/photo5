@@ -11,6 +11,7 @@ import 'package:flutter/foundation.dart';
 int currentPage = 0; // これで現在のページを追跡します
 
 class TimelineItem {
+  final Key key;
   final String id;
   final String userId;
   final String country;  // This is from DB
@@ -23,6 +24,7 @@ class TimelineItem {
   String? geocodedCity;  // This is from geocoding
 
   TimelineItem({
+    required this.key,
     required this.id,
     required this.userId,
     required this.country,
@@ -53,6 +55,7 @@ class TimelineItem {
 
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
+      key: ValueKey(json['_key'] ?? '0'), // この行を追加
       id: json['_id'] ?? '0',
       userId: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
@@ -61,8 +64,8 @@ class TimelineItem {
       imageFilename: json['imageFilename'] ?? 'dummy',
       thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
       localtime: json['localtime'] ?? 'dummy',
-      geocodedCountry: null,  // Set null as default
-      geocodedCity: null,  // Set null as default
+      geocodedCountry: json['geocodedCountry'] as String?,  // デフォルト値としてnullを返す
+      geocodedCity: json['geocodedCity'] as String?,  // デフォルト値としてnullを返す
     );
   }
 

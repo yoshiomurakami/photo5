@@ -6,7 +6,7 @@ class TimelineCard extends StatelessWidget {
   final TimelineItem item;
   final Size size;
 
-  TimelineCard({required this.item, required this.size});
+  TimelineCard({Key? key, required this.item, required this.size}) : super(key: key);
 
   FlagsCode? getFlagCode(String countryCode) {
     try {
@@ -53,6 +53,7 @@ class TimelineCard extends StatelessWidget {
           top: size.height * 0.2 - size.width * 0.1,
           left: size.width * 0.3,
           child: Container(
+            key: ValueKey(item.thumbnailFilename),
             width: size.width * 0.2,
             height: size.width * 0.2,
             decoration: BoxDecoration(
