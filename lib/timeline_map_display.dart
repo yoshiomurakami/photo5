@@ -11,7 +11,7 @@ class MapController {
   GoogleMapController? _controller;
   LatLng _currentLocation = LatLng(0, 0);
   Set<Marker> _markers = {};
-  double _zoomLevel = 2; // 既存のズームレベル値をセット
+  double _zoomLevel = 10; // 既存のズームレベル値をセット
   double get zoomLevel => _zoomLevel;
   Timer? _zoomTimer;
 
@@ -134,11 +134,16 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 }
 
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
+  String? currentCardId;
+  bool programmaticChange = false; // これを追加
   @override
   void initState() {
     super.initState();
     final timelineNotifier = ref.read(timelineNotifierProvider);
-    timelineNotifier.addPostedPhoto();
+    timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   onPostedPhoto();
+    // });
   }
 
   @override
@@ -167,8 +172,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 controller: widget.pageController,
                 itemCount: widget.timelineItems.length,
                 onPageChanged: (index) async {
-                  if (!widget.programmaticPageChange) {
+                  if (!programmaticChange) {
+                    print("onPageChanged called. programmaticChange: $programmaticChange");
                     final item = widget.timelineItems[index];
+                    setState(() {
+                      currentCardId = item.id;  // IDを更新
+                      print("表示したページ番号は = $currentCardId");
+                    });
                     MapController.instance.updateMapLocation(item.lat, item.lng);
 
                     await widget.updateTimeline(widget.timelineItems);
@@ -181,8 +191,10 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         });
                       });
                     }
+                  }else{
+                    print("AAAonPageChanged called. programmaticChange: $programmaticChange");
                   }
-                },
+              },
                 itemBuilder: (context, index) {
                   return GestureDetector(
                     onTap: () async {
@@ -212,6 +224,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                     child: TimelineCard(key: widget.timelineItems[index].key, item: widget.timelineItems[index], size: widget.size),
                   );
                 },
+                pageSnapping: true,
+                physics: BouncingScrollPhysics(),
+                scrollDirection: Axis.horizontal,
               ),
             ),
             Positioned(
@@ -247,6 +262,25 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         );
     //   },
     // );
+  }
+
+  // 新しいカードを追加する際の処理を行うメソッド
+  void onPostedPhoto() {
+
+    programmaticChange = true; // ここで変更を開始
+
+    // 1. 現在の表示インデックスを保存
+    int? currentIndex = widget.pageController.page?.round();
+    if (currentIndex == null) return;
+
+    // 2. カード追加後の表示インデックスを設定
+    int newIndex = currentIndex + 1;
+
+    // 3. 新しいインデックスにページを移動
+    widget.pageController.jumpToPage(newIndex);
+    print("this is programmaticChange");
+
+    programmaticChange = false; // ここで変更を終了
   }
 }
 

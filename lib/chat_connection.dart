@@ -4,6 +4,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_providers.dart';
+import 'timeline_map_display.dart';
 
 IO.Socket?socket;
 
@@ -35,9 +36,11 @@ class ChatConnection {
     print('Photo info sent.');
   }
 
-  // 新しい写真の情報をリッスンするメソッド
-  void onNewPhoto(void Function(dynamic) callback) {
-    socket?.on('new_photo', callback);
+  void onNewPhoto(void Function(dynamic) callback, {Function? onReceived}) {
+    socket?.on('new_photo', (data) {
+      callback(data);
+      onReceived?.call(); // 新しい写真が受信されたときに呼び出される
+    });
   }
 
 
@@ -93,7 +96,7 @@ class TimelineNotifier extends ChangeNotifier {
   // Getter for timelineItems
   // List<TimelineItem> get timelineItems => _timelineItems;
 
-  void addPostedPhoto() {
+  void addPostedPhoto(PageController pageController, List<TimelineItem> timelineItems) {
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
       print("onNewPhoto=$data");
@@ -129,6 +132,22 @@ class TimelineNotifier extends ChangeNotifier {
           // Notify listeners about the change
           notifyListeners();
 
+          // 現在のページインデックスを取得
+          int? currentIndex = pageController.page?.round();
+          print("currentIndex=$currentIndex");
+          if (currentIndex != null) {
+            print("currentIndex=$currentIndex");
+            // 現在のインデックスを1増やして次のページへ移動
+            currentIndex = ++currentIndex;
+            pageController.jumpToPage(currentIndex);
+
+            // 移動後のカードのアイテムを取得
+            var nextItem = timelineItems[currentIndex];
+
+            // アイテムが持つlatとlngを使用してマップ位置を更新
+            MapController.instance.updateMapLocation(nextItem.lat, nextItem.lng);
+            print("currentIndex_after=$nextItem");
+          }
 
 
         } else {
@@ -137,6 +156,10 @@ class TimelineNotifier extends ChangeNotifier {
       } catch (e) {
         print("Error in geocoding: $e");
       }
+    },onReceived: () {
+      print("新しい写真が受信されました！");
+
+
     });
   }
 }

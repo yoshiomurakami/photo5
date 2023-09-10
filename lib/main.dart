@@ -159,7 +159,7 @@ class _StartupState extends State<Startup> {
   @override
   void initState() {
     super.initState();
-    pageController = PageController();
+    pageController = PageController(viewportFraction: 1.0);
     _startupController = StreamController<bool>();
     _startupProcedures(context);
   }
