@@ -3,15 +3,15 @@ import 'timeline_providers.dart';
 
 class TimelineFullScreenImagePage extends StatefulWidget {
   final List<String> imageFilenames;
+  final List<String> itemIds; // IDだけのリストを追加
   final int initialIndex;
   final Key key;
-  // final List<TimelineItem> timelineItems;
-  final Function(List<TimelineItem>) onTimelineItemsAdded; // 追加
+  final Function(List<TimelineItem>) onTimelineItemsAdded;
 
   TimelineFullScreenImagePage(
       this.imageFilenames,
+      this.itemIds,  // この行を追加
       this.initialIndex,
-      // this.timelineItems,
       {required this.key, required this.onTimelineItemsAdded})
       : super(key: key);
 
@@ -25,6 +25,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
   late PageController _pageController;
   Widget? imageWidget;
   int currentIndex = 0;
+  List<String>?  itemIds;
 
   @override
   void initState() {
@@ -32,9 +33,11 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
     _pageController = PageController(initialPage: widget.initialIndex)
       ..addListener(() {
         currentIndex = _pageController.page!.round();
+        print("Current Index Updated: $currentIndex");
       });
     currentIndex = widget.initialIndex;
     imageWidget = buildImageWidget();
+    itemIds = List.from(widget.itemIds);  // null check 不要
   }
 
   Widget buildImageWidget() {
@@ -51,6 +54,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
             setState(() {
               widget.imageFilenames.addAll(newImageFilenames); // 新しい画像ファイル名を現在のリストに追加
               imageWidget = buildImageWidget(); // これを追加して再構築する
+              itemIds!.addAll(newItems.map((item) => item.id.toString()));
             });
           });
         }
@@ -81,6 +85,15 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
     super.dispose();
   }
 
+  void _onItemsAdded(List<TimelineItem> newItems) {
+    setState(() {
+      itemIds!.addAll(newItems.map((item) => item.id.toString()));
+    });
+    if (widget.onTimelineItemsAdded != null) {
+      widget.onTimelineItemsAdded(newItems);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -96,7 +109,11 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
               child: Icon(Icons.arrow_back, color: Colors.white),
               backgroundColor: Colors.transparent,
               onPressed: (){
-                Navigator.pop(context, currentIndex);
+                // String currentItemId = widget.itemIds[currentIndex];
+                if (currentIndex < itemIds!.length) {
+                  String currentItemId = itemIds![currentIndex];
+                  Navigator.pop(context, currentItemId);
+                }
               },
             ),
           ),

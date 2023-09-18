@@ -199,11 +199,12 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   return GestureDetector(
                     onTap: () async {
                       print('Navigating to image: ${widget.timelineItems[index].imageFilename}');
-                      final result = await Navigator.push(
+                      final returnedId = await Navigator.push(
                         context,
                         MaterialPageRoute(
                           builder: (context) => TimelineFullScreenImagePage(
                             widget.timelineItems.map((item) => item.imageFilename).toList(),
+                            widget.timelineItems.map((item) => item.id.toString()).toList(), // この行を変更
                             index,
                             key: UniqueKey(),
                             onTimelineItemsAdded: (newItems) {
@@ -214,11 +215,18 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                           ),
                         ),
                       );
-                      if (result is int) {
-                        widget.pageController.jumpToPage(result);
-                        final lat = widget.timelineItems[result].lat;
-                        final lng = widget.timelineItems[result].lng;
-                        MapController.instance.updateMapLocation(lat, lng);
+
+
+                      // itemIdを基づいてインデックスを検索する
+                      if (returnedId != null) {
+                        final targetIndex = widget.timelineItems.indexWhere((item) => item.id == returnedId);
+                        if (targetIndex != -1) {
+                          widget.pageController.jumpToPage(targetIndex);
+                          print("widget.pageController.jumpToPage(targetIndex) is_$returnedId)");
+                          final lat = widget.timelineItems[targetIndex].lat;
+                          final lng = widget.timelineItems[targetIndex].lng;
+                          MapController.instance.updateMapLocation(lat, lng);
+                        }
                       }
                     },
                     child: TimelineCard(key: widget.timelineItems[index].key, item: widget.timelineItems[index], size: widget.size),

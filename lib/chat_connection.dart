@@ -135,7 +135,7 @@ class TimelineNotifier extends ChangeNotifier {
           // 現在のページインデックスを取得
           int? currentIndex = pageController.page?.round();
           print("currentIndex=$currentIndex");
-          if (currentIndex != null) {
+          if (currentIndex != null && currentIndex != 0) {
             print("currentIndex=$currentIndex");
             // 現在のインデックスを1増やして次のページへ移動
             currentIndex = ++currentIndex;

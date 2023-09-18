@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 
 class FullScreenImagePage extends StatefulWidget {
   final String imagePath;
+  final String itemId; // 追加
 
-  FullScreenImagePage(this.imagePath);
+  FullScreenImagePage(this.imagePath, this.itemId); // 修正
+
 
   @override
   _FullScreenImagePageState createState() => _FullScreenImagePageState();
@@ -40,7 +42,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                 children: <Widget>[
                   Image.memory(
                     snapshot.data!,
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                   ),
                   Positioned(
                     left: 15.0,
@@ -49,7 +51,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                       child: Icon(Icons.arrow_back, color: Colors.white),
                       backgroundColor: Colors.transparent,
                       onPressed: () {
-                        Navigator.pop(context);
+                        Navigator.pop(context, widget.itemId); // itemIdを戻り値として使用
                       },
                     ),
                   ),
