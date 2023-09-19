@@ -42,7 +42,7 @@ class TimelineItem {
     required double lng,
   }) {
     return {
-      '_id': '0',
+      '_id': '343hg5q0858jwir',
       'userId': 'dummy',
       'country': 'dummy',
       'lat': lat.toString(),
@@ -56,7 +56,7 @@ class TimelineItem {
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
       key: ValueKey(json['_key'] ?? '0'), // この行を追加
-      id: json['_id'] ?? '0',
+      id: json['_id'] ?? '343hg5q0858jwir',
       userId: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
       lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),

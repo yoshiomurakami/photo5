@@ -8,11 +8,11 @@ import 'album_photoview.dart';
 class ImageDetail {
   final Uint8List thumbnail;
   final String imagePath;
-  final String imageId;
+  // final String imageId;
   final String imageLat;
   final String imageLng;
 
-  ImageDetail({required this.thumbnail, required this.imagePath, required this.imageId, required this.imageLat, required this.imageLng});
+  ImageDetail({required this.thumbnail, required this.imagePath, required this.imageLat, required this.imageLng});
 }
 
 
@@ -55,7 +55,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
       images.add(ImageDetail(
         thumbnail: bytes,
         imagePath: map['imagePath'], // Assuming 'imagePath' is the correct column name
-        imageId:map['id'],
+        // imageId:map['id'],
         imageLat:map['imageLat'],
         imageLng:map['imageLng'],
       ));
@@ -106,7 +106,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
                         MaterialPageRoute(
                           builder: (context) => FullScreenImagePage(
                             snapshot.data![index].imagePath,  // We only provide the image path now.
-                            snapshot.data![index].imageId, // idを渡す
+                            // snapshot.data![index].imageId, // idを渡す
                           ),
                         ),
                       );

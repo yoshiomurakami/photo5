@@ -4,9 +4,9 @@ import 'package:flutter/material.dart';
 
 class FullScreenImagePage extends StatefulWidget {
   final String imagePath;
-  final String itemId; // 追加
+  // final String itemId; // 追加
 
-  FullScreenImagePage(this.imagePath, this.itemId); // 修正
+  FullScreenImagePage(this.imagePath); // 修正
 
 
   @override
@@ -51,7 +51,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                       child: Icon(Icons.arrow_back, color: Colors.white),
                       backgroundColor: Colors.transparent,
                       onPressed: () {
-                        Navigator.pop(context, widget.itemId); // itemIdを戻り値として使用
+                        Navigator.pop(context, widget.imagePath); // itemIdを戻り値として使用
                       },
                     ),
                   ),

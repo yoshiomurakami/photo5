@@ -188,6 +188,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       getMoreTimelineItems().then((newItems) {
                         setState(() {
                           widget.timelineItems.addAll(newItems); // 新しいアイテムを現在のリストに追加
+                          currentCardId = item.id;  // IDを更新
                         });
                       });
                     }
@@ -210,6 +211,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             onTimelineItemsAdded: (newItems) {
                               setState(() {
                                 widget.timelineItems.addAll(newItems);
+                                currentCardId = widget.timelineItems[index].id;  // IDを更新
                               });
                             },
                           ),

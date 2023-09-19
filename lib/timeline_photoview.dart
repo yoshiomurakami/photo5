@@ -85,15 +85,6 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
     super.dispose();
   }
 
-  void _onItemsAdded(List<TimelineItem> newItems) {
-    setState(() {
-      itemIds!.addAll(newItems.map((item) => item.id.toString()));
-    });
-    if (widget.onTimelineItemsAdded != null) {
-      widget.onTimelineItemsAdded(newItems);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
