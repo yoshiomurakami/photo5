@@ -38,8 +38,12 @@ class ChatConnection {
 
   void onNewPhoto(void Function(dynamic) callback, {Function? onReceived}) {
     socket?.on('new_photo', (data) {
+      print("Type of data: ${data.runtimeType}");
+      if (data is String) {
+        data = jsonDecode(data);
+      }
       callback(data);
-      onReceived?.call(); // 新しい写真が受信されたときに呼び出される
+      onReceived?.call();
     });
   }
 

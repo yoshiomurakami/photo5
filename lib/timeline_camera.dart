@@ -397,13 +397,15 @@ class _CameraScreenState extends State<CameraScreen> {
           'createdAt': responseBody['photo']['createdAt'],
           'userID': responseBody['photo']['userID'],
           'country': responseBody['photo']['country'],
-          'lat': responseBody['photo']['lat'],
-          'lng': responseBody['photo']['lng'],
+          'lat': double.parse(responseBody['photo']['lat']),
+          'lng': double.parse(responseBody['photo']['lng']),
           'localtime': responseBody['photo']['localtime'],
           'imageFilename': responseBody['photo']['imageFilename'],
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
+        print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
+        print("Type of lng: ${responseBody['photo']['lng'].runtimeType}");
       } else {
         print('Upload failed.');
       }

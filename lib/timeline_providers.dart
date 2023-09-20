@@ -47,7 +47,7 @@ class TimelineItem {
       'country': 'dummy',
       'lat': lat.toString(),
       'lng': lng.toString(),
-      'imageFilename': 'dummy',
+      'imageFilename': '03.png',
       'thumbnailFilename': '03.png',
       'localtime': 'dummy',
     };
@@ -61,7 +61,7 @@ class TimelineItem {
       country: json['country'] ?? 'dummy',
       lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),
       lng: (json['lng'] is String) ? double.parse(json['lng']) : (json['lng'] as double? ?? 0.0),
-      imageFilename: json['imageFilename'] ?? 'dummy',
+      imageFilename: json['imageFilename'] ?? '03.png',
       thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
       localtime: json['localtime'] ?? 'dummy',
       geocodedCountry: json['geocodedCountry'] as String?,  // デフォルト値としてnullを返す
