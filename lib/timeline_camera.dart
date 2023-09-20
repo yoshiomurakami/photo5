@@ -394,6 +394,7 @@ class _CameraScreenState extends State<CameraScreen> {
         // APIの応答から新しい写真情報を取得
         Map<String, dynamic> responseBody = jsonDecode(response.body);
         Map<String, dynamic> newPhotoInfo = {
+          '_id': responseBody['photo']['_id'],
           'createdAt': responseBody['photo']['createdAt'],
           'userID': responseBody['photo']['userID'],
           'country': responseBody['photo']['country'],
@@ -404,8 +405,8 @@ class _CameraScreenState extends State<CameraScreen> {
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
-        print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
-        print("Type of lng: ${responseBody['photo']['lng'].runtimeType}");
+        // print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
+        // print("Type of lng: ${responseBody['photo']['lng'].runtimeType}");
       } else {
         print('Upload failed.');
       }
