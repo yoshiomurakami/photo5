@@ -6,6 +6,7 @@ import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_card.dart';
 import 'chat_connection.dart';
+import 'timeline_fullscreen_widget.dart';
 
 class MapController {
   GoogleMapController? _controller;
@@ -136,6 +137,9 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
   bool programmaticChange = false; // これを追加
+  final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
+  bool _programmaticPageChange = false;
+
   @override
   void initState() {
     super.initState();
@@ -268,6 +272,33 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ],
               ),
             ),
+            Positioned(
+              right: widget.size.width * 0.05,
+              top: widget.size.height * 0.5 + (widget.size.height * 0.35), // 位置を調整
+              child: FloatingActionButton(
+                heroTag: "displayFullScreen",
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TimelineFullScreenWidget(
+                        size: widget.size,
+                        currentLocation: widget.currentLocation,
+                        timelineItems: widget.timelineItems,
+                        pageController: _pageController,
+                        programmaticPageChange: _programmaticPageChange,
+                        updateGeocodedLocation: updateGeocodedLocation,
+                      ),
+                    ),
+                  );
+                },
+
+                child: Icon(Icons.fullscreen),
+                mini: true,
+              ),
+            ),
+
+
           ],
         );
     //   },
