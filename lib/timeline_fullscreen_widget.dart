@@ -10,6 +10,7 @@ class TimelineFullScreenWidget extends StatelessWidget {
   final PageController pageController;
   final bool programmaticPageChange;
   final Function updateGeocodedLocation;
+  final String? currentCardId;
 
   TimelineFullScreenWidget({
     required this.timelineItems,
@@ -18,12 +19,13 @@ class TimelineFullScreenWidget extends StatelessWidget {
     required this.pageController,
     required this.programmaticPageChange,
     required this.updateGeocodedLocation,
+    required this.currentCardId,
   });
 
   @override
   Widget build(BuildContext context) {
     // カレントロケーションの設定
-    MapController.instance.setCurrentLocation(currentLocation);
+    // MapController.instance.setCurrentLocation(currentLocation);
 
     return FullScreenDisplay(
       currentLocation: currentLocation,
@@ -32,6 +34,7 @@ class TimelineFullScreenWidget extends StatelessWidget {
       pageController: pageController,
       programmaticPageChange: programmaticPageChange,
       updateTimeline: updateGeocodedLocation,
+      currentCardId: currentCardId,
     );
   }
 }

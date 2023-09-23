@@ -4,7 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
-import 'timeline_card.dart';
+import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_fullscreen_widget.dart';
 
@@ -139,6 +139,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool programmaticChange = false; // これを追加
   final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
+  bool isFullScreen = false;
 
   @override
   void initState() {
@@ -288,6 +289,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         pageController: _pageController,
                         programmaticPageChange: _programmaticPageChange,
                         updateGeocodedLocation: updateGeocodedLocation,
+                        currentCardId: currentCardId,
                       ),
                     ),
                   );
