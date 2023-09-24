@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/cupertino.dart';
-import 'timeline_photoview.dart';
+// import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
@@ -145,7 +145,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
   bool isFullScreen = false;
-  late ScrollController _scrollController; // Add this
+  // late ScrollController _scrollController; // Add this
   late FixedExtentScrollController _pickerController; // Add this
   bool isScrolling = false;
 
@@ -168,9 +168,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     super.initState();
     final timelineNotifier = ref.read(timelineNotifierProvider);
     timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
-    _scrollController = ScrollController();  // これを追加
+    // _scrollController = ScrollController();  // これを追加
     _pickerController = FixedExtentScrollController(); // Initialize the controller
-    ScrollActivity? lastActivity;  // 直前のScrollActivityを格納する変数を定義
+    // ScrollActivity? lastActivity;  // 直前のScrollActivityを格納する変数を定義
 
 
   }
@@ -195,10 +195,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             Positioned.fill(
               child: NotificationListener<ScrollEndNotification>(
                 onNotification: (notification) {
-                  if (notification is ScrollEndNotification) {
                     print("Stopped scrolling");
                     _updateMapToSelectedItem();
-                  }
                   return true;
                 },
                 child: CupertinoPicker(
@@ -230,9 +228,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.4,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_pickerController.selectedItem! > 0) {
+                  if (_pickerController.selectedItem > 0) {
                     _pickerController.animateToItem(
-                        _pickerController.selectedItem! - 1,
+                        _pickerController.selectedItem - 1,
                         duration: Duration(milliseconds: 300),  // Duration of the animation
                         curve: Curves.easeInOut  // Animation curve
                     );
@@ -246,9 +244,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.6,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_pickerController.selectedItem! < widget.timelineItems.length - 1) {
+                  if (_pickerController.selectedItem < widget.timelineItems.length - 1) {
                     _pickerController.animateToItem(
-                        _pickerController.selectedItem! + 1,
+                        _pickerController.selectedItem + 1,
                         duration: Duration(milliseconds: 300),  // Duration of the animation
                         curve: Curves.easeInOut  // Animation curve
                     );
