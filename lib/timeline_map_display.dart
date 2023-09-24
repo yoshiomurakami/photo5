@@ -146,9 +146,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     super.initState();
     final timelineNotifier = ref.read(timelineNotifierProvider);
     timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   onPostedPhoto();
-    // });
   }
 
   @override
@@ -169,39 +166,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               padding: EdgeInsets.only(bottom: 0),
             ),
             Positioned(
-              top: widget.size.height * 0.3,
-              left: 0,
-              right: 0,
-              height: widget.size.height * 0.3,
-              child: PageView.builder(
-                controller: widget.pageController,
-                itemCount: widget.timelineItems.length,
-                onPageChanged: (index) async {
-                  if (!programmaticChange) {
-                    print("onPageChanged called. programmaticChange: $programmaticChange");
-                    final item = widget.timelineItems[index];
-                    setState(() {
-                      currentCardId = item.id;  // IDを更新
-                      print("表示したページ番号は = $currentCardId");
-                    });
-                    MapController.instance.updateMapLocation(item.lat, item.lng);
-
-                    await widget.updateTimeline(widget.timelineItems);
-
-                    if (index == widget.timelineItems.length - 1) {
-                      print("more timelineItems");
-                      getMoreTimelineItems().then((newItems) {
-                        setState(() {
-                          widget.timelineItems.addAll(newItems); // 新しいアイテムを現在のリストに追加
-                          currentCardId = item.id;  // IDを更新
-                        });
-                      });
-                    }
-                  }else{
-                    print("AAAonPageChanged called. programmaticChange: $programmaticChange");
-                  }
-              },
+              // top: widget.size.height * 0.5,
+              // left: 0,
+              // right: 0,
+              // height: widget.size.height * 0.5,
+              child: ListView.builder(
+                itemCount: widget.timelineItems.length + 2, // +2 for dummy space at the top and bottom
                 itemBuilder: (context, index) {
+                  // Add dummy space at the top to center the first thumbnail
+                  if (index == 0) {
+                    return SizedBox(height: MediaQuery.of(context).size.height / 2 - (widget.size.height / 5 / 2));
+                  }
+                  // Add dummy space at the bottom to allow for scrolling
+                  if (index == widget.timelineItems.length + 1) {
+                    return SizedBox(height: MediaQuery.of(context).size.height / 2 - (widget.size.height / 5 / 2));
+                  }
+
+                  // Decrement the index by 1 for the actual items to account for the added dummy space
+                  index -= 1;
                   return GestureDetector(
                     onTap: () async {
                       print('Navigating to image: ${widget.timelineItems[index].imageFilename}');
@@ -210,39 +192,42 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         MaterialPageRoute(
                           builder: (context) => TimelineFullScreenImagePage(
                             widget.timelineItems.map((item) => item.imageFilename).toList(),
-                            widget.timelineItems.map((item) => item.id.toString()).toList(), // この行を変更
+                            widget.timelineItems.map((item) => item.id.toString()).toList(),
                             index,
                             key: UniqueKey(),
                             onTimelineItemsAdded: (newItems) {
                               setState(() {
                                 widget.timelineItems.addAll(newItems);
-                                currentCardId = widget.timelineItems[index].id;  // IDを更新
+                                currentCardId = widget.timelineItems[index].id;
                               });
                             },
                           ),
                         ),
                       );
 
-
-                      // itemIdを基づいてインデックスを検索する
                       if (returnedId != null) {
                         final targetIndex = widget.timelineItems.indexWhere((item) => item.id == returnedId);
                         if (targetIndex != -1) {
-                          widget.pageController.jumpToPage(targetIndex);
-                          print("widget.pageController.jumpToPage(targetIndex) is_$returnedId)");
+                          // ListViewでのスクロール位置の制御のためのコードはコメントアウトしました
+                          // widget.scrollController.jumpTo(targetIndex * MediaQuery.of(context).size.height / 5);
                           final lat = widget.timelineItems[targetIndex].lat;
                           final lng = widget.timelineItems[targetIndex].lng;
                           MapController.instance.updateMapLocation(lat, lng);
                         }
                       }
                     },
-                    child: TimelineCard(key: widget.timelineItems[index].key, item: widget.timelineItems[index], size: widget.size),
+                    child: TimelineCard(
+                      key: widget.timelineItems[index].key,
+                      item: widget.timelineItems[index],
+                      size: widget.size,
+                    ),
                   );
                 },
-                pageSnapping: true,
                 physics: BouncingScrollPhysics(),
-                scrollDirection: Axis.horizontal,
+                scrollDirection: Axis.vertical,
               ),
+
+
             ),
             Positioned(
               right: widget.size.width * 0.05,
@@ -305,25 +290,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         );
     //   },
     // );
-  }
-
-  // 新しいカードを追加する際の処理を行うメソッド
-  void onPostedPhoto() {
-
-    programmaticChange = true; // ここで変更を開始
-
-    // 1. 現在の表示インデックスを保存
-    int? currentIndex = widget.pageController.page?.round();
-    if (currentIndex == null) return;
-
-    // 2. カード追加後の表示インデックスを設定
-    int newIndex = currentIndex + 1;
-
-    // 3. 新しいインデックスにページを移動
-    widget.pageController.jumpToPage(newIndex);
-    print("this is programmaticChange");
-
-    programmaticChange = false; // ここで変更を終了
   }
 }
 

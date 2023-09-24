@@ -22,7 +22,7 @@ class _MainScreenContent extends StatefulWidget {
 }
 
 class _MainScreenState extends State<_MainScreenContent> {
-  final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
+  final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
   Future<List<CameraDescription>>? _camerasFuture;
   ChatConnection? chatConnection;

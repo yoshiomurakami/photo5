@@ -19,53 +19,25 @@ class TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          width: size.width * 1.0,
-          height: size.height * 0.15,
-          child: Card(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10.0),
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: <Widget>[
-                  Text('No. ${item.id}'),
-                  Text(item.geocodedCountry ?? 'Unknown'),
-                  Text(item.geocodedCity ?? 'Unknown'),
-                  getFlagCode(item.country) != null
-                      ? Flag.fromCode(
-                    getFlagCode(item.country)!,
-                    height: 20,
-                    width: 30,
-                  )
-                      : Container(),
-                ],
-              ),
+    return Container(
+      height: size.width * 0.225,
+      // color: Colors.pink,
+      child: Align(
+        alignment: Alignment.center,
+        child: Container(
+          key: ValueKey(item.thumbnailFilename),
+          width: size.width * 0.2,
+          height: size.width * 0.2,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(size.width * 0.04),
+            image: DecorationImage(
+              image: NetworkImage('https://photo5.world/${item.thumbnailFilename}'),
+              fit: BoxFit.cover,
             ),
           ),
         ),
-        Positioned(
-          top: size.height * 0.2 - size.width * 0.1,
-          left: size.width * 0.3,
-          child: Container(
-            key: ValueKey(item.thumbnailFilename),
-            width: size.width * 0.2,
-            height: size.width * 0.2,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(size.width * 0.04),
-              image: DecorationImage(
-                image: NetworkImage('https://photo5.world/${item.thumbnailFilename}'),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
+
 }
