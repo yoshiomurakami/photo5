@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/cupertino.dart';
 import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
@@ -15,6 +16,7 @@ class MapController {
   double _zoomLevel = 10; // 既存のズームレベル値をセット
   double get zoomLevel => _zoomLevel;
   Timer? _zoomTimer;
+
 
   // シングルトンインスタンス
   static final MapController _instance = MapController._internal();
@@ -82,6 +84,9 @@ class MapController {
   }
 }
 
+
+
+
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
@@ -137,15 +142,37 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
   bool programmaticChange = false; // これを追加
-  final PageController _pageController = PageController(viewportFraction: 0.8); // ここでビューポートの幅を設定
+  final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
   bool isFullScreen = false;
+  late ScrollController _scrollController; // Add this
+  late FixedExtentScrollController _pickerController; // Add this
+  bool isScrolling = false;
+
+
+  void _updateMapToSelectedItem() {
+    int index = _pickerController.selectedItem;
+
+    print("Selected Item ID after stopped scrolling: ${widget.timelineItems[index].id}");
+
+    // Get the lat and lng of the selected item
+    double lat = widget.timelineItems[index].lat;
+    double lng = widget.timelineItems[index].lng;
+
+    // Update the map location
+    MapController.instance.updateMapLocation(lat, lng);
+  }
 
   @override
   void initState() {
     super.initState();
     final timelineNotifier = ref.read(timelineNotifierProvider);
     timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
+    _scrollController = ScrollController();  // これを追加
+    _pickerController = FixedExtentScrollController(); // Initialize the controller
+    ScrollActivity? lastActivity;  // 直前のScrollActivityを格納する変数を定義
+
+
   }
 
   @override
@@ -165,69 +192,70 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               scrollGesturesEnabled: false,
               padding: EdgeInsets.only(bottom: 0),
             ),
-            Positioned(
-              // top: widget.size.height * 0.5,
-              // left: 0,
-              // right: 0,
-              // height: widget.size.height * 0.5,
-              child: ListView.builder(
-                itemCount: widget.timelineItems.length + 2, // +2 for dummy space at the top and bottom
-                itemBuilder: (context, index) {
-                  // Add dummy space at the top to center the first thumbnail
-                  if (index == 0) {
-                    return SizedBox(height: MediaQuery.of(context).size.height / 2 - (widget.size.height / 5 / 2));
+            Positioned.fill(
+              child: NotificationListener<ScrollEndNotification>(
+                onNotification: (notification) {
+                  if (notification is ScrollEndNotification) {
+                    print("Stopped scrolling");
+                    _updateMapToSelectedItem();
                   }
-                  // Add dummy space at the bottom to allow for scrolling
-                  if (index == widget.timelineItems.length + 1) {
-                    return SizedBox(height: MediaQuery.of(context).size.height / 2 - (widget.size.height / 5 / 2));
-                  }
-
-                  // Decrement the index by 1 for the actual items to account for the added dummy space
-                  index -= 1;
-                  return GestureDetector(
-                    onTap: () async {
-                      print('Navigating to image: ${widget.timelineItems[index].imageFilename}');
-                      final returnedId = await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => TimelineFullScreenImagePage(
-                            widget.timelineItems.map((item) => item.imageFilename).toList(),
-                            widget.timelineItems.map((item) => item.id.toString()).toList(),
-                            index,
-                            key: UniqueKey(),
-                            onTimelineItemsAdded: (newItems) {
-                              setState(() {
-                                widget.timelineItems.addAll(newItems);
-                                currentCardId = widget.timelineItems[index].id;
-                              });
-                            },
-                          ),
+                  return true;
+                },
+                child: CupertinoPicker(
+                  scrollController: _pickerController,
+                  selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
+                    background: Colors.transparent,
+                  ),
+                  itemExtent: MediaQuery.of(context).size.height / 10,
+                  diameterRatio: 1,
+                  onSelectedItemChanged: (int index) {},
+                  magnification: 1.1,
+                  children: List<Widget>.generate(
+                    widget.timelineItems.length,
+                        (int index) {
+                      return Center(
+                        child: TimelineCard(
+                          key: widget.timelineItems[index].key,
+                          item: widget.timelineItems[index],
+                          size: widget.size,
                         ),
                       );
-
-                      if (returnedId != null) {
-                        final targetIndex = widget.timelineItems.indexWhere((item) => item.id == returnedId);
-                        if (targetIndex != -1) {
-                          // ListViewでのスクロール位置の制御のためのコードはコメントアウトしました
-                          // widget.scrollController.jumpTo(targetIndex * MediaQuery.of(context).size.height / 5);
-                          final lat = widget.timelineItems[targetIndex].lat;
-                          final lng = widget.timelineItems[targetIndex].lng;
-                          MapController.instance.updateMapLocation(lat, lng);
-                        }
-                      }
                     },
-                    child: TimelineCard(
-                      key: widget.timelineItems[index].key,
-                      item: widget.timelineItems[index],
-                      size: widget.size,
-                    ),
-                  );
-                },
-                physics: BouncingScrollPhysics(),
-                scrollDirection: Axis.vertical,
+                  ),
+                ),
               ),
-
-
+            ),
+            Positioned(
+              left: 20,
+              top: widget.size.height * 0.4,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_pickerController.selectedItem! > 0) {
+                    _pickerController.animateToItem(
+                        _pickerController.selectedItem! - 1,
+                        duration: Duration(milliseconds: 300),  // Duration of the animation
+                        curve: Curves.easeInOut  // Animation curve
+                    );
+                  }
+                },
+                child: Icon(Icons.arrow_upward),
+              ),
+            ),
+            Positioned(
+              left: 20,
+              top: widget.size.height * 0.6,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (_pickerController.selectedItem! < widget.timelineItems.length - 1) {
+                    _pickerController.animateToItem(
+                        _pickerController.selectedItem! + 1,
+                        duration: Duration(milliseconds: 300),  // Duration of the animation
+                        curve: Curves.easeInOut  // Animation curve
+                    );
+                  }
+                },
+                child: Icon(Icons.arrow_downward),
+              ),
             ),
             Positioned(
               right: widget.size.width * 0.05,
@@ -290,6 +318,12 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         );
     //   },
     // );
+  }
+
+  @override
+  void dispose() {
+    _pickerController.dispose();  // Dispose the picker controller
+    super.dispose();
   }
 }
 
