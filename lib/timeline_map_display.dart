@@ -150,18 +150,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool isScrolling = false;
 
 
-  void _updateMapToSelectedItem() {
+  void _updateMapToSelectedItem(List<TimelineItem> items) {
     int index = _pickerController.selectedItem;
 
-    print("Selected Item ID after stopped scrolling: ${widget.timelineItems[index].id}");
+    // 範囲外アクセスを防ぐ
+    if (index >= 0 && index < items.length) {
+      print("Selected Item ID after stopped scrolling: ${items[index].id}");
 
-    // Get the lat and lng of the selected item
-    double lat = widget.timelineItems[index].lat;
-    double lng = widget.timelineItems[index].lng;
+      // Get the lat and lng of the selected item
+      double lat = items[index].lat;
+      double lng = items[index].lng;
 
-    // Update the map location
-    MapController.instance.updateMapLocation(lat, lng);
+      // Update the map location
+      MapController.instance.updateMapLocation(lat, lng);
+    } else {
+      print("Selected index out of range: $index");
+    }
   }
+
 
   @override
   void initState() {
@@ -170,14 +176,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
     // _scrollController = ScrollController();  // これを追加
     _pickerController = FixedExtentScrollController(); // Initialize the controller
-    // ScrollActivity? lastActivity;  // 直前のScrollActivityを格納する変数を定義
-
-
+    print('_pickerController initial item: ${_pickerController.initialItem}'); // この行を追加
   }
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(timelineNotifierProvider);
+    return Consumer(
+      builder: (BuildContext context, WidgetRef ref, Widget? child) {
+        final items = ref.watch(timelineAddProvider); // ここでアイテムを取得
+
         return Stack(
           children: <Widget>[
             GoogleMap(
@@ -195,8 +202,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             Positioned.fill(
               child: NotificationListener<ScrollEndNotification>(
                 onNotification: (notification) {
-                    print("Stopped scrolling");
-                    _updateMapToSelectedItem();
+                  print("Stopped scrolling");
+                  _updateMapToSelectedItem(items);
                   return true;
                 },
                 child: CupertinoPicker(
@@ -206,15 +213,20 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   ),
                   itemExtent: MediaQuery.of(context).size.height / 10,
                   diameterRatio: 1,
-                  onSelectedItemChanged: (int index) {},
+                  onSelectedItemChanged: (int index) {
+                    print('_pickerController selected item: $index');
+                    if (index == items.length - 1) {
+                      ref.read(timelineAddProvider.notifier).addMoreItems();
+                    }
+                  },
                   magnification: 1.1,
                   children: List<Widget>.generate(
-                    widget.timelineItems.length,
+                    items.length,
                         (int index) {
                       return Center(
                         child: TimelineCard(
-                          key: widget.timelineItems[index].key,
-                          item: widget.timelineItems[index],
+                          key: items[index].key,
+                          item: items[index],
                           size: widget.size,
                         ),
                       );
@@ -231,8 +243,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   if (_pickerController.selectedItem > 0) {
                     _pickerController.animateToItem(
                         _pickerController.selectedItem - 1,
-                        duration: Duration(milliseconds: 300),  // Duration of the animation
-                        curve: Curves.easeInOut  // Animation curve
+                        duration: Duration(milliseconds: 300),
+                        curve: Curves.easeInOut
                     );
                   }
                 },
@@ -244,11 +256,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.6,
               child: ElevatedButton(
                 onPressed: () {
-                  if (_pickerController.selectedItem < widget.timelineItems.length - 1) {
+                  print("Current selected item: ${_pickerController.selectedItem}");
+                  print("Total items: ${items.length}");
+
+                  if (_pickerController.selectedItem < items.length - 1) {
                     _pickerController.animateToItem(
                         _pickerController.selectedItem + 1,
-                        duration: Duration(milliseconds: 300),  // Duration of the animation
-                        curve: Curves.easeInOut  // Animation curve
+                        duration: Duration(milliseconds: 300),
+                        curve: Curves.easeInOut
                     );
                   }
                 },
@@ -286,7 +301,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             ),
             Positioned(
               right: widget.size.width * 0.05,
-              top: widget.size.height * 0.5 + (widget.size.height * 0.35), // 位置を調整
+              top: widget.size.height * 0.5 + (widget.size.height * 0.35),
               child: FloatingActionButton(
                 heroTag: "displayFullScreen",
                 onPressed: () {
@@ -305,18 +320,16 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                     ),
                   );
                 },
-
                 child: Icon(Icons.fullscreen),
                 mini: true,
               ),
             ),
-
-
           ],
         );
-    //   },
-    // );
+      },
+    );
   }
+
 
   @override
   void dispose() {

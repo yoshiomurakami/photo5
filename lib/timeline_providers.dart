@@ -75,6 +75,24 @@ class TimelineItem {
   }
 }
 
+class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
+  TimelineNotifier() : super([]) {
+    _loadInitialData();
+  }
+
+  Future<void> _loadInitialData() async {
+    List<TimelineItem> initialData = await getTimeline();
+    state = initialData;
+  }
+
+  Future<void> addMoreItems() async {
+    List<TimelineItem> newItems = await getMoreTimelineItems();
+    state = [...state, ...newItems];
+  }
+}
+
+
+
 Future<Map<String, String>> getGeocodedLocation(LatLng position) async {
   final places = await placemarkFromCoordinates(position.latitude, position.longitude);
   if (places.isNotEmpty) {
@@ -186,4 +204,4 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   return timelineItems;
 });
 
-
+final timelineAddProvider = StateNotifierProvider<TimelineNotifier, List<TimelineItem>>((ref) => TimelineNotifier());
