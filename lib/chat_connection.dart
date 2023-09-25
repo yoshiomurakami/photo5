@@ -87,11 +87,11 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
 }
 
 
-class TimelineNotifier extends ChangeNotifier {
+class ChatNotifier extends ChangeNotifier {
 
   final ChangeNotifierProviderRef<Object?> ref;
 
-  TimelineNotifier(this.ref);
+  ChatNotifier(this.ref);
 
   final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
@@ -100,7 +100,7 @@ class TimelineNotifier extends ChangeNotifier {
   // Getter for timelineItems
   // List<TimelineItem> get timelineItems => _timelineItems;
 
-  void addPostedPhoto(PageController pageController, List<TimelineItem> timelineItems) {
+  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems) {
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
       print("onNewPhoto=$data");
@@ -136,14 +136,24 @@ class TimelineNotifier extends ChangeNotifier {
           // Notify listeners about the change
           notifyListeners();
 
-          // 現在のページインデックスを取得
-          int? currentIndex = pageController.page?.round();
+          int? currentIndex;
+          if (pageController.hasClients) {
+            currentIndex = pageController.page?.round();
+          } else {
+            currentIndex = pickerController.selectedItem; // この行を変更
+          }
+
           print("currentIndex=$currentIndex");
           if (currentIndex != null && currentIndex != 0) {
             print("currentIndex=$currentIndex");
             // 現在のインデックスを1増やして次のページへ移動
             currentIndex = ++currentIndex;
-            pageController.jumpToPage(currentIndex);
+            pickerController.animateToItem(
+                currentIndex,
+                duration: Duration(milliseconds: 300),
+                curve: Curves.easeInOut
+            );
+
 
             // 移動後のカードのアイテムを取得
             var nextItem = timelineItems[currentIndex];
@@ -168,7 +178,7 @@ class TimelineNotifier extends ChangeNotifier {
   }
 }
 
-final timelineNotifierProvider = ChangeNotifierProvider<TimelineNotifier>((ref) => TimelineNotifier(ref));
+final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) => ChatNotifier(ref));
 
 
 

@@ -106,7 +106,6 @@ class MapDisplay extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // final timelineNotifier = ref.read(timelineNotifierProvider);
     return _MapDisplayStateful(
       currentLocation: currentLocation,
       timelineItems: timelineItems,
@@ -141,12 +140,11 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
-  bool programmaticChange = false; // これを追加
-  final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
+  bool programmaticChange = false;
+  final PageController _pageController = PageController(viewportFraction: 1);
   bool _programmaticPageChange = false;
   bool isFullScreen = false;
-  // late ScrollController _scrollController; // Add this
-  late FixedExtentScrollController _pickerController; // Add this
+  late FixedExtentScrollController _pickerController;
   bool isScrolling = false;
 
 
@@ -172,18 +170,17 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   @override
   void initState() {
     super.initState();
-    final timelineNotifier = ref.read(timelineNotifierProvider);
-    timelineNotifier.addPostedPhoto(widget.pageController, widget.timelineItems); // ここを変更
-    // _scrollController = ScrollController();  // これを追加
-    _pickerController = FixedExtentScrollController(); // Initialize the controller
-    print('_pickerController initial item: ${_pickerController.initialItem}'); // この行を追加
+    _pickerController = FixedExtentScrollController();
+    final ChatNotifier = ref.read(chatNotifierProvider);
+    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems);
+    print('_pickerController initial item: ${_pickerController.initialItem}');
   }
 
   @override
   Widget build(BuildContext context) {
     return Consumer(
       builder: (BuildContext context, WidgetRef ref, Widget? child) {
-        final items = ref.watch(timelineAddProvider); // ここでアイテムを取得
+        final items = ref.watch(timelineAddProvider);
 
         return Stack(
           children: <Widget>[
@@ -199,7 +196,11 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               scrollGesturesEnabled: false,
               padding: EdgeInsets.only(bottom: 0),
             ),
-            Positioned.fill(
+            Positioned(
+              top: widget.size.height * 0.25,  // 上から25%の位置
+              bottom: widget.size.height * 0.25,  // 下から25%の位置
+              left: 0,  // 左端から0の位置
+              right: 0,  // 右端から0の位置
               child: NotificationListener<ScrollEndNotification>(
                 onNotification: (notification) {
                   print("Stopped scrolling");
@@ -209,17 +210,17 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 child: CupertinoPicker(
                   scrollController: _pickerController,
                   selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
-                    background: Colors.transparent,
+                    // background: Colors.transparent,
                   ),
-                  itemExtent: MediaQuery.of(context).size.height / 10,
+                  itemExtent: MediaQuery.of(context).size.height / 9,
                   diameterRatio: 1,
                   onSelectedItemChanged: (int index) {
                     print('_pickerController selected item: $index');
-                    if (index == items.length - 1) {
+                    if (index > items.length - 5) {
                       ref.read(timelineAddProvider.notifier).addMoreItems();
                     }
                   },
-                  magnification: 1.1,
+                  magnification: 1.25,
                   children: List<Widget>.generate(
                     items.length,
                         (int index) {
@@ -236,13 +237,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
             Positioned(
-              left: 20,
-              top: widget.size.height * 0.4,
-              child: ElevatedButton(
+              right: widget.size.width * 0.05,
+              top: (widget.size.height * 0.55) - (56.0 / 2),
+              child: FloatingActionButton(
                 onPressed: () {
                   if (_pickerController.selectedItem > 0) {
                     _pickerController.animateToItem(
-                        _pickerController.selectedItem - 1,
+                        _pickerController.selectedItem + 1,
                         duration: Duration(milliseconds: 300),
                         curve: Curves.easeInOut
                     );
@@ -252,16 +253,16 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
             Positioned(
-              left: 20,
-              top: widget.size.height * 0.6,
-              child: ElevatedButton(
+              right: widget.size.width * 0.05,
+              top: (widget.size.height * 0.45) - (56.0 / 2),
+              child: FloatingActionButton(
                 onPressed: () {
                   print("Current selected item: ${_pickerController.selectedItem}");
                   print("Total items: ${items.length}");
 
-                  if (_pickerController.selectedItem < items.length - 1) {
+                  if (_pickerController.selectedItem <= items.length - 1) {
                     _pickerController.animateToItem(
-                        _pickerController.selectedItem + 1,
+                        _pickerController.selectedItem - 1,
                         duration: Duration(milliseconds: 300),
                         curve: Curves.easeInOut
                     );
@@ -333,7 +334,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
   @override
   void dispose() {
-    _pickerController.dispose();  // Dispose the picker controller
+    _pickerController.dispose();
     super.dispose();
   }
 }

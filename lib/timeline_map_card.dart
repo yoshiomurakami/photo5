@@ -20,7 +20,7 @@ class TimelineCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: size.width * 0.2,
+      // height: size.width * 0.2,
       // color: Colors.pink,
       child: Align(
         alignment: Alignment.center,

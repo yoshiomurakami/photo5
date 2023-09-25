@@ -144,7 +144,7 @@ class _FullScreenDisplayState extends ConsumerState<_FullScreenDisplayStateful> 
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(timelineNotifierProvider);
+    ref.watch(chatNotifierProvider);
 
     return Stack(
       children: <Widget>[
