@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_fullscreen_card.dart';
-import 'chat_connection.dart';
+// import 'chat_connection.dart';
 
 // class MapController {
 //   GoogleMapController? _controller;
@@ -144,7 +144,7 @@ class _FullScreenDisplayState extends ConsumerState<_FullScreenDisplayStateful> 
 
   @override
   Widget build(BuildContext context) {
-    ref.watch(chatNotifierProvider);
+    // ref.watch(chatNotifierProvider);
 
     return Stack(
       children: <Widget>[
