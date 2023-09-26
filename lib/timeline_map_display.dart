@@ -181,6 +181,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return Consumer(
       builder: (BuildContext context, WidgetRef ref, Widget? child) {
         final items = ref.watch(timelineAddProvider);
+
         return Stack(
           children: <Widget>[
             GoogleMap(

@@ -127,7 +127,7 @@ class ChatNotifier extends ChangeNotifier {
           print("maked_TimelineItem newItem=$newItem");
 
           // printTimelineItems();
-          final timelineItems = await ref.read(timelineProvider.future);
+          final timelineItems = await ref.read(timelineAddProvider);
 
           // Add the new item to the beginning of the list
           timelineItems.insert(1, newItem);
