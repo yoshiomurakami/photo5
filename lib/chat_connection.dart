@@ -4,7 +4,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_providers.dart';
-import 'timeline_map_display.dart';
+// import 'timeline_map_display.dart';
 
 IO.Socket?socket;
 
@@ -148,20 +148,9 @@ class ChatNotifier extends ChangeNotifier {
             print("currentIndex=$currentIndex");
             // 現在のインデックスを1増やして次のページへ移動
             currentIndex = ++currentIndex;
-            pickerController.animateToItem(
-                currentIndex,
-                duration: Duration(milliseconds: 300),
-                curve: Curves.easeInOut
-            );
-
-
-            // 移動後のカードのアイテムを取得
-            var nextItem = timelineItems[currentIndex];
-
-            // アイテムが持つlatとlngを使用してマップ位置を更新
-            MapController.instance.updateMapLocation(nextItem.lat, nextItem.lng);
-            print("currentIndex_after=$nextItem");
+            pickerController.jumpToItem(currentIndex); // アニメーションなしでジャンプ
           }
+
 
 
         } else {

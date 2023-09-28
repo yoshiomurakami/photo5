@@ -84,9 +84,6 @@ class MapController {
   }
 }
 
-
-
-
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
@@ -183,6 +180,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         final items = ref.watch(timelineAddProvider);
         ref.watch(chatNotifierProvider);
 
+
         return Stack(
           children: <Widget>[
             GoogleMap(
@@ -198,64 +196,57 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               padding: EdgeInsets.only(bottom: 0),
             ),
             Positioned(
-              top: widget.size.height * 0.25,  // 上から25%の位置
-              bottom: widget.size.height * 0.25,  // 下から25%の位置
-              left: 0,  // 左端から0の位置
-              right: 0,  // 右端から0の位置
-              child: NotificationListener<ScrollEndNotification>(
-                onNotification: (notification) {
-                  print("Stopped scrolling");
-                  _updateMapToSelectedItem(items);
-                  return true;
-                },
-                child: CupertinoPicker(
-                  scrollController: _pickerController,
-                  selectionOverlay: const CupertinoPickerDefaultSelectionOverlay(
-                    // background: Colors.transparent,
-                  ),
-                  itemExtent: MediaQuery.of(context).size.height / 9,
-                  diameterRatio: 1,
-                  onSelectedItemChanged: (int index) {
-                    print('_pickerController selected item: $index');
-                    if (index > items.length - 5) {
-                      ref.read(timelineAddProvider.notifier).addMoreItems();
+              top: widget.size.height * 0.3,
+              bottom: widget.size.height * 0.3,
+              left: 0,
+              right: 0,
+              child: Container(
+                // color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
+                child: NotificationListener<ScrollNotification>(
+                  onNotification: (notification) {
+                    if (notification is ScrollEndNotification) {
+                      print("Stopped scrolling");
+                      _updateMapToSelectedItem(items);
                     }
+                    return true;
                   },
-                  magnification: 1.25,
-                  children: List<Widget>.generate(
-                    items.length,
-                        (int index) {
-                      return Center(
-                        child: TimelineCard(
-                          key: items[index].key,
-                          item: items[index],
-                          size: widget.size,
-                        ),
-                      );
+                  child: ListWheelScrollView(
+                    controller: _pickerController,
+                    itemExtent: MediaQuery.of(context).size.height / 10,
+                    diameterRatio: 1.25,
+                    onSelectedItemChanged: (int index) {
+                      print('_pickerController selected item: $index');
+                      if (index > items.length - 5) {
+                        ref.read(timelineAddProvider.notifier).addMoreItems();
+                      }
                     },
+                    magnification: 1.3,
+                    useMagnifier: true,
+                    physics: FixedExtentScrollPhysics(),
+                    children: List<Widget>.generate(
+                      items.length,
+                          (int index) {
+                        return Center(
+                          child: TimelineCard(
+                            key: items[index].key,
+                            item: items[index],
+                            size: widget.size,
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
             ),
+
+
+
+
+
             Positioned(
               right: widget.size.width * 0.05,
-              top: (widget.size.height * 0.55) - (56.0 / 2),
-              child: FloatingActionButton(
-                onPressed: () {
-                  if (_pickerController.selectedItem > 0) {
-                    _pickerController.animateToItem(
-                        _pickerController.selectedItem + 1,
-                        duration: Duration(milliseconds: 300),
-                        curve: Curves.easeInOut
-                    );
-                  }
-                },
-                child: Icon(Icons.arrow_upward),
-              ),
-            ),
-            Positioned(
-              right: widget.size.width * 0.05,
-              top: (widget.size.height * 0.45) - (56.0 / 2),
+              top: (widget.size.height * 0.46) - (56.0 / 2),
               child: FloatingActionButton(
                 onPressed: () {
                   print("Current selected item: ${_pickerController.selectedItem}");
@@ -263,13 +254,39 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
                   if (_pickerController.selectedItem <= items.length - 1) {
                     _pickerController.animateToItem(
+                        _pickerController.selectedItem + 1,
+                        duration: Duration(milliseconds: 300),
+                        curve: Curves.easeInOut
+                    );
+                  }
+                },
+                backgroundColor: Colors.transparent, // 透明な背景
+                elevation: 0, // 影をなくす
+                child: Icon(
+                  Icons.keyboard_double_arrow_up,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            Positioned(
+              right: widget.size.width * 0.05,
+              top: (widget.size.height * 0.54) - (56.0 / 2),
+              child: FloatingActionButton(
+                onPressed: () {
+                  if (_pickerController.selectedItem >= 0) {
+                    _pickerController.animateToItem(
                         _pickerController.selectedItem - 1,
                         duration: Duration(milliseconds: 300),
                         curve: Curves.easeInOut
                     );
                   }
                 },
-                child: Icon(Icons.arrow_downward),
+                backgroundColor: Colors.transparent, // 透明な背景
+                elevation: 0, // 影をなくす
+                child: Icon(
+                  Icons.keyboard_double_arrow_down,
+                  color: Colors.black,
+                ),
               ),
             ),
             Positioned(
@@ -339,4 +356,58 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     super.dispose();
   }
 }
+
+//
+// class SliderController extends StatefulWidget {
+//   final VoidCallback onReachedTop;
+//   final VoidCallback onReachedBottom;
+//
+//   SliderController({
+//     required this.onReachedTop,
+//     required this.onReachedBottom,
+//   });
+//
+//   @override
+//   _SliderControllerState createState() => _SliderControllerState();
+// }
+//
+// class _SliderControllerState extends State<SliderController> {
+//   double pointerValue = 0.5; // ポインターの初期位置は中央
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return GestureDetector(
+//       onVerticalDragUpdate: (details) {
+//         setState(() {
+//           pointerValue += details.delta.dy / (MediaQuery.of(context).size.height * 0.2);
+//           pointerValue = pointerValue.clamp(0.0, 2.0);
+//         });
+//
+//         if (pointerValue == 0.0) {
+//           widget.onReachedTop.call();
+//           pointerValue = 1.0;
+//         } else if (pointerValue == 2.0) {
+//           widget.onReachedBottom.call();
+//           pointerValue = 1.0;
+//         }
+//       },
+//       child: Container(
+//         height: MediaQuery.of(context).size.width * 0.2,
+//         width: 15, // Slider width
+//         color: Colors.grey.shade200, // Slider background color
+//         child: Align(
+//           alignment: Alignment(0, pointerValue * 2 - 1),
+//           child: Container(
+//             height: 15, // Pointer height
+//             width: 15, // Pointer width
+//             decoration: BoxDecoration(
+//               shape: BoxShape.circle,
+//               color: Colors.blue, // Pointer color
+//             ),
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 

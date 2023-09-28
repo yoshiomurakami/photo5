@@ -29,7 +29,7 @@ class CameraButton extends StatelessWidget {
     final Size size = MediaQuery.of(context).size;
     return Positioned(
       left: size.width * 0.4,
-      top: size.height * 0.7,
+      top: size.height * 0.9,
       child: Container(
         width: size.width * 0.2,
         height: size.width * 0.2,
