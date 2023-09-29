@@ -7,7 +7,7 @@ import 'package:flutter/cupertino.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
-import 'timeline_fullscreen_widget.dart';
+// import 'timeline_fullscreen_widget.dart';
 
 class MapController {
   GoogleMapController? _controller;
@@ -138,8 +138,8 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
   bool programmaticChange = false;
-  final PageController _pageController = PageController(viewportFraction: 1);
-  bool _programmaticPageChange = false;
+  // final PageController _pageController = PageController(viewportFraction: 1);
+  // bool _programmaticPageChange = false;
   bool isFullScreen = false;
   late FixedExtentScrollController _pickerController;
   bool isScrolling = false;
@@ -196,8 +196,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               padding: EdgeInsets.only(bottom: 0),
             ),
             Positioned(
-              top: widget.size.height * 0.3,
-              bottom: widget.size.height * 0.3,
+              top: widget.size.height * 0.2,
+              bottom: widget.size.height * 0.2,
               left: 0,
               right: 0,
               child: Container(
@@ -231,6 +231,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             key: items[index].key,
                             item: items[index],
                             size: widget.size,
+                            controller: _pickerController, // これを追加
+                            currentIndex: index, // 追加
                           ),
                         );
                       },
@@ -248,6 +250,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: (widget.size.height * 0.46) - (56.0 / 2),
               child: FloatingActionButton(
+                heroTag: "timelineForwardOne",
                 onPressed: () {
                   print("Current selected item: ${_pickerController.selectedItem}");
                   print("Total items: ${items.length}");
@@ -272,6 +275,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: (widget.size.height * 0.54) - (56.0 / 2),
               child: FloatingActionButton(
+                heroTag: "timelineBackOne",
                 onPressed: () {
                   if (_pickerController.selectedItem >= 0) {
                     _pickerController.animateToItem(
@@ -318,31 +322,31 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ],
               ),
             ),
-            Positioned(
-              right: widget.size.width * 0.05,
-              top: widget.size.height * 0.5 + (widget.size.height * 0.35),
-              child: FloatingActionButton(
-                heroTag: "displayFullScreen",
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => TimelineFullScreenWidget(
-                        size: widget.size,
-                        currentLocation: widget.currentLocation,
-                        timelineItems: widget.timelineItems,
-                        pageController: _pageController,
-                        programmaticPageChange: _programmaticPageChange,
-                        updateGeocodedLocation: updateGeocodedLocation,
-                        currentCardId: currentCardId,
-                      ),
-                    ),
-                  );
-                },
-                child: Icon(Icons.fullscreen),
-                mini: true,
-              ),
-            ),
+            // Positioned(
+            //   right: widget.size.width * 0.05,
+            //   top: widget.size.height * 0.5 + (widget.size.height * 0.35),
+            //   child: FloatingActionButton(
+            //     heroTag: "displayFullScreen",
+            //     onPressed: () {
+            //       Navigator.push(
+            //         context,
+            //         MaterialPageRoute(
+            //           builder: (context) => TimelineFullScreenWidget(
+            //             size: widget.size,
+            //             currentLocation: widget.currentLocation,
+            //             timelineItems: widget.timelineItems,
+            //             pageController: _pageController,
+            //             programmaticPageChange: _programmaticPageChange,
+            //             updateGeocodedLocation: updateGeocodedLocation,
+            //             currentCardId: currentCardId,
+            //           ),
+            //         ),
+            //       );
+            //     },
+            //     child: Icon(Icons.fullscreen),
+            //     mini: true,
+            //   ),
+            // ),
           ],
         );
       },

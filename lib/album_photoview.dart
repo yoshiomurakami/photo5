@@ -48,6 +48,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
                     left: 15.0,
                     bottom: 15.0,
                     child: FloatingActionButton(
+                      heroTag: "BackToAlbum",
                       child: Icon(Icons.arrow_back, color: Colors.white),
                       backgroundColor: Colors.transparent,
                       onPressed: () {

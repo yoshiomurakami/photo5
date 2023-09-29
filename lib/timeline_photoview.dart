@@ -97,6 +97,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
             left: 15.0,
             bottom: 15.0,
             child: FloatingActionButton(
+              heroTag: "BackToMao",
               child: Icon(Icons.arrow_back, color: Colors.white),
               backgroundColor: Colors.transparent,
               onPressed: (){
