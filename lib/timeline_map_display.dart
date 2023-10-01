@@ -242,10 +242,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
 
-
-
-
-
             Positioned(
               right: widget.size.width * 0.05,
               top: (widget.size.height * 0.46) - (56.0 / 2),
@@ -360,6 +356,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     super.dispose();
   }
 }
+
 
 //
 // class SliderController extends StatefulWidget {
