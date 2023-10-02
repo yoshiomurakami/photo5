@@ -164,6 +164,10 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
+
+
+
+
   @override
   void initState() {
     super.initState();
@@ -233,6 +237,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             size: widget.size,
                             controller: _pickerController, // これを追加
                             currentIndex: index, // 追加
+                            pickerController: _pickerController,
+                            items: items,
                           ),
                         );
                       },
@@ -247,18 +253,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: (widget.size.height * 0.46) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineForwardOne",
-                onPressed: () {
-                  print("Current selected item: ${_pickerController.selectedItem}");
-                  print("Total items: ${items.length}");
-
-                  if (_pickerController.selectedItem <= items.length - 1) {
-                    _pickerController.animateToItem(
-                        _pickerController.selectedItem + 1,
-                        duration: Duration(milliseconds: 300),
-                        curve: Curves.easeInOut
-                    );
-                  }
-                },
+                onPressed: () => scrollTimeline(_pickerController, 1, widget.timelineItems.length),
                 backgroundColor: Colors.transparent, // 透明な背景
                 elevation: 0, // 影をなくす
                 child: Icon(
@@ -272,15 +267,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: (widget.size.height * 0.54) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineBackOne",
-                onPressed: () {
-                  if (_pickerController.selectedItem >= 0) {
-                    _pickerController.animateToItem(
-                        _pickerController.selectedItem - 1,
-                        duration: Duration(milliseconds: 300),
-                        curve: Curves.easeInOut
-                    );
-                  }
-                },
+                onPressed: () => scrollTimeline(_pickerController, -1, widget.timelineItems.length),
                 backgroundColor: Colors.transparent, // 透明な背景
                 elevation: 0, // 影をなくす
                 child: Icon(
@@ -356,7 +343,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     super.dispose();
   }
 }
-
 
 //
 // class SliderController extends StatefulWidget {
