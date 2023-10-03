@@ -164,6 +164,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
+  Future<void> handleScroll(int step) async {
+    final newCenterItem = await scrollTimeline(_pickerController, step, widget.timelineItems);
+    setState(() {
+      currentCardId = newCenterItem.id;  // newCenterItemのidを取得
+    });
+  }
+
+
 
 
 
@@ -253,7 +261,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: (widget.size.height * 0.46) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineForwardOne",
-                onPressed: () => scrollTimeline(_pickerController, 1, widget.timelineItems.length),
+                onPressed: () => handleScroll(1),
                 backgroundColor: Colors.transparent, // 透明な背景
                 elevation: 0, // 影をなくす
                 child: Icon(
@@ -267,7 +275,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: (widget.size.height * 0.54) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineBackOne",
-                onPressed: () => scrollTimeline(_pickerController, -1, widget.timelineItems.length),
+                onPressed: () => handleScroll(-1),
                 backgroundColor: Colors.transparent, // 透明な背景
                 elevation: 0, // 影をなくす
                 child: Icon(

@@ -28,6 +28,7 @@ class TimelineCard extends StatefulWidget {
 class _TimelineCardState extends State<TimelineCard> {
   bool isDialogShown = false;
   int? currentSelectedItem;
+  TimelineItem? centerItem;  // 追加
 
   @override
   void initState() {
@@ -40,38 +41,15 @@ class _TimelineCardState extends State<TimelineCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        int centerIndex = widget.controller.selectedItem;
-        if (widget.currentIndex == centerIndex) {
-          showDialog(
-            context: context,
-            barrierColor: Colors.transparent,
-            builder: (context) => VerticalSwipeDetector(
-              onSwipeUp: () => scrollTimeline(widget.pickerController, 1, widget.items.length),
-              onSwipeDown: () => scrollTimeline(widget.pickerController, -1, widget.items.length),
-              child: Dialog(
-                backgroundColor: Colors.transparent,
-                insetPadding: EdgeInsets.all(20.0),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16.0),
-                      border: Border.all(color: Colors.white, width: 3.0),  // 白い枠縁
-                    ),
-                    child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16.0),
-                        child: Image.network(
-                          'https://photo5.world/${widget.item.imageFilename}',
-                          fit: BoxFit.contain,
-                        )
-                    ),
-                  ),
-                ),
-              ),
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => FullScreenImageViewer(
+              items: widget.items,
+              initialIndex: widget.controller.selectedItem,
             ),
-
-          );
-        }
+          ),
+        );
       },
       child: Container(
         child: Align(
@@ -97,80 +75,90 @@ class _TimelineCardState extends State<TimelineCard> {
       ),
     );
   }
+
 }
 
-class VerticalSwipeDetector extends StatefulWidget {
-  final Widget child;
-  final VoidCallback onSwipeUp;
-  final VoidCallback onSwipeDown;
+class FullScreenImageViewer extends StatefulWidget {
+  final List<TimelineItem> items;
+  final int initialIndex;
 
-  VerticalSwipeDetector({
-    required this.child,
-    required this.onSwipeUp,
-    required this.onSwipeDown,
-  });
+  FullScreenImageViewer({required this.items, required this.initialIndex});
 
   @override
-  _VerticalSwipeDetectorState createState() => _VerticalSwipeDetectorState();
+  _FullScreenImageViewerState createState() => _FullScreenImageViewerState();
 }
 
-class _VerticalSwipeDetectorState extends State<VerticalSwipeDetector> {
-  final double swipeThreshold = 5.0;  // この値は調整可能です
-  double? totalDragDelta;
+class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+  PageController _scrollController = PageController();
 
-  void _onVerticalDragStart(DragStartDetails details) {
-    totalDragDelta = 0.0;
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = PageController(initialPage: widget.initialIndex);
   }
 
-  void _onVerticalDragUpdate(DragUpdateDetails details) {
-    if (totalDragDelta == null) return;  // この行を追加
-
-    double newDelta = totalDragDelta! + details.primaryDelta!;
-    totalDragDelta = newDelta;
-
-    if (newDelta < -swipeThreshold) {
-      print("Swiping up...");
-    } else if (newDelta > swipeThreshold) {
-      print("Swiping down...");
-    }
-  }
-
-
-  void _onVerticalDragEnd(DragEndDetails details) {
-    if (totalDragDelta! < -swipeThreshold) {
-      widget.onSwipeUp();
-      print("onSwipeUp");
-    } else if (totalDragDelta! > swipeThreshold) {
-      widget.onSwipeDown();
-      print("onSwipeDown");
-    }
-    totalDragDelta = null;
-  }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onVerticalDragStart: _onVerticalDragStart,
-      onVerticalDragUpdate: _onVerticalDragUpdate,
-      onVerticalDragEnd: _onVerticalDragEnd,
-      child: widget.child,
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Center(  // 中央に配置するためのCenterウィジェットを追加
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,  // 画像の横幅をデバイスの90%に設定
+          child: PageView.builder(
+            controller: _scrollController,
+            itemCount: widget.items.length,
+            onPageChanged: (index) {
+              int step = index - widget.controller.selectedItem;  // 新しいインデックスと現在のインデックスの差を取得
+              scrollTimeline(widget.controller, step, widget.items);  // 下層のリストを移動させる
+            },
+            itemBuilder: (context, index) {
+              TimelineItem currentItem = widget.items[index];
+              return Image.network(
+                'https://photo5.world/${currentItem.imageFilename}',
+                fit: BoxFit.scaleDown,  // 画像のサイズがコンテナサイズより大きい場合に縮小するように変更
+                loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                  if (loadingProgress == null) return child;
+
+                  return Container(
+                    color: Colors.white,
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
+
 }
 
 
-void scrollTimeline(FixedExtentScrollController controller, int step, int maxItems) {
+Future<TimelineItem> scrollTimeline(FixedExtentScrollController controller, int step, List<TimelineItem> items) async {
   int currentItem = controller.selectedItem;
   int targetItem = currentItem + step;
 
-  if (targetItem >= 0 && targetItem < maxItems) {
-    controller.animateToItem(
-        targetItem,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeInOut
-    );
-  }
+  await controller.animateToItem(
+      targetItem,
+      duration: Duration(milliseconds: 300),
+      curve: Curves.easeInOut
+  );
+
+  // アニメーションが完了した後に中央のアイテムを返す
+  int centerIndex = controller.selectedItem;
+  return items[centerIndex];
 }
+
+
+
 
 
 
