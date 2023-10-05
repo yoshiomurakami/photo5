@@ -36,8 +36,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: this.home,
+    return Material(
+      color: Colors.transparent,
+      // color: Color(0xFFFFCC4D),
+        child:MaterialApp(
+          theme: ThemeData(
+            canvasColor: Colors.transparent,
+          ),
+          home: this.home,
+        ),
     );
   }
 }
@@ -211,6 +218,8 @@ class _StartupState extends State<Startup> {
         children: [
           Container(
             color: Color(0xFFFFCC4D),
+            // color: Colors.transparent,
+
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

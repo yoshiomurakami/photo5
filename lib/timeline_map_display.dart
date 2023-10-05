@@ -143,6 +143,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool isFullScreen = false;
   late FixedExtentScrollController _pickerController;
   bool isScrolling = false;
+  bool isFullScreenMode = false;
+
 
 
   void _updateMapToSelectedItem(List<TimelineItem> items) {
@@ -243,18 +245,42 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             key: items[index].key,
                             item: items[index],
                             size: widget.size,
-                            controller: _pickerController, // これを追加
-                            currentIndex: index, // 追加
+                            controller: _pickerController,
+                            currentIndex: index,
                             pickerController: _pickerController,
                             items: items,
+                            onTapCallback: () {
+                              setState(() {
+                                isFullScreenMode = !isFullScreenMode;
+                              });
+                            },
                           ),
                         );
                       },
                     ),
+
                   ),
                 ),
               ),
             ),
+
+            if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: FullScreenImageViewer(
+                  items: items, // これはあなたのitemsリストを参照するものと仮定しています。
+                  initialIndex: _pickerController.selectedItem, // これはあなたのコントローラの選択されたアイテムのインデックスを参照するものと仮定しています。
+                  controller: _pickerController, // FullScreenImageViewerに必要な他のプロパティや設定も追加できます。
+                  onTap: () {
+                    setState(() {
+                      isFullScreenMode = false;
+                    });
+                  },
+                ),
+              ),
 
             Positioned(
               right: widget.size.width * 0.05,

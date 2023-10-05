@@ -31,7 +31,7 @@ class _FullScreenImagePageState extends State<FullScreenImagePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.yellow,
       body: FutureBuilder<Uint8List>(
         future: imageBytes,
         builder: (context, snapshot) {

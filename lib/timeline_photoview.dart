@@ -88,7 +88,7 @@ class _TimelineFullScreenImagePageState extends State<TimelineFullScreenImagePag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      // backgroundColor: Colors.black,
       body: Stack(
         fit: StackFit.expand,
         children: <Widget>[

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 // import 'package:flag/flag.dart';
 import 'timeline_providers.dart';
+import 'dart:ui' as ui;
+import 'dart:async';
 
 
 class TimelineCard extends StatefulWidget {
@@ -10,6 +12,7 @@ class TimelineCard extends StatefulWidget {
   final int currentIndex;
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
+  final VoidCallback? onTapCallback;
 
   TimelineCard({
     Key? key,
@@ -19,6 +22,7 @@ class TimelineCard extends StatefulWidget {
     required this.currentIndex,
     required this.pickerController,
     required this.items,
+    required this.onTapCallback,
   }) : super(key: key);
 
   @override
@@ -29,6 +33,7 @@ class _TimelineCardState extends State<TimelineCard> {
   bool isDialogShown = false;
   int? currentSelectedItem;
   TimelineItem? centerItem;  // 追加
+  bool isFullScreenMode = false;  // デフォルトは非表示
 
   @override
   void initState() {
@@ -41,16 +46,21 @@ class _TimelineCardState extends State<TimelineCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FullScreenImageViewer(
-              items: widget.items,
-              initialIndex: widget.controller.selectedItem,
-            ),
-          ),
-        );
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(
+        //     builder: (context) => FullScreenImageViewer(
+        //       items: widget.items,
+        //       initialIndex: widget.controller.selectedItem,
+        //       controller: widget.controller,  // controllerを渡す
+        //     ),
+        //   ),
+        // );
+        if (widget.onTapCallback != null) {
+          widget.onTapCallback!();
+        }
       },
+
       child: Container(
         child: Align(
           alignment: Alignment.center,
@@ -81,8 +91,15 @@ class _TimelineCardState extends State<TimelineCard> {
 class FullScreenImageViewer extends StatefulWidget {
   final List<TimelineItem> items;
   final int initialIndex;
+  final FixedExtentScrollController controller;
+  final VoidCallback onTap; // タップ時のコールバック
 
-  FullScreenImageViewer({required this.items, required this.initialIndex});
+  FullScreenImageViewer({
+    required this.items,
+    required this.initialIndex,
+    required this.controller,
+    required this.onTap,
+  });
 
   @override
   _FullScreenImageViewerState createState() => _FullScreenImageViewerState();
@@ -97,49 +114,106 @@ class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
     _scrollController = PageController(initialPage: widget.initialIndex);
   }
 
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(  // 中央に配置するためのCenterウィジェットを追加
-        child: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.9,  // 画像の横幅をデバイスの90%に設定
-          child: PageView.builder(
-            controller: _scrollController,
-            itemCount: widget.items.length,
-            onPageChanged: (index) {
-              int step = index - widget.controller.selectedItem;  // 新しいインデックスと現在のインデックスの差を取得
-              scrollTimeline(widget.controller, step, widget.items);  // 下層のリストを移動させる
-            },
-            itemBuilder: (context, index) {
-              TimelineItem currentItem = widget.items[index];
-              return Image.network(
-                'https://photo5.world/${currentItem.imageFilename}',
-                fit: BoxFit.scaleDown,  // 画像のサイズがコンテナサイズより大きい場合に縮小するように変更
-                loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-                  if (loadingProgress == null) return child;
-
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: Material(
+        color: Colors.transparent,
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.9,
+              child: PageView.builder(
+                controller: _scrollController,
+                itemCount: widget.items.length,
+                scrollDirection: Axis.vertical,
+                onPageChanged: (index) {
+                  int step = index - widget.controller.selectedItem;
+                  scrollTimeline(widget.controller, step, widget.items);
+                },
+                itemBuilder: (context, index) {
+                  TimelineItem currentItem = widget.items[index];
                   return Container(
-                    color: Colors.white,
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        value: loadingProgress.expectedTotalBytes != null
-                            ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                            : null,
+                    alignment: Alignment.center,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16.0),
+                        border: Border.all(color: Colors.white, width: 2.0),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16.0),
+                        child: Image.network(
+                          'https://photo5.world/${currentItem.imageFilename}',
+                          fit: BoxFit.scaleDown,
+                          loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              color: Colors.transparent,
+                              child: Center(
+                                child: CircularProgressIndicator(
+                                  value: loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   );
                 },
-              );
-            },
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
+
+
+
+
+
+  Widget buildImage(double width, double height) {
+    return Container(
+      width: width,
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.0),
+        border: Border.all(color: Colors.white, width: 3.0),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16.0),
+        child: Image.network(
+          'https://photo5.world/${widget.items[widget.controller.selectedItem].imageFilename}',
+          fit: BoxFit.cover,
+        ),
+      ),
+    );
+  }
+
+  Future<ui.Image> _loadImage(String imageUrl) async {
+    final Completer<ui.Image> completer = Completer();
+    final NetworkImage image = NetworkImage(imageUrl);
+    image.resolve(const ImageConfiguration()).addListener(
+      ImageStreamListener(
+            (ImageInfo image, bool synchronousCall) {
+          final ui.Image img = image.image;
+          completer.complete(img);
+        },
+      ),
+    );
+    return completer.future;
+  }
+
+
 }
+
 
 
 Future<TimelineItem> scrollTimeline(FixedExtentScrollController controller, int step, List<TimelineItem> items) async {
