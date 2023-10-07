@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-// import 'package:flag/flag.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_providers.dart';
+import 'chat_connection.dart';
 import 'dart:ui' as ui;
 import 'dart:async';
 
@@ -88,30 +89,69 @@ class _TimelineCardState extends State<TimelineCard> {
 
 }
 
-class FullScreenImageViewer extends StatefulWidget {
+class FullScreenImageViewer extends ConsumerWidget {
   final List<TimelineItem> items;
   final int initialIndex;
   final FixedExtentScrollController controller;
   final VoidCallback onTap; // タップ時のコールバック
+  final VoidCallback? onNewPhotoReceived;
 
   FullScreenImageViewer({
     required this.items,
     required this.initialIndex,
     required this.controller,
     required this.onTap,
+    this.onNewPhotoReceived,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return _FullScreenImageViewerStateful(
+      items: items,
+      initialIndex: initialIndex,
+      controller: controller,
+      onTap: onTap,
+      onNewPhotoReceived: onNewPhotoReceived,
+    );
+  }
+}
+
+class _FullScreenImageViewerStateful extends ConsumerStatefulWidget {
+  final List<TimelineItem> items;
+  final int initialIndex;
+  final FixedExtentScrollController controller;
+  final VoidCallback onTap; // タップ時のコールバック
+  final VoidCallback? onNewPhotoReceived;
+
+  _FullScreenImageViewerStateful({
+    required this.items,
+    required this.initialIndex,
+    required this.controller,
+    required this.onTap,
+    this.onNewPhotoReceived,
   });
 
   @override
   _FullScreenImageViewerState createState() => _FullScreenImageViewerState();
 }
-
-class _FullScreenImageViewerState extends State<FullScreenImageViewer> {
+class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerStateful> {
   PageController _scrollController = PageController();
 
   @override
   void initState() {
     super.initState();
     _scrollController = PageController(initialPage: widget.initialIndex);
+    final chatNotifier = ref.read(chatNotifierProvider);
+    chatNotifier.fullScreenImageViewerController = _scrollController;
+  }
+
+  @override
+  void dispose() {
+    Future.delayed(Duration.zero, () {
+      final chatNotifier = ref.read(chatNotifierProvider);
+      chatNotifier.fullScreenImageViewerController = null;
+    });
+    super.dispose();
   }
 
   @override

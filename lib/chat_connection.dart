@@ -95,6 +95,8 @@ class ChatNotifier extends ChangeNotifier {
 
   final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
+  PageController? fullScreenImageViewerController;
+
   // List<TimelineItem> _timelineItems = [];
 
   // Getter for timelineItems
@@ -151,6 +153,14 @@ class ChatNotifier extends ChangeNotifier {
             pickerController.jumpToItem(currentIndex); // アニメーションなしでジャンプ
           }
 
+          // 新しい画像が受信された際の上層リストビューの処理
+          if (fullScreenImageViewerController != null && fullScreenImageViewerController!.hasClients) {
+            int? currentIndex = fullScreenImageViewerController!.page?.round();
+            if (currentIndex != null && currentIndex != 0) {
+              currentIndex = ++currentIndex;
+              fullScreenImageViewerController!.jumpToPage(currentIndex); // アニメーションなしでジャンプ
+            }
+          }
 
 
         } else {
