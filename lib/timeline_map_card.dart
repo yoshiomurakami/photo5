@@ -183,22 +183,13 @@ class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerSt
                         border: Border.all(color: Colors.white, width: 2.0),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16.0),
+                        borderRadius: BorderRadius.circular(14.0),
                         child: Image.network(
                           'https://photo5.world/${currentItem.imageFilename}',
                           fit: BoxFit.scaleDown,
                           loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
                             if (loadingProgress == null) return child;
-                            return Container(
-                              color: Colors.transparent,
-                              child: Center(
-                                child: CircularProgressIndicator(
-                                  value: loadingProgress.expectedTotalBytes != null
-                                      ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-                                      : null,
-                                ),
-                              ),
-                            );
+                            return Container(width: 0, height: 0);
                           },
                         ),
                       ),
