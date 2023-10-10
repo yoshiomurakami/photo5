@@ -47,6 +47,27 @@ class ChatConnection {
     });
   }
 
+  void onCameraEvent(void Function(dynamic) callback) {
+    socket?.on('camera_event', (data) {
+      callback(data);
+    });
+  }
+
+  void listenToCameraEvent(BuildContext context, void Function() callback) {
+    socket?.on('camera_event', (data) {
+      print('Received camera_event with data: $data');
+
+      // ここで context を使用してSnackBarを表示します。
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Received message: $data"),
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      callback();
+    });
+  }
 
   void sendMessage(String message) {
     socket?.emit('message', message);
@@ -175,6 +196,7 @@ class ChatNotifier extends ChangeNotifier {
 
     });
   }
+
 }
 
 final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) => ChatNotifier(ref));

@@ -10,6 +10,7 @@ class TimelineMapWidget extends StatelessWidget {
   final PageController pageController;
   final bool programmaticPageChange;
   final Function updateGeocodedLocation;
+  final VoidCallback onCameraButtonPressed;
 
   TimelineMapWidget({
     required this.timelineItems,
@@ -18,6 +19,7 @@ class TimelineMapWidget extends StatelessWidget {
     required this.pageController,
     required this.programmaticPageChange,
     required this.updateGeocodedLocation,
+    required this.onCameraButtonPressed,
   });
 
   @override
@@ -25,15 +27,23 @@ class TimelineMapWidget extends StatelessWidget {
     // カレントロケーションの設定
     MapController.instance.setCurrentLocation(currentLocation);
 
-    return MapDisplay(
-      currentLocation: currentLocation,
-      timelineItems: timelineItems,
-      size: size,
-      pageController: pageController,
-      programmaticPageChange: programmaticPageChange,
-      updateTimeline: updateGeocodedLocation,
+    return Stack(
+      children: [
+        // まず、背景として MapDisplay を配置
+        MapDisplay(
+          currentLocation: currentLocation,
+          timelineItems: timelineItems,
+          size: size,
+          pageController: pageController,
+          programmaticPageChange: programmaticPageChange,
+          updateTimeline: updateGeocodedLocation,
+        ),
+        // 次に、CameraButton を配置
+        // CameraButton(onPressed: onCameraButtonPressed),
+      ],
     );
   }
+
 }
 
 

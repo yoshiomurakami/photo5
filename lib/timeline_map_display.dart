@@ -2,12 +2,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:camera/camera.dart';
+// import 'package:flutter/cupertino.dart';
 // import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
-// import 'timeline_fullscreen_widget.dart';
+import 'timeline_camera.dart';
+
 
 class MapController {
   GoogleMapController? _controller;
@@ -144,6 +146,10 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   late FixedExtentScrollController _pickerController;
   bool isScrolling = false;
   bool isFullScreenMode = false;
+  List<CameraDescription>? _cameras;
+  late CameraController _controller;
+  ChatConnection chatConnection = ChatConnection();
+
 
 
 
@@ -185,6 +191,27 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     final ChatNotifier = ref.read(chatNotifierProvider);
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems);
     print('_pickerController initial item: ${_pickerController.initialItem}');
+    _initializeCamera();
+    // listenToCameraEventを呼び出す
+    chatConnection.listenToCameraEvent(context, () {
+      // 何かの処理... 今回は特に何もしない
+    });
+  }
+
+  Future<void> _initializeCamera() async {
+    _cameras = await availableCameras();
+    if (_cameras!.isNotEmpty) {
+      _controller = CameraController(_cameras![0], ResolutionPreset.medium);
+    }
+  }
+
+  void _openCamera(CameraDescription cameraDescription) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(camera: cameraDescription),
+      ),
+    );
   }
 
   @override
@@ -254,33 +281,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 isFullScreenMode = !isFullScreenMode;
                               });
                             },
+                            onCameraButtonPressed: () {
+                              if (_cameras != null && _cameras!.isNotEmpty) {
+                                _openCamera(_cameras![0]);
+                                chatConnection.sendMessage("someone_start_camera");
+                              } else {
+                                print("No available cameras found.");
+                                // もしご希望であれば、ユーザーにエラーメッセージを表示する処理も追加できます。
+                              }
+                            },
+                            // cameraDescription: snapshot.data!.first,
                           ),
                         );
                       },
                     ),
-
                   ),
                 ),
               ),
             ),
-
-            if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
-              Positioned(
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: FullScreenImageViewer(
-                  items: items, // これはあなたのitemsリストを参照するものと仮定しています。
-                  initialIndex: _pickerController.selectedItem, // これはあなたのコントローラの選択されたアイテムのインデックスを参照するものと仮定しています。
-                  controller: _pickerController, // FullScreenImageViewerに必要な他のプロパティや設定も追加できます。
-                  onTap: () {
-                    setState(() {
-                      isFullScreenMode = false;
-                    });
-                  },
-                ),
-              ),
 
             Positioned(
               right: widget.size.width * 0.05,
@@ -339,6 +357,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ],
               ),
             ),
+
+            if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
+              Positioned(
+                top: 0,
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: FullScreenImageViewer(
+                  items: items, // これはあなたのitemsリストを参照するものと仮定しています。
+                  initialIndex: _pickerController.selectedItem, // これはあなたのコントローラの選択されたアイテムのインデックスを参照するものと仮定しています。
+                  controller: _pickerController, // FullScreenImageViewerに必要な他のプロパティや設定も追加できます。
+                  onTap: () {
+                    setState(() {
+                      isFullScreenMode = false;
+                    });
+                  },
+                ),
+              ),
             // Positioned(
             //   right: widget.size.width * 0.05,
             //   top: widget.size.height * 0.5 + (widget.size.height * 0.35),
@@ -378,57 +414,39 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 }
 
+// class CameraButton extends StatelessWidget {
+//   final VoidCallback onPressed;
 //
-// class SliderController extends StatefulWidget {
-//   final VoidCallback onReachedTop;
-//   final VoidCallback onReachedBottom;
-//
-//   SliderController({
-//     required this.onReachedTop,
-//     required this.onReachedBottom,
-//   });
-//
-//   @override
-//   _SliderControllerState createState() => _SliderControllerState();
-// }
-//
-// class _SliderControllerState extends State<SliderController> {
-//   double pointerValue = 0.5; // ポインターの初期位置は中央
+//   CameraButton({required this.onPressed});
 //
 //   @override
 //   Widget build(BuildContext context) {
-//     return GestureDetector(
-//       onVerticalDragUpdate: (details) {
-//         setState(() {
-//           pointerValue += details.delta.dy / (MediaQuery.of(context).size.height * 0.2);
-//           pointerValue = pointerValue.clamp(0.0, 2.0);
-//         });
-//
-//         if (pointerValue == 0.0) {
-//           widget.onReachedTop.call();
-//           pointerValue = 1.0;
-//         } else if (pointerValue == 2.0) {
-//           widget.onReachedBottom.call();
-//           pointerValue = 1.0;
-//         }
-//       },
+//     final Size size = MediaQuery.of(context).size;
+//     return Positioned(
+//       left: size.width * 0.4,
+//       top: size.height * 0.9,
 //       child: Container(
-//         height: MediaQuery.of(context).size.width * 0.2,
-//         width: 15, // Slider width
-//         color: Colors.grey.shade200, // Slider background color
-//         child: Align(
-//           alignment: Alignment(0, pointerValue * 2 - 1),
-//           child: Container(
-//             height: 15, // Pointer height
-//             width: 15, // Pointer width
-//             decoration: BoxDecoration(
-//               shape: BoxShape.circle,
-//               color: Colors.blue, // Pointer color
+//         width: size.width * 0.2,
+//         height: size.width * 0.2,
+//         child: FloatingActionButton(
+//           heroTag: "camera", // HeroTag設定
+//           backgroundColor: Color(0xFFFFCC4D),
+//           foregroundColor: Colors.black,
+//           elevation: 0,
+//           shape: CircleBorder(side: BorderSide(color: Colors.black, width: 2.0)),
+//           child: Center(
+//             child: Text(
+//               '📷',
+//               textAlign: TextAlign.center,
+//               style: TextStyle(
+//                 fontSize: size.width * 0.1,
+//                 height: 1.0,
+//               ),
 //             ),
 //           ),
+//           onPressed: onPressed,
 //         ),
 //       ),
 //     );
 //   }
 // }
-

@@ -17,6 +17,8 @@ import 'chat_connection.dart';
 // import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+
+
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.getInstance().then((prefs) {
@@ -41,7 +43,7 @@ class MyApp extends StatelessWidget {
       // color: Color(0xFFFFCC4D),
         child:MaterialApp(
           theme: ThemeData(
-            canvasColor: Colors.transparent,
+            canvasColor: Color(0xFFFFCC4D)
           ),
           home: this.home,
         ),

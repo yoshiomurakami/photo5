@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'album_screen.dart';
+// import 'album_screen.dart';
 import 'timeline_camera.dart';
 import 'timeline_map_widget.dart';
 import 'timeline_providers.dart';
@@ -26,6 +26,7 @@ class _MainScreenState extends State<_MainScreenContent> {
   bool _programmaticPageChange = false;
   Future<List<CameraDescription>>? _camerasFuture;
   ChatConnection? chatConnection;
+
   // String? latestPhotoChange;
 
 
@@ -50,14 +51,14 @@ class _MainScreenState extends State<_MainScreenContent> {
     );
   }
 
-  void _openAlbum() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AlbumScreen(),
-      ),
-    );
-  }
+  // void _openAlbum() {
+  //   Navigator.push(
+  //     context,
+  //     MaterialPageRoute(
+  //       builder: (context) => AlbumScreen(),
+  //     ),
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +78,12 @@ class _MainScreenState extends State<_MainScreenContent> {
             pageController: _pageController,
             programmaticPageChange: _programmaticPageChange,
             updateGeocodedLocation: updateGeocodedLocation,
+            onCameraButtonPressed: () async {
+              List<CameraDescription>? cameras = await _camerasFuture;
+              if (cameras != null && cameras.isNotEmpty) {
+                _openCamera(cameras.first);
+              }
+            },
           );
         },
         loading: () => timelineMapWidget = Center(child: CircularProgressIndicator()),
@@ -87,20 +94,20 @@ class _MainScreenState extends State<_MainScreenContent> {
         body: Stack(
           children: <Widget>[
             timelineMapWidget,
-            FutureBuilder<List<CameraDescription>>(
-              future: _camerasFuture,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  if (snapshot.hasData) {
-                    return CameraButton(onPressed: () => _openCamera(snapshot.data!.first));
-                  } else {
-                    return Text('No camera found');
-                  }
-                } else {
-                  return CircularProgressIndicator();
-                }
-              },
-            ),
+            // FutureBuilder<List<CameraDescription>>(
+            //   future: _camerasFuture,
+            //   builder: (context, snapshot) {
+            //     if (snapshot.connectionState == ConnectionState.done) {
+            //       if (snapshot.hasData) {
+            //         return CameraButton(onPressed: () => _openCamera(snapshot.data!.first));
+            //       } else {
+            //         return Text('No camera found');
+            //       }
+            //     } else {
+            //       return CircularProgressIndicator();
+            //     }
+            //   },
+            // ),
             Positioned(
               left: 0,
               bottom: 0,
@@ -114,11 +121,11 @@ class _MainScreenState extends State<_MainScreenContent> {
             //   ),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          heroTag: "album",
-          onPressed: _openAlbum,
-          child: Icon(Icons.photo_album),
-        ),
+        // floatingActionButton: FloatingActionButton(
+        //   heroTag: "album",
+        //   onPressed: _openAlbum,
+        //   child: Icon(Icons.photo_album),
+        // ),
       );
     });
   }

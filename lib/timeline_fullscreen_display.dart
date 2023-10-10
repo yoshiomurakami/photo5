@@ -179,7 +179,7 @@ class _FullScreenDisplayState extends ConsumerState<_FullScreenDisplayStateful> 
           right: 10,
           bottom: 10 + (2 * 60 + 2 * 10),  // 2つの他のボタンとの間隔を考慮
           child: FloatingActionButton(
-            heroTag: "camera",
+            // heroTag: "camera",
             onPressed: () {
               // カメラの起動ロジック
             },

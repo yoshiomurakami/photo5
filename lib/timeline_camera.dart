@@ -18,43 +18,45 @@ import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
 import 'chat_connection.dart';
 import 'dart:convert';
+// import 'camera_utilities.dart';
 
-class CameraButton extends StatelessWidget {
-  final VoidCallback onPressed;
-
-  CameraButton({required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    final Size size = MediaQuery.of(context).size;
-    return Positioned(
-      left: size.width * 0.4,
-      top: size.height * 0.9,
-      child: Container(
-        width: size.width * 0.2,
-        height: size.width * 0.2,
-        child: FloatingActionButton(
-          heroTag: "camera", // HeroTag設定
-          backgroundColor: Color(0xFFFFCC4D),
-          foregroundColor: Colors.black,
-          elevation: 0,
-          shape: CircleBorder(side: BorderSide(color: Colors.black, width: 2.0)),
-          child: Center(
-            child: Text(
-              '📷',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: size.width * 0.1,
-                height: 1.0,
-              ),
-            ),
-          ),
-          onPressed: onPressed,
-        ),
-      ),
-    );
-  }
-}
+// class CameraButton extends StatelessWidget {
+//   final VoidCallback onPressed;
+//
+//   CameraButton({required this.onPressed});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     final Size size = MediaQuery.of(context).size;
+//     return Positioned(
+//       left: size.width * 0.4,
+//       top: size.height * 0.75,
+//       child: Container(
+//         width: size.width * 0.2,
+//         height: size.width * 0.2,
+//         // child: FloatingActionButton(
+//         //   // key: cameraButtonKey,
+//         //   heroTag: "camera", // HeroTag設定
+//         //   backgroundColor: Color(0xFFFFCC4D),
+//         //   foregroundColor: Colors.black,
+//         //   elevation: 0,
+//         //   shape: CircleBorder(side: BorderSide(color: Colors.black, width: 2.0)),
+//         //   child: Center(
+//         //     child: Text(
+//         //       '📷',
+//         //       textAlign: TextAlign.center,
+//         //       style: TextStyle(
+//         //         fontSize: size.width * 0.1,
+//         //         height: 1.0,
+//         //       ),
+//         //     ),
+//         //   ),
+//         //   onPressed: onPressed,
+//         // ),
+//       ),
+//     );
+//   }
+// }
 
 class CameraScreen extends StatefulWidget {
 

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_providers.dart';
 import 'chat_connection.dart';
-import 'dart:ui' as ui;
 import 'dart:async';
-
 
 class TimelineCard extends StatefulWidget {
   final TimelineItem item;
@@ -14,6 +12,7 @@ class TimelineCard extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final VoidCallback? onTapCallback;
+  final VoidCallback? onCameraButtonPressed;
 
   TimelineCard({
     Key? key,
@@ -24,6 +23,7 @@ class TimelineCard extends StatefulWidget {
     required this.pickerController,
     required this.items,
     required this.onTapCallback,
+    required this.onCameraButtonPressed,
   }) : super(key: key);
 
   @override
@@ -47,16 +47,6 @@ class _TimelineCardState extends State<TimelineCard> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(
-        //     builder: (context) => FullScreenImageViewer(
-        //       items: widget.items,
-        //       initialIndex: widget.controller.selectedItem,
-        //       controller: widget.controller,  // controllerを渡す
-        //     ),
-        //   ),
-        // );
         if (widget.onTapCallback != null) {
           widget.onTapCallback!();
         }
@@ -74,8 +64,47 @@ class _TimelineCardState extends State<TimelineCard> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-              child: FadeInImage.assetNetwork(
-                placeholder: 'assets/01.png',
+              child: widget.item.id == "343hg5q0858jwir"  // ここで条件を追加
+              ? Stack(
+                children: <Widget>[
+                  // FadeInImage.assetNetwork(
+                  //   placeholder: 'assets/02.png',
+                  //   image: 'https://photo5.world/${widget.item.thumbnailFilename}',
+                  //   fit: BoxFit.cover,
+                  //   fadeInDuration: Duration(milliseconds: 300),
+                  // ),
+                  Align(
+                    alignment: Alignment.center,
+                    child: Container(
+                      width: widget.size.width * 0.14,
+                      height: widget.size.width * 0.14,
+                      child: FloatingActionButton(
+                        // key: cameraButtonKey,
+                        // heroTag: "camera", // HeroTag設定
+                        backgroundColor: Color(0xFFFFCC4D),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
+                        child: Center(
+                          child: Text(
+                            '📷',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: widget.size.width * 0.08,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                        onPressed: widget.onCameraButtonPressed,
+                      ),
+                    ),
+                  ),
+
+
+                ],
+              )
+                  : FadeInImage.assetNetwork(
+                placeholder: 'assets/placeholder_thumb.png',
                 image: 'https://photo5.world/${widget.item.thumbnailFilename}',
                 fit: BoxFit.cover,
                 fadeInDuration: Duration(milliseconds: 300),
@@ -84,6 +113,7 @@ class _TimelineCardState extends State<TimelineCard> {
           ),
         ),
       ),
+
     );
   }
 
@@ -134,6 +164,7 @@ class _FullScreenImageViewerStateful extends ConsumerStatefulWidget {
   @override
   _FullScreenImageViewerState createState() => _FullScreenImageViewerState();
 }
+
 class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerStateful> {
   PageController _scrollController = PageController();
 
@@ -227,22 +258,6 @@ class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerSt
       ),
     );
   }
-
-  Future<ui.Image> _loadImage(String imageUrl) async {
-    final Completer<ui.Image> completer = Completer();
-    final NetworkImage image = NetworkImage(imageUrl);
-    image.resolve(const ImageConfiguration()).addListener(
-      ImageStreamListener(
-            (ImageInfo image, bool synchronousCall) {
-          final ui.Image img = image.image;
-          completer.complete(img);
-        },
-      ),
-    );
-    return completer.future;
-  }
-
-
 }
 
 
@@ -261,39 +276,6 @@ Future<TimelineItem> scrollTimeline(FixedExtentScrollController controller, int 
   int centerIndex = controller.selectedItem;
   return items[centerIndex];
 }
-
-
-
-
-
-
-// class FullScreenImageModal extends StatelessWidget {
-//   final String imageFilename;
-//
-//   FullScreenImageModal({required this.imageFilename});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final size = MediaQuery.of(context).size;
-//
-//     return Material(
-//       color: Colors.transparent,
-//       child: Center(
-//         child: Container(
-//           width: size.width * 0.9,
-//           height: size.height * 0.9,
-//           decoration: BoxDecoration(
-//             borderRadius: BorderRadius.circular(16.0),
-//             image: DecorationImage(
-//               image: NetworkImage('https://photo5.world/$imageFilename'),
-//               fit: BoxFit.contain,
-//             ),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-// }
 
 
 
