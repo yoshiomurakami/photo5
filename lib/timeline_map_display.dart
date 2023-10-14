@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
-// import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart';
 // import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
@@ -18,7 +18,6 @@ class MapController {
   double _zoomLevel = 10; // 既存のズームレベル値をセット
   double get zoomLevel => _zoomLevel;
   Timer? _zoomTimer;
-
 
   // シングルトンインスタンス
   static final MapController _instance = MapController._internal();
@@ -50,6 +49,7 @@ class MapController {
       _zoomLevel += 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
+    print("New_zoomLevel=$_zoomLevel");
   }
 
   void zoomOut(LatLng target) {
@@ -57,34 +57,176 @@ class MapController {
       _zoomLevel -= 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
+    print("New_zoomLevel=$_zoomLevel");
   }
 
-  void startZoomingIn(LatLng target) {
-    _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-      if (_zoomLevel < 15) {
-        _zoomLevel += 1;
-        _controller?.animateCamera(CameraUpdate.zoomIn());
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void startZoomingOut(LatLng target) {
-    _zoomTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-      if (_zoomLevel > 2) {
-        _zoomLevel -= 1;
-        _controller?.animateCamera(CameraUpdate.zoomOut());
-      } else {
-        timer.cancel();
-      }
-    });
-  }
-
-  void stopZooming() {
-    _zoomTimer?.cancel();
+  // 新しいメソッドを追加
+  void updateZoom(double newZoomLevel) {
+    if (newZoomLevel >= 1.0 && newZoomLevel <= 20.0) {
+      _zoomLevel = newZoomLevel;
+      _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
+    }
   }
 }
+
+class ZoomControl extends StatefulWidget {
+  final Size size;
+  final double right;
+  final double top;
+
+  ZoomControl({required this.size, required this.right, required this.top});
+
+  @override
+  _ZoomControlState createState() => _ZoomControlState();
+}
+
+class _ZoomControlState extends State<ZoomControl> {
+  double _startPosition = 0;
+  double _endPosition = 0;
+  double _zoomLevel = 2.0; // 初期値として最小のズームレベルを設定
+
+  @override
+  void initState() {
+    super.initState();
+    _zoomLevel = MapController.instance.zoomLevel.toDouble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final double zoomTouchLength = 300;
+    print("zoomTouchLength=$zoomTouchLength");
+
+    return Positioned(
+      right: widget.right,
+      top: widget.top,
+      child: GestureDetector(
+        onVerticalDragStart: (details) {
+          _startPosition = details.localPosition.dy;
+        },
+        onVerticalDragEnd: (details) {
+          double difference = _endPosition - _startPosition;
+          double zoomDelta;
+
+
+          if (difference.abs() >= zoomTouchLength * 0.9) {
+            zoomDelta = 13.0;
+          } else if (difference.abs() >= zoomTouchLength * 0.1) {
+            zoomDelta = 1.0 + (difference.abs() - zoomTouchLength * 0.1) * 12 / (zoomTouchLength * 0.8);
+          } else {
+            zoomDelta = 1.0;
+          }
+
+          double currentZoomLevel = _zoomLevel;
+
+          if (difference > 0) {
+            // Swipe down
+            for (int i = 0; i < zoomDelta; i++) {
+              if (currentZoomLevel > 2) {
+
+                MapController.instance.zoomOut(MapController.instance._currentLocation);
+                currentZoomLevel--;
+              }
+            }
+          } else {
+            // Swipe up
+            for (int i = 0; i < zoomDelta; i++) {
+              if (currentZoomLevel < 15) {
+                print("currentZoomLevel=$currentZoomLevel");
+                MapController.instance.zoomIn(MapController.instance._currentLocation);
+                currentZoomLevel++;
+              }
+            }
+          }
+          // ズームインの操作
+          if (difference < 0) {
+            if (_zoomLevel + zoomDelta <= 15) {
+              _zoomLevel += zoomDelta;
+              for (int i = 0; i < zoomDelta; i++) {
+                MapController.instance.zoomIn(MapController.instance._currentLocation);
+              }
+            } else {
+              while (_zoomLevel < 15) {
+                _zoomLevel += 1;
+                MapController.instance.zoomIn(MapController.instance._currentLocation);
+              }
+            }
+          }
+          // ズームアウトの操作
+          else {
+            if (_zoomLevel - zoomDelta >= 2) {
+              _zoomLevel -= zoomDelta;
+              for (int i = 0; i < zoomDelta; i++) {
+                MapController.instance.zoomOut(MapController.instance._currentLocation);
+              }
+            } else {
+              while (_zoomLevel > 2) {
+                _zoomLevel -= 1;
+                MapController.instance.zoomOut(MapController.instance._currentLocation);
+              }
+            }
+          }
+          _startPosition = 0;
+          _endPosition = 0;
+        },
+        onVerticalDragUpdate: (details) {
+          _endPosition = details.localPosition.dy;
+        },
+        child: Container(
+          width: widget.size.width,
+          height: widget.size.height,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.9),
+            border: Border.all(color: Colors.black, width: 2.5),
+            borderRadius: BorderRadius.circular(20),
+            // boxShadow: [ // 立体感を出すための影を追加
+            //   BoxShadow(
+            //     color: Colors.black38,
+            //     offset: Offset(2.0, 2.0),
+            //     blurRadius: 4.0,
+            //     spreadRadius: 1.0,
+            //   ),
+            // ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: GestureDetector(
+                  onTap: () {
+                    // ズームインの処理
+                    MapController.instance.updateZoom(15.0);
+                    setState(() {
+                      _zoomLevel = 15.0;
+                    });
+                  },
+                  child: Icon(Icons.location_city, size: 18.0),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4.0),
+                child: GestureDetector(
+                  onTap: () {
+                    // ズームアウトの処理
+                    MapController.instance.updateZoom(2.0);
+                    setState(() {
+                      _zoomLevel = 2.0;
+                    });
+                  },
+                  child: Icon(Icons.public, size: 18.0),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+
+
 
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
@@ -301,7 +443,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             ),
 
             Positioned(
-              right: widget.size.width * 0.05,
+              right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
               top: (widget.size.height * 0.46) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineForwardOne",
@@ -315,7 +457,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
             Positioned(
-              right: widget.size.width * 0.05,
+              right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
               top: (widget.size.height * 0.54) - (56.0 / 2),
               child: FloatingActionButton(
                 heroTag: "timelineBackOne",
@@ -328,35 +470,43 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ),
               ),
             ),
-            Positioned(
-              right: widget.size.width * 0.05,
-              top: widget.size.height * 0.5 + (widget.size.height * 0.2),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    child: FloatingActionButton(
-                      heroTag: "mapZoomIn",
-                      onPressed: () {
-                        MapController.instance.zoomIn(widget.currentLocation);
-                      },
-                      child: Icon(Icons.add),
-                      mini: true,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  GestureDetector(
-                    child: FloatingActionButton(
-                      heroTag: "mapZoomOut",
-                      onPressed: () {
-                        MapController.instance.zoomOut(widget.currentLocation);
-                      },
-                      child: Icon(Icons.remove),
-                      mini: true,
-                    ),
-                  ),
-                ],
-              ),
+            // Positioned(
+            //   right: widget.size.width * 0.05,
+            //   top: widget.size.height * 0.5 + (widget.size.height * 0.2),
+            //   child: Column(
+            //     children: [
+            //       GestureDetector(
+            //         child: FloatingActionButton(
+            //           heroTag: "mapZoomIn",
+            //           onPressed: () {
+            //             MapController.instance.zoomIn(widget.currentLocation);
+            //           },
+            //           child: Icon(Icons.add),
+            //           mini: true,
+            //         ),
+            //       ),
+            //       SizedBox(height: 10),
+            //       GestureDetector(
+            //         child: FloatingActionButton(
+            //           heroTag: "mapZoomOut",
+            //           onPressed: () {
+            //             MapController.instance.zoomOut(widget.currentLocation);
+            //           },
+            //           child: Icon(Icons.remove),
+            //           mini: true,
+            //         ),
+            //       ),
+            //     ],
+            //   ),
+            // ),
+            ZoomControl(
+              size: Size(widget.size.width * 0.1, widget.size.width * 0.3),
+              right: widget.size.width * 0.03,
+              top: (widget.size.height) - (widget.size.width * 0.33),
             ),
+
+
+
 
             if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
               Positioned(
@@ -375,31 +525,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   },
                 ),
               ),
-            // Positioned(
-            //   right: widget.size.width * 0.05,
-            //   top: widget.size.height * 0.5 + (widget.size.height * 0.35),
-            //   child: FloatingActionButton(
-            //     heroTag: "displayFullScreen",
-            //     onPressed: () {
-            //       Navigator.push(
-            //         context,
-            //         MaterialPageRoute(
-            //           builder: (context) => TimelineFullScreenWidget(
-            //             size: widget.size,
-            //             currentLocation: widget.currentLocation,
-            //             timelineItems: widget.timelineItems,
-            //             pageController: _pageController,
-            //             programmaticPageChange: _programmaticPageChange,
-            //             updateGeocodedLocation: updateGeocodedLocation,
-            //             currentCardId: currentCardId,
-            //           ),
-            //         ),
-            //       );
-            //     },
-            //     child: Icon(Icons.fullscreen),
-            //     mini: true,
-            //   ),
-            // ),
           ],
         );
       },
