@@ -15,9 +15,8 @@ class MapController {
   GoogleMapController? _controller;
   LatLng _currentLocation = LatLng(0, 0);
   Set<Marker> _markers = {};
-  double _zoomLevel = 10; // 既存のズームレベル値をセット
+  double _zoomLevel = 15; // 既存のズームレベル値をセット
   double get zoomLevel => _zoomLevel;
-  Timer? _zoomTimer;
 
   // シングルトンインスタンス
   static final MapController _instance = MapController._internal();
@@ -62,7 +61,7 @@ class MapController {
 
   // 新しいメソッドを追加
   void updateZoom(double newZoomLevel) {
-    if (newZoomLevel >= 1.0 && newZoomLevel <= 20.0) {
+    if (newZoomLevel >= 2.0 && newZoomLevel <= 15.0) {
       _zoomLevel = newZoomLevel;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
@@ -83,12 +82,14 @@ class ZoomControl extends StatefulWidget {
 class _ZoomControlState extends State<ZoomControl> {
   double _startPosition = 0;
   double _endPosition = 0;
-  double _zoomLevel = 2.0; // 初期値として最小のズームレベルを設定
+
+  // ValueNotifierを追加
+  ValueNotifier<double> _zoomLevelNotifier = ValueNotifier<double>(2.0);
 
   @override
   void initState() {
     super.initState();
-    _zoomLevel = MapController.instance.zoomLevel.toDouble();
+    _zoomLevelNotifier.value = MapController.instance.zoomLevel.toDouble();
   }
 
   @override
@@ -107,22 +108,20 @@ class _ZoomControlState extends State<ZoomControl> {
           double difference = _endPosition - _startPosition;
           double zoomDelta;
 
-
           if (difference.abs() >= zoomTouchLength * 0.9) {
             zoomDelta = 13.0;
-          } else if (difference.abs() >= zoomTouchLength * 0.1) {
+          } else if (difference.abs() >= zoomTouchLength * 0.01) {
             zoomDelta = 1.0 + (difference.abs() - zoomTouchLength * 0.1) * 12 / (zoomTouchLength * 0.8);
           } else {
             zoomDelta = 1.0;
           }
 
-          double currentZoomLevel = _zoomLevel;
+          double currentZoomLevel = _zoomLevelNotifier.value;
 
           if (difference > 0) {
             // Swipe down
             for (int i = 0; i < zoomDelta; i++) {
-              if (currentZoomLevel > 2) {
-
+              if (currentZoomLevel >= 2) {
                 MapController.instance.zoomOut(MapController.instance._currentLocation);
                 currentZoomLevel--;
               }
@@ -130,98 +129,76 @@ class _ZoomControlState extends State<ZoomControl> {
           } else {
             // Swipe up
             for (int i = 0; i < zoomDelta; i++) {
-              if (currentZoomLevel < 15) {
-                print("currentZoomLevel=$currentZoomLevel");
+              if (currentZoomLevel <= 15) {
                 MapController.instance.zoomIn(MapController.instance._currentLocation);
                 currentZoomLevel++;
               }
             }
           }
-          // ズームインの操作
-          if (difference < 0) {
-            if (_zoomLevel + zoomDelta <= 15) {
-              _zoomLevel += zoomDelta;
-              for (int i = 0; i < zoomDelta; i++) {
-                MapController.instance.zoomIn(MapController.instance._currentLocation);
-              }
-            } else {
-              while (_zoomLevel < 15) {
-                _zoomLevel += 1;
-                MapController.instance.zoomIn(MapController.instance._currentLocation);
-              }
-            }
-          }
-          // ズームアウトの操作
-          else {
-            if (_zoomLevel - zoomDelta >= 2) {
-              _zoomLevel -= zoomDelta;
-              for (int i = 0; i < zoomDelta; i++) {
-                MapController.instance.zoomOut(MapController.instance._currentLocation);
-              }
-            } else {
-              while (_zoomLevel > 2) {
-                _zoomLevel -= 1;
-                MapController.instance.zoomOut(MapController.instance._currentLocation);
-              }
-            }
-          }
+
+          // Update the _zoomLevelNotifier value
+          _zoomLevelNotifier.value = currentZoomLevel;
+          print("currentZoomLevel=$currentZoomLevel");
+
           _startPosition = 0;
           _endPosition = 0;
         },
         onVerticalDragUpdate: (details) {
           _endPosition = details.localPosition.dy;
         },
-        child: Container(
-          width: widget.size.width,
-          height: widget.size.height,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.9),
-            border: Border.all(color: Colors.black, width: 2.5),
-            borderRadius: BorderRadius.circular(20),
-            // boxShadow: [ // 立体感を出すための影を追加
-            //   BoxShadow(
-            //     color: Colors.black38,
-            //     offset: Offset(2.0, 2.0),
-            //     blurRadius: 4.0,
-            //     spreadRadius: 1.0,
-            //   ),
-            // ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: GestureDetector(
-                  onTap: () {
-                    // ズームインの処理
-                    MapController.instance.updateZoom(15.0);
-                    setState(() {
-                      _zoomLevel = 15.0;
-                    });
-                  },
-                  child: Icon(Icons.location_city, size: 18.0),
-                ),
+        child: ValueListenableBuilder<double>(
+          valueListenable: _zoomLevelNotifier,
+          builder: (BuildContext context, double zoom, Widget? child) {
+            return Container(
+              width: widget.size.width,
+              height: widget.size.height,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.9),
+                border: Border.all(color: Colors.black, width: 2.5),
+                borderRadius: BorderRadius.circular(20),
               ),
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: GestureDetector(
-                  onTap: () {
-                    // ズームアウトの処理
-                    MapController.instance.updateZoom(2.0);
-                    setState(() {
-                      _zoomLevel = 2.0;
-                    });
-                  },
-                  child: Icon(Icons.public, size: 18.0),
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        // ズームインの処理
+                        MapController.instance.updateZoom(15.0);
+                        _zoomLevelNotifier.value = 15.0;
+                      },
+                      child: Icon(
+                        Icons.location_city,
+                        size: 20.0,
+                        color: zoom > 14.0 ? Colors.grey : Colors.black,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: GestureDetector(
+                      onTap: () {
+                        // ズームアウトの処理
+                        MapController.instance.updateZoom(2.0);
+                        _zoomLevelNotifier.value = 2.0;
+                      },
+                      child: Icon(
+                        Icons.public,
+                        size: 20.0,
+                        color: zoom < 3.0 ? Colors.grey : Colors.black,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
+
 }
 
 

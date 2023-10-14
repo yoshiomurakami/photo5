@@ -67,12 +67,6 @@ class _TimelineCardState extends State<TimelineCard> {
               child: widget.item.id == "343hg5q0858jwir"  // ここで条件を追加
               ? Stack(
                 children: <Widget>[
-                  // FadeInImage.assetNetwork(
-                  //   placeholder: 'assets/02.png',
-                  //   image: 'https://photo5.world/${widget.item.thumbnailFilename}',
-                  //   fit: BoxFit.cover,
-                  //   fadeInDuration: Duration(milliseconds: 300),
-                  // ),
                   Align(
                     alignment: Alignment.center,
                     child: Container(
@@ -99,24 +93,25 @@ class _TimelineCardState extends State<TimelineCard> {
                       ),
                     ),
                   ),
-
-
                 ],
               )
-                  : FadeInImage.assetNetwork(
-                placeholder: 'assets/placeholder_thumb.png',
-                image: 'https://photo5.world/${widget.item.thumbnailFilename}',
-                fit: BoxFit.cover,
-                fadeInDuration: Duration(milliseconds: 300),
+                  : Stack(
+                children: <Widget>[
+                  Image.asset('assets/placeholder_thumb.png'),
+                  FadeInImage.assetNetwork(
+                    placeholder: 'assets/placeholder_thumb_transparent.png',
+                    image: 'https://photo5.world/${widget.item.thumbnailFilename}',
+                    fit: BoxFit.cover,
+                    fadeInDuration: Duration(milliseconds: 300),
+                  ),
+                ],
               ),
             ),
           ),
         ),
       ),
-
     );
   }
-
 }
 
 class FullScreenImageViewer extends ConsumerWidget {
