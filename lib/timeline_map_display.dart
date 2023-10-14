@@ -44,19 +44,19 @@ class MapController {
   }
 
   void zoomIn(LatLng target) {
-    if (_zoomLevel < 15) {
+    if (_zoomLevel <= 15) {
       _zoomLevel += 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
-    print("New_zoomLevel=$_zoomLevel");
+    print("New_zoomLevel_in=$_zoomLevel");
   }
 
   void zoomOut(LatLng target) {
-    if (_zoomLevel > 2) {
+    if (_zoomLevel >= 2) {
       _zoomLevel -= 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
-    print("New_zoomLevel=$_zoomLevel");
+    print("New_zoomLevel_out=$_zoomLevel");
   }
 
   // 新しいメソッドを追加
@@ -121,7 +121,7 @@ class _ZoomControlState extends State<ZoomControl> {
           if (difference > 0) {
             // Swipe down
             for (int i = 0; i < zoomDelta; i++) {
-              if (currentZoomLevel >= 2) {
+              if (currentZoomLevel > 2) {
                 MapController.instance.zoomOut(MapController.instance._currentLocation);
                 currentZoomLevel--;
               }
@@ -129,7 +129,7 @@ class _ZoomControlState extends State<ZoomControl> {
           } else {
             // Swipe up
             for (int i = 0; i < zoomDelta; i++) {
-              if (currentZoomLevel <= 15) {
+              if (currentZoomLevel < 15) {
                 MapController.instance.zoomIn(MapController.instance._currentLocation);
                 currentZoomLevel++;
               }
@@ -171,7 +171,7 @@ class _ZoomControlState extends State<ZoomControl> {
                       child: Icon(
                         Icons.location_city,
                         size: 20.0,
-                        color: zoom > 14.0 ? Colors.grey : Colors.black,
+                        color: zoom == 15.0 ? Colors.grey : Colors.black,
                       ),
                     ),
                   ),
@@ -186,7 +186,7 @@ class _ZoomControlState extends State<ZoomControl> {
                       child: Icon(
                         Icons.public,
                         size: 20.0,
-                        color: zoom < 3.0 ? Colors.grey : Colors.black,
+                        color: zoom < 4.0 ? Colors.grey : Colors.black,
                       ),
                     ),
                   ),
@@ -396,9 +396,18 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             pickerController: _pickerController,
                             items: items,
                             onTapCallback: () {
-                              setState(() {
-                                isFullScreenMode = !isFullScreenMode;
-                              });
+                              // タップされたアイテムが中央のアイテムでない場合
+                              if (_pickerController.selectedItem != index) {
+                                _pickerController.animateToItem(
+                                  index,
+                                  duration: Duration(milliseconds: 250),
+                                  curve: Curves.easeInOut,
+                                );
+                              } else {
+                                setState(() {
+                                  isFullScreenMode = !isFullScreenMode;
+                                });
+                              }
                             },
                             onCameraButtonPressed: () {
                               if (_cameras != null && _cameras!.isNotEmpty) {
