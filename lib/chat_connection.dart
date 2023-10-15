@@ -47,30 +47,62 @@ class ChatConnection {
     });
   }
 
-  void onCameraEvent(void Function(dynamic) callback) {
-    socket?.on('camera_event', (data) {
-      callback(data);
-    });
-  }
+  // void onCameraEvent(void Function(dynamic) callback) {
+  //   socket?.on('camera_event', (data) {
+  //     callback(data);
+  //   });
+  // }
 
   void listenToCameraEvent(BuildContext context, void Function() callback) {
     socket?.on('camera_event', (data) {
       print('Received camera_event with data: $data');
 
       // ここで context を使用してSnackBarを表示します。
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Received message: $data"),
-          duration: Duration(seconds: 3),
-        ),
-      );
-
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Received message: $data"),
+            duration: Duration(seconds: 3),
+          ),
+        );
       callback();
     });
   }
 
+  void listenToShootingRoomMessages(BuildContext context) {
+    socket?.on('shooting', (data) {
+      // "shooting" ルームからのメッセージを処理
+      print('Received message from "shooting" room: $data');
+    });
+  }
+
+  void listenToRoomCount(BuildContext context) {
+    socket?.on('room_count', (data) {
+      print('Number of users in "shooting" room: ${data['count']}');
+
+      String actionMessage = data['action'] == "entered" ? "入室" : "退出";
+
+      // ここで context を使用してSnackBarを表示します。
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("$actionMessage - Number of users in \"shooting\" room: ${data['count']}"),
+          duration: Duration(seconds: 3),
+        ),
+      );
+    });
+  }
+
+
+  void emitEvent(String eventName) {
+    socket?.emit(eventName);
+  }
+
   void sendMessage(String message) {
     socket?.emit('message', message);
+  }
+
+  void removeListeners() {
+    socket?.off('camera_event');
+    socket?.off('room_count');
   }
 
   void disconnect() {

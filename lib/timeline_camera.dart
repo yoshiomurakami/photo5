@@ -472,9 +472,13 @@ class _CameraScreenState extends State<CameraScreen> {
                             child: Text('Take Picture'),
                           ),
                           ElevatedButton(
-                            onPressed: () => _navigateBack(context),
+                            onPressed: () {
+                              chatConnection.emitEvent("leave_shooting_room");
+                              _navigateBack(context);
+                            },
                             child: Text('Back'),
                           ),
+
                         ],
                       ),
                     ),

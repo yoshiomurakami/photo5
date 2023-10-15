@@ -315,6 +315,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     chatConnection.listenToCameraEvent(context, () {
       // 何かの処理... 今回は特に何もしない
     });
+    chatConnection.listenToRoomCount(context);
   }
 
   Future<void> _initializeCamera() async {
@@ -358,8 +359,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             Positioned(
               top: widget.size.height * 0.2,
               bottom: widget.size.height * 0.2,
-              left: 0,
-              right: 0,
+              left: widget.size.width * 0.15,
+              right: widget.size.width * 0.15,
               child: Container(
                 // color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
                 child: NotificationListener<ScrollNotification>(
@@ -412,7 +413,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                             onCameraButtonPressed: () {
                               if (_cameras != null && _cameras!.isNotEmpty) {
                                 _openCamera(_cameras![0]);
-                                chatConnection.sendMessage("someone_start_camera");
+                                chatConnection.emitEvent("enter_shooting_room");
                               } else {
                                 print("No available cameras found.");
                                 // もしご希望であれば、ユーザーにエラーメッセージを表示する処理も追加できます。
@@ -428,34 +429,34 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
 
-            Positioned(
-              right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
-              top: (widget.size.height * 0.46) - (56.0 / 2),
-              child: FloatingActionButton(
-                heroTag: "timelineForwardOne",
-                onPressed: () => handleScroll(1),
-                backgroundColor: Colors.transparent, // 透明な背景
-                elevation: 0, // 影をなくす
-                child: Icon(
-                  Icons.keyboard_double_arrow_up,
-                  color: Colors.black,
-                ),
-              ),
-            ),
-            Positioned(
-              right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
-              top: (widget.size.height * 0.54) - (56.0 / 2),
-              child: FloatingActionButton(
-                heroTag: "timelineBackOne",
-                onPressed: () => handleScroll(-1),
-                backgroundColor: Colors.transparent, // 透明な背景
-                elevation: 0, // 影をなくす
-                child: Icon(
-                  Icons.keyboard_double_arrow_down,
-                  color: Colors.black,
-                ),
-              ),
-            ),
+            // Positioned(
+            //   right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
+            //   top: (widget.size.height * 0.46) - (56.0 / 2),
+            //   child: FloatingActionButton(
+            //     heroTag: "timelineForwardOne",
+            //     onPressed: () => handleScroll(1),
+            //     backgroundColor: Colors.transparent, // 透明な背景
+            //     elevation: 0, // 影をなくす
+            //     child: Icon(
+            //       Icons.keyboard_double_arrow_up,
+            //       color: Colors.black,
+            //     ),
+            //   ),
+            // ),
+            // Positioned(
+            //   right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
+            //   top: (widget.size.height * 0.54) - (56.0 / 2),
+            //   child: FloatingActionButton(
+            //     heroTag: "timelineBackOne",
+            //     onPressed: () => handleScroll(-1),
+            //     backgroundColor: Colors.transparent, // 透明な背景
+            //     elevation: 0, // 影をなくす
+            //     child: Icon(
+            //       Icons.keyboard_double_arrow_down,
+            //       color: Colors.black,
+            //     ),
+            //   ),
+            // ),
             // Positioned(
             //   right: widget.size.width * 0.05,
             //   top: widget.size.height * 0.5 + (widget.size.height * 0.2),
@@ -486,9 +487,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             //   ),
             // ),
             ZoomControl(
-              size: Size(widget.size.width * 0.1, widget.size.width * 0.3),
+              size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
               right: widget.size.width * 0.03,
-              top: (widget.size.height) - (widget.size.width * 0.33),
+              top: (widget.size.height) - (widget.size.height * 0.3) ,
             ),
 
 
@@ -521,8 +522,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   @override
   void dispose() {
     _pickerController.dispose();
+
+    // リスナーの解除処理
+    chatConnection.removeListeners();
+
     super.dispose();
   }
+
 }
 
 // class CameraButton extends StatelessWidget {
