@@ -111,6 +111,11 @@ class ChatConnection {
 }
 
 class ConnectionNumber extends StatefulWidget {
+  final double? left;
+  final double? bottom;
+
+  ConnectionNumber({this.left, this.bottom});
+
   @override
   _ConnectionNumberState createState() => _ConnectionNumberState();
 }
@@ -126,18 +131,58 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
         totalConnections = connections;
       });
     });
-
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(8),
-      color: Colors.black.withOpacity(0.5),
-      child: Text('Connections: $totalConnections', style: TextStyle(color: Colors.white)),
+    double screenWidth = MediaQuery.of(context).size.width;
+    double leftMargin = screenWidth * 0.05;  // 画面の横幅の5%
+    double screenHeight = MediaQuery.of(context).size.height;
+    double bottomMargin = screenHeight * 0.05;  // 画面の横幅の5%
+
+    return Positioned(
+      left: widget.left ?? leftMargin,
+      bottom: widget.bottom ?? bottomMargin,
+      // width: 150,
+      height: screenWidth * 0.1,
+      child: Container(
+        padding: EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),  // 左側のpaddingを0に、右側のpaddingを調整
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border.all(color: Colors.black, width: 2.5),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              '✋',
+              style: TextStyle(color: Colors.black),
+            ),
+            SizedBox(width: 10),  // この値は、アイコンと数字の間のスペースを調整するために変更できます
+            Text(
+              '$totalConnections',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
+
 }
+
+
+
+
+
+
+
+
 
 
 class ChatNotifier extends ChangeNotifier {

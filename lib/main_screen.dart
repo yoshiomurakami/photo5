@@ -108,11 +108,7 @@ class _MainScreenState extends State<_MainScreenContent> {
             //     }
             //   },
             // ),
-            Positioned(
-              left: 0,
-              bottom: 0,
-              child: ConnectionNumber(),
-            ),
+            ConnectionNumber(),
             // if (latestPhotoChange != null)
             //   Positioned(
             //     top: 10,

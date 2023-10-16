@@ -153,7 +153,7 @@ class _ZoomControlState extends State<ZoomControl> {
               width: widget.size.width,
               height: widget.size.height,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.9),
+                color: Colors.white.withOpacity(0.8),
                 border: Border.all(color: Colors.black, width: 2.5),
                 borderRadius: BorderRadius.circular(20),
               ),
@@ -200,10 +200,6 @@ class _ZoomControlState extends State<ZoomControl> {
   }
 
 }
-
-
-
-
 
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
@@ -488,7 +484,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             // ),
             ZoomControl(
               size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
-              right: widget.size.width * 0.03,
+              right: widget.size.width * 0.05,
               top: (widget.size.height) - (widget.size.height * 0.3) ,
             ),
 
