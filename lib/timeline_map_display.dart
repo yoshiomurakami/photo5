@@ -201,6 +201,75 @@ class _ZoomControlState extends State<ZoomControl> {
 
 }
 
+class JumpToTop extends StatefulWidget {
+  final Size size;
+  final VoidCallback onPressed;
+
+  JumpToTop({Key? key, required this.size, required this.onPressed}) : super(key: key);
+
+  @override
+  _JumpToTopState createState() => _JumpToTopState();
+}
+
+
+class _JumpToTopState extends State<JumpToTop> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+  }
+
+  void fadeIn() => _controller.forward();
+
+  void fadeOut() => _controller.reverse();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      bottom: widget.size.width * 0.05,
+      left: widget.size.width * 0.5 - (widget.size.width * 0.15) / 2,
+      child: FadeTransition(
+        opacity: _controller,
+        child: ElevatedButton(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: 4.0),
+            child: Text(
+              '📷',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: widget.size.width * 0.07,
+              ),
+            ),
+          ),
+          onPressed: widget.onPressed,
+          style: ElevatedButton.styleFrom(
+            shape: CircleBorder(),
+            primary: Color(0xFFFFCC4D),
+            side: BorderSide(color: Colors.black, width: 2.0),
+            fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
+          ),
+        ),
+      ),
+    );
+  }
+
+
+
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+}
+
+
+
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
@@ -264,6 +333,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   List<CameraDescription>? _cameras;
   late CameraController _controller;
   ChatConnection chatConnection = ChatConnection();
+  final _jumpToTopKey = GlobalKey<_JumpToTopState>();
 
 
 
@@ -287,12 +357,21 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
-  Future<void> handleScroll(int step) async {
-    final newCenterItem = await scrollTimeline(_pickerController, step, widget.timelineItems);
-    setState(() {
-      currentCardId = newCenterItem.id;  // newCenterItemのidを取得
-    });
-  }
+  // void _handleScroll() {
+  //   // リストビューの中央の位置を取得
+  //   var centerPosition = _pickerController.offset + widget.size.height * 0.5;
+  //
+  //   // 中央のアイテムのインデックスを計算
+  //   var itemHeight = MediaQuery.of(context).size.height / 10; // itemExtentとして設定されている
+  //   var centerItemIndex = (centerPosition / itemHeight).round();
+  //
+  //   if (centerItemIndex == 0) {
+  //     _jumpToTopKey.currentState!.fadeOut();
+  //   } else {
+  //     _jumpToTopKey.currentState!.fadeIn();
+  //   }
+  // }
+
 
 
 
@@ -303,6 +382,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   void initState() {
     super.initState();
     _pickerController = FixedExtentScrollController();
+    _pickerController!.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems);
     print('_pickerController initial item: ${_pickerController.initialItem}');
@@ -312,6 +392,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       // 何かの処理... 今回は特に何もしない
     });
     chatConnection.listenToRoomCount(context);
+    _pickerController.addListener(_scrollListener);
+  }
+
+  void _scrollListener() {
+    if (_pickerController.selectedItem > 3) {
+      _jumpToTopKey.currentState?.fadeIn();
+    } else {
+      _jumpToTopKey.currentState?.fadeOut();
+    }
   }
 
   Future<void> _initializeCamera() async {
@@ -508,6 +597,17 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   },
                 ),
               ),
+            JumpToTop(
+              key: _jumpToTopKey,
+              size: Size(widget.size.width, widget.size.height),
+              onPressed: () {
+                _pickerController.animateToItem(
+                  0,
+                  duration: Duration(milliseconds: 500),
+                  curve: Curves.easeInOut,
+                );
+              },
+            ),
           ],
         );
       },
@@ -518,10 +618,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   @override
   void dispose() {
     _pickerController.dispose();
-
     // リスナーの解除処理
     chatConnection.removeListeners();
-
+    _pickerController.removeListener(_scrollListener);
     super.dispose();
   }
 
