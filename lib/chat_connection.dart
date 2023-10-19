@@ -156,7 +156,7 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Text(
-              '✋',
+              '😀',
               style: TextStyle(color: Colors.black),
             ),
             SizedBox(width: 10),  // この値は、アイコンと数字の間のスペースを調整するために変更できます

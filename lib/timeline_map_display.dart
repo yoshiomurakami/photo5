@@ -212,61 +212,99 @@ class JumpToTop extends StatefulWidget {
 }
 
 
-class _JumpToTopState extends State<JumpToTop> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
+  late AnimationController _fadeController;
+  late AnimationController _positionController;
+  late Animation<double> _positionAnimation;
+  double? _bottomPosition;
+
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_bottomPosition == null) {
+      _bottomPosition = MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2;
+    }
+  }
+
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _fadeController = AnimationController(
       duration: const Duration(milliseconds: 100),
       vsync: this,
+      value: 1.0,
     );
+
+    _positionController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _positionAnimation = Tween<double>(
+      begin: 0,
+      end: widget.size.height * 0.5 + 100, // 画面の半分 + 100px
+    ).animate(_positionController);
   }
 
-  void fadeIn() => _controller.forward();
+  void centerButton() {
+    setState(() {
+      _bottomPosition = MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2;
+    });
+  }
 
-  void fadeOut() => _controller.reverse();
+  void moveButton() {
+    setState(() {
+      _bottomPosition = (widget.size.width * 0.15) / 2; // この値を変更してボタンの下部の位置を調整します。
+    });
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      bottom: widget.size.width * 0.05,
-      left: widget.size.width * 0.5 - (widget.size.width * 0.15) / 2,
-      child: FadeTransition(
-        opacity: _controller,
-        child: ElevatedButton(
-          child: Padding(
-            padding: EdgeInsets.only(bottom: 4.0),
-            child: Text(
-              '📷',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: widget.size.width * 0.07,
+    return AnimatedBuilder(
+      animation: _positionAnimation,
+      builder: (context, child) {
+        return Positioned(
+          bottom: _bottomPosition,
+          left: widget.size.width * 0.5 - (widget.size.width * 0.15) / 2,
+          child: FadeTransition(
+            opacity: _fadeController,
+            child: ElevatedButton(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 4.0),
+                child: Text(
+                  '📷',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: widget.size.width * 0.07,
+                  ),
+                ),
+              ),
+              onPressed: widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                shape: CircleBorder(),
+                primary: Color(0xFFFFCC4D),
+                side: BorderSide(color: Colors.black, width: 2.0),
+                fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
               ),
             ),
           ),
-          onPressed: widget.onPressed,
-          style: ElevatedButton.styleFrom(
-            shape: CircleBorder(),
-            primary: Color(0xFFFFCC4D),
-            side: BorderSide(color: Colors.black, width: 2.0),
-            fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 
-
-
-
   @override
   void dispose() {
-    _controller.dispose();
+    _fadeController.dispose();
+    _positionController.dispose();
     super.dispose();
   }
 }
+
 
 
 
@@ -392,16 +430,16 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       // 何かの処理... 今回は特に何もしない
     });
     chatConnection.listenToRoomCount(context);
-    _pickerController.addListener(_scrollListener);
   }
 
   void _scrollListener() {
-    if (_pickerController.selectedItem > 3) {
-      _jumpToTopKey.currentState?.fadeIn();
+    if (_pickerController.selectedItem == 0) {
+      _jumpToTopKey.currentState?.centerButton();
     } else {
-      _jumpToTopKey.currentState?.fadeOut();
+      _jumpToTopKey.currentState?.moveButton();
     }
   }
+
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();

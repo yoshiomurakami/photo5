@@ -72,25 +72,25 @@ class _TimelineCardState extends State<TimelineCard> {
                     child: Container(
                       width: widget.size.width * 0.14,
                       height: widget.size.width * 0.14,
-                      child: FloatingActionButton(
-                        // key: cameraButtonKey,
-                        // heroTag: "camera", // HeroTag設定
-                        backgroundColor: Color(0xFFFFCC4D),
-                        foregroundColor: Colors.black,
-                        elevation: 0,
-                        shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-                        child: Center(
-                          child: Text(
-                            '📷',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: widget.size.width * 0.08,
-                              height: 1.0,
-                            ),
-                          ),
-                        ),
-                        onPressed: widget.onCameraButtonPressed,
-                      ),
+                      // child: FloatingActionButton(
+                      //   // key: cameraButtonKey,
+                      //   // heroTag: "camera", // HeroTag設定
+                      //   backgroundColor: Color(0xFFFFCC4D),
+                      //   foregroundColor: Colors.black,
+                      //   elevation: 0,
+                      //   shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
+                      //   child: Center(
+                      //     child: Text(
+                      //       '📷',
+                      //       textAlign: TextAlign.center,
+                      //       style: TextStyle(
+                      //         fontSize: widget.size.width * 0.08,
+                      //         height: 1.0,
+                      //       ),
+                      //     ),
+                      //   ),
+                      //   onPressed: widget.onCameraButtonPressed,
+                      // ),
                     ),
                   ),
                 ],
