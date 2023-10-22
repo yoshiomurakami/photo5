@@ -53,17 +53,24 @@ class ChatConnection {
   //   });
   // }
 
-  void listenToCameraEvent(BuildContext context, void Function() callback) {
+  void listenToCameraEvent(BuildContext context, void Function(String) callback) {
     socket?.on('camera_event', (data) {
       print('Received camera_event with data: $data');
+      callback(data);
+    });
+  }
+
+  void listenToLeaveShootingRoomEvent(BuildContext context, void Function() callback) {
+    socket?.on('leave_shooting_room', (data) {
+      print('Received leave_shooting_room event with data: $data');
 
       // ここで context を使用してSnackBarを表示します。
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Received message: $data"),
-            duration: Duration(seconds: 3),
-          ),
-        );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Received message: $data"),
+          duration: Duration(seconds: 3),
+        ),
+      );
       callback();
     });
   }
@@ -157,7 +164,10 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
           children: <Widget>[
             Text(
               '😀',
-              style: TextStyle(color: Colors.black),
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 20,
+              ),
             ),
             SizedBox(width: 10),  // この値は、アイコンと数字の間のスペースを調整するために変更できます
             Text(

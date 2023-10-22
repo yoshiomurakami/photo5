@@ -204,8 +204,14 @@ class _ZoomControlState extends State<ZoomControl> {
 class JumpToTop extends StatefulWidget {
   final Size size;
   final VoidCallback onPressed;
+  final bool showBadge;
 
-  JumpToTop({Key? key, required this.size, required this.onPressed}) : super(key: key);
+  JumpToTop({
+    Key? key,
+    required this.size,
+    required this.onPressed,
+    this.showBadge = false,
+  }) : super(key: key);
 
   @override
   _JumpToTopState createState() => _JumpToTopState();
@@ -215,18 +221,27 @@ class JumpToTop extends StatefulWidget {
 class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _positionController;
-  late Animation<double> _positionAnimation;
+  Animation<double>? _positionAnimation;
   double? _bottomPosition;
+  bool isCentered = true;
 
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_bottomPosition == null) {
-      _bottomPosition = MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2;
+
+    if (_positionAnimation == null) {
+      _positionAnimation = Tween<double>(
+        begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2,
+        end: MediaQuery.of(context).size.height * 0.05,
+      ).animate(_positionController)
+        ..addListener(() {
+          setState(() {
+            _bottomPosition = _positionAnimation!.value;
+          });
+        });
     }
   }
-
 
   @override
   void initState() {
@@ -238,39 +253,37 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
     );
 
     _positionController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 500),
       vsync: this,
     );
-    _positionAnimation = Tween<double>(
-      begin: 0,
-      end: widget.size.height * 0.5 + 100, // 画面の半分 + 100px
-    ).animate(_positionController);
   }
+
 
   void centerButton() {
     setState(() {
-      _bottomPosition = MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2;
+      isCentered = true;
+      _positionController.reverse(); // アニメーションを開始
     });
   }
 
   void moveButton() {
     setState(() {
-      _bottomPosition = (widget.size.width * 0.15) / 2; // この値を変更してボタンの下部の位置を調整します。
+      isCentered = false;
+      _positionController.forward(); // アニメーションを開始
     });
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
-      animation: _positionAnimation,
+      animation: _positionAnimation!,
       builder: (context, child) {
         return Positioned(
-          bottom: _bottomPosition,
-          left: widget.size.width * 0.5 - (widget.size.width * 0.15) / 2,
-          child: FadeTransition(
+          bottom: _positionAnimation!.value,
+          left: widget.size.width * 0.5 - (widget.size.width * 0.15 * 1.3) / 2,
+        child: Stack(
+        children: [
+          FadeTransition(
             opacity: _fadeController,
             child: ElevatedButton(
               child: Padding(
@@ -284,16 +297,33 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                 ),
               ),
               onPressed: widget.onPressed,
+
               style: ElevatedButton.styleFrom(
                 shape: CircleBorder(),
                 primary: Color(0xFFFFCC4D),
                 side: BorderSide(color: Colors.black, width: 2.0),
-                fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
+                fixedSize: Size(widget.size.width * 0.15 * 1.3, widget.size.width * 0.15),
               ),
             ),
           ),
+
+          if (widget.showBadge)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+        ],
+        ),
         );
-      },
+        },
     );
   }
 
@@ -362,8 +392,6 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
 class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
   bool programmaticChange = false;
-  // final PageController _pageController = PageController(viewportFraction: 1);
-  // bool _programmaticPageChange = false;
   bool isFullScreen = false;
   late FixedExtentScrollController _pickerController;
   bool isScrolling = false;
@@ -372,6 +400,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   late CameraController _controller;
   ChatConnection chatConnection = ChatConnection();
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
+  bool showCameraBadge = false;
 
 
 
@@ -395,27 +424,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
-  // void _handleScroll() {
-  //   // リストビューの中央の位置を取得
-  //   var centerPosition = _pickerController.offset + widget.size.height * 0.5;
-  //
-  //   // 中央のアイテムのインデックスを計算
-  //   var itemHeight = MediaQuery.of(context).size.height / 10; // itemExtentとして設定されている
-  //   var centerItemIndex = (centerPosition / itemHeight).round();
-  //
-  //   if (centerItemIndex == 0) {
-  //     _jumpToTopKey.currentState!.fadeOut();
-  //   } else {
-  //     _jumpToTopKey.currentState!.fadeIn();
-  //   }
-  // }
-
-
-
-
-
-
-
   @override
   void initState() {
     super.initState();
@@ -426,9 +434,18 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     print('_pickerController initial item: ${_pickerController.initialItem}');
     _initializeCamera();
     // listenToCameraEventを呼び出す
-    chatConnection.listenToCameraEvent(context, () {
-      // 何かの処理... 今回は特に何もしない
+    chatConnection.listenToCameraEvent(context, (String data) {
+      if (data == "someone_start_camera") {
+        setState(() {
+          showCameraBadge = true;
+        });
+      } else if (data == "someone_leave_camera") {
+        setState(() {
+          showCameraBadge = false;
+        });
+      }
     });
+
     chatConnection.listenToRoomCount(context);
   }
 
@@ -478,6 +495,29 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               zoomGesturesEnabled: false,
               scrollGesturesEnabled: false,
               padding: EdgeInsets.only(bottom: 0),
+            ),
+            JumpToTop(
+              key: _jumpToTopKey,
+              size: Size(widget.size.width, widget.size.height),
+              showBadge: showCameraBadge,
+              onPressed: () {
+                // リストを最上部にスクロール
+                _pickerController.animateToItem(
+                  0,
+                  duration: Duration(milliseconds: 100),
+                  curve: Curves.easeInOut,
+                );
+
+                // カメラボタンが中央にある場合のみカメラを起動
+                if (_jumpToTopKey.currentState?.isCentered == true) {
+                  if (_cameras != null && _cameras!.isNotEmpty) {
+                    _openCamera(_cameras![0]);
+                    chatConnection.emitEvent("enter_shooting_room");
+                  } else {
+                    print("No available cameras found.");
+                  }
+                }
+              },
             ),
             Positioned(
               top: widget.size.height * 0.2,
@@ -552,63 +592,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
 
-            // Positioned(
-            //   right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
-            //   top: (widget.size.height * 0.46) - (56.0 / 2),
-            //   child: FloatingActionButton(
-            //     heroTag: "timelineForwardOne",
-            //     onPressed: () => handleScroll(1),
-            //     backgroundColor: Colors.transparent, // 透明な背景
-            //     elevation: 0, // 影をなくす
-            //     child: Icon(
-            //       Icons.keyboard_double_arrow_up,
-            //       color: Colors.black,
-            //     ),
-            //   ),
-            // ),
-            // Positioned(
-            //   right: (widget.size.width * 0.5) - (56.0 / 2) - (widget.size.width * 0.1 * 1.3) - (56.0 / 2),
-            //   top: (widget.size.height * 0.54) - (56.0 / 2),
-            //   child: FloatingActionButton(
-            //     heroTag: "timelineBackOne",
-            //     onPressed: () => handleScroll(-1),
-            //     backgroundColor: Colors.transparent, // 透明な背景
-            //     elevation: 0, // 影をなくす
-            //     child: Icon(
-            //       Icons.keyboard_double_arrow_down,
-            //       color: Colors.black,
-            //     ),
-            //   ),
-            // ),
-            // Positioned(
-            //   right: widget.size.width * 0.05,
-            //   top: widget.size.height * 0.5 + (widget.size.height * 0.2),
-            //   child: Column(
-            //     children: [
-            //       GestureDetector(
-            //         child: FloatingActionButton(
-            //           heroTag: "mapZoomIn",
-            //           onPressed: () {
-            //             MapController.instance.zoomIn(widget.currentLocation);
-            //           },
-            //           child: Icon(Icons.add),
-            //           mini: true,
-            //         ),
-            //       ),
-            //       SizedBox(height: 10),
-            //       GestureDetector(
-            //         child: FloatingActionButton(
-            //           heroTag: "mapZoomOut",
-            //           onPressed: () {
-            //             MapController.instance.zoomOut(widget.currentLocation);
-            //           },
-            //           child: Icon(Icons.remove),
-            //           mini: true,
-            //         ),
-            //       ),
-            //     ],
-            //   ),
-            // ),
             ZoomControl(
               size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
               right: widget.size.width * 0.05,
@@ -635,17 +618,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   },
                 ),
               ),
-            JumpToTop(
-              key: _jumpToTopKey,
-              size: Size(widget.size.width, widget.size.height),
-              onPressed: () {
-                _pickerController.animateToItem(
-                  0,
-                  duration: Duration(milliseconds: 500),
-                  curve: Curves.easeInOut,
-                );
-              },
-            ),
+
+
           ],
         );
       },
@@ -663,40 +637,3 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 }
-
-// class CameraButton extends StatelessWidget {
-//   final VoidCallback onPressed;
-//
-//   CameraButton({required this.onPressed});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final Size size = MediaQuery.of(context).size;
-//     return Positioned(
-//       left: size.width * 0.4,
-//       top: size.height * 0.9,
-//       child: Container(
-//         width: size.width * 0.2,
-//         height: size.width * 0.2,
-//         child: FloatingActionButton(
-//           heroTag: "camera", // HeroTag設定
-//           backgroundColor: Color(0xFFFFCC4D),
-//           foregroundColor: Colors.black,
-//           elevation: 0,
-//           shape: CircleBorder(side: BorderSide(color: Colors.black, width: 2.0)),
-//           child: Center(
-//             child: Text(
-//               '📷',
-//               textAlign: TextAlign.center,
-//               style: TextStyle(
-//                 fontSize: size.width * 0.1,
-//                 height: 1.0,
-//               ),
-//             ),
-//           ),
-//           onPressed: onPressed,
-//         ),
-//       ),
-//     );
-//   }
-// }
