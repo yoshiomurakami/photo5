@@ -224,7 +224,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   Animation<double>? _positionAnimation;
   double? _bottomPosition;
   bool isCentered = true;
-  String buttonText = '📷';
+  String buttonText = '';
 
 
   @override
@@ -268,7 +268,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         });
       } else {
         setState(() {
-          buttonText = '📷';
+          buttonText = '';
         });
       }
     });
@@ -327,9 +327,14 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
               onPressed: widget.onPressed,
               style: ElevatedButton.styleFrom(
                 shape: CircleBorder(),
-                primary: buttonText == 'expand_less' ? Colors.white : Color(0xFFFFCC4D),
-                side: BorderSide(color: Colors.black, width: 2.0),
-                fixedSize: Size(widget.size.width * 0.15 * 1.3, widget.size.width * 0.15),
+                // primary: buttonText == 'expand_less' ? Colors.white : Color(0xFFFFCC4D),
+                primary: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
+
+                // side: BorderSide(color: Colors.black, width: 2.0),
+                side: BorderSide(color: Colors.transparent, width: 2.0),
+
+                fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
+                elevation: 0, // これで影をなくします
               ),
             ),
           ),
@@ -581,6 +586,45 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 setState(() {
                                   isFullScreenMode = !isFullScreenMode;
                                 });
+                              }
+                            },
+                            onCameraButtonPressed: () {
+                              // リストを最上部にスクロール
+                              _pickerController.animateToItem(
+                                0,
+                                duration: Duration(milliseconds: 100),
+                                curve: Curves.easeInOut,
+                              );
+
+                              // このメソッドはサーバーからcurrentShootingGroupIDを待つ
+                              Future<String?> _waitForGroupId() async {
+                                Completer<String?> completer = Completer();
+
+                                // 'assign_group_id' イベントのリスナーを設定
+                                chatConnection.on('assign_group_id', (data) {
+                                  completer.complete(data as String?);
+                                  // イベントリスナーを解除
+                                  chatConnection.off('assign_group_id');
+                                });
+
+                                return completer.future;
+                              }
+
+                              // カメラボタンが中央にある場合のみカメラを起動
+                              if (_jumpToTopKey.currentState?.isCentered == true) {
+                                if (_cameras != null && _cameras!.isNotEmpty) {
+                                  chatConnection.emitEvent("enter_shooting_room");
+                                  _waitForGroupId().then((groupID) {
+                                    if(groupID != null) {
+                                      _openCamera(_cameras![0], groupID);
+                                      print("get groupID = $groupID");
+                                    } else {
+                                      print("Failed to get the group ID.");
+                                    }
+                                  });
+                                } else {
+                                  print("No available cameras found.");
+                                }
                               }
                             },
                             // onCameraButtonPressed: () {

@@ -12,7 +12,7 @@ class TimelineCard extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final VoidCallback? onTapCallback;
-  // final VoidCallback? onCameraButtonPressed;
+  final VoidCallback? onCameraButtonPressed;
 
   TimelineCard({
     Key? key,
@@ -23,7 +23,7 @@ class TimelineCard extends StatefulWidget {
     required this.pickerController,
     required this.items,
     required this.onTapCallback,
-    // required this.onCameraButtonPressed,
+    required this.onCameraButtonPressed,
   }) : super(key: key);
 
   @override
@@ -70,27 +70,27 @@ class _TimelineCardState extends State<TimelineCard> {
                   Align(
                     alignment: Alignment.center,
                     child: Container(
-                      width: widget.size.width * 0.14,
-                      height: widget.size.width * 0.14,
-                      // child: FloatingActionButton(
-                      //   // key: cameraButtonKey,
-                      //   // heroTag: "camera", // HeroTag設定
-                      //   backgroundColor: Color(0xFFFFCC4D),
-                      //   foregroundColor: Colors.black,
-                      //   elevation: 0,
-                      //   shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-                      //   child: Center(
-                      //     child: Text(
-                      //       '📷',
-                      //       textAlign: TextAlign.center,
-                      //       style: TextStyle(
-                      //         fontSize: widget.size.width * 0.08,
-                      //         height: 1.0,
-                      //       ),
-                      //     ),
-                      //   ),
-                      //   onPressed: widget.onCameraButtonPressed,
-                      // ),
+                      width: MediaQuery.of(context).size.width * 0.15,
+                      height: MediaQuery.of(context).size.width * 0.15,
+                      child: FloatingActionButton(
+                        // key: cameraButtonKey,
+                        // heroTag: "camera", // HeroTag設定
+                        backgroundColor: Color(0xFFFFCC4D),
+                        foregroundColor: Colors.black,
+                        elevation: 0,
+                        shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
+                        child: Center(
+                          child: Text(
+                            '📷',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 24,
+                              height: 1.0,
+                            ),
+                          ),
+                        ),
+                        onPressed: widget.onCameraButtonPressed,
+                      ),
                     ),
                   ),
                 ],
@@ -173,10 +173,10 @@ class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerSt
 
   @override
   void dispose() {
-    Future.delayed(Duration.zero, () {
+    // Future.delayed(Duration.zero, () {
       final chatNotifier = ref.read(chatNotifierProvider);
       chatNotifier.fullScreenImageViewerController = null;
-    });
+    // });
     super.dispose();
   }
 
