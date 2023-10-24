@@ -224,6 +224,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   Animation<double>? _positionAnimation;
   double? _bottomPosition;
   bool isCentered = true;
+  String buttonText = '📷';
 
 
   @override
@@ -238,6 +239,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         ..addListener(() {
           setState(() {
             _bottomPosition = _positionAnimation!.value;
+
           });
         });
     }
@@ -253,9 +255,33 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
     );
 
     _positionController = AnimationController(
-      duration: const Duration(milliseconds: 500),
+      duration: const Duration(milliseconds: 250),
       vsync: this,
     );
+
+    _positionController.addListener(() {
+      _updateFadeControllerValue();
+      if (_positionController.value > 0.5) {
+        // ボタンが画面の下部に近づいたら
+        setState(() {
+          buttonText = 'expand_less'; // ここに変更したいテキストを設定
+        });
+      } else {
+        setState(() {
+          buttonText = '📷';
+        });
+      }
+    });
+
+  }
+
+  void _updateFadeControllerValue() {
+    if (_positionController.isAnimating) {
+      double fadeValue = 1 - (_positionController.value - 1).abs() * 2.0;
+      _fadeController.value = fadeValue.clamp(0.0, 1.0) as double;
+    } else {
+      _fadeController.value = 1.0;
+    }
   }
 
 
@@ -288,8 +314,10 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
             child: ElevatedButton(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 4.0),
-                child: Text(
-                  '📷',
+                child: buttonText == 'expand_less'
+                    ? Icon(Icons.expand_less, color: Colors.black, size: widget.size.width * 0.07)
+                    : Text(
+                  buttonText,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: widget.size.width * 0.07,
@@ -297,20 +325,21 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                 ),
               ),
               onPressed: widget.onPressed,
-
               style: ElevatedButton.styleFrom(
                 shape: CircleBorder(),
-                primary: Color(0xFFFFCC4D),
+                primary: buttonText == 'expand_less' ? Colors.white : Color(0xFFFFCC4D),
                 side: BorderSide(color: Colors.black, width: 2.0),
                 fixedSize: Size(widget.size.width * 0.15 * 1.3, widget.size.width * 0.15),
               ),
             ),
           ),
 
+
+
           if (widget.showBadge)
               Positioned(
                 top: 0,
-                right: 0,
+                right: 10,
                 child: Container(
                   width: 12,
                   height: 12,
@@ -428,7 +457,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   void initState() {
     super.initState();
     _pickerController = FixedExtentScrollController();
-    _pickerController!.addListener(_scrollListener);
+    _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems);
     print('_pickerController initial item: ${_pickerController.initialItem}');
@@ -465,11 +494,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     }
   }
 
-  void _openCamera(CameraDescription cameraDescription) {
+  void _openCamera(CameraDescription cameraDescription, String groupID) { // groupIDを引数として追加
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CameraScreen(camera: cameraDescription),
+        builder: (context) => CameraScreen(
+          camera: cameraDescription,
+          groupID: groupID, // CameraScreenにgroupIDを渡す
+        ),
       ),
     );
   }
@@ -496,29 +528,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               scrollGesturesEnabled: false,
               padding: EdgeInsets.only(bottom: 0),
             ),
-            JumpToTop(
-              key: _jumpToTopKey,
-              size: Size(widget.size.width, widget.size.height),
-              showBadge: showCameraBadge,
-              onPressed: () {
-                // リストを最上部にスクロール
-                _pickerController.animateToItem(
-                  0,
-                  duration: Duration(milliseconds: 100),
-                  curve: Curves.easeInOut,
-                );
 
-                // カメラボタンが中央にある場合のみカメラを起動
-                if (_jumpToTopKey.currentState?.isCentered == true) {
-                  if (_cameras != null && _cameras!.isNotEmpty) {
-                    _openCamera(_cameras![0]);
-                    chatConnection.emitEvent("enter_shooting_room");
-                  } else {
-                    print("No available cameras found.");
-                  }
-                }
-              },
-            ),
             Positioned(
               top: widget.size.height * 0.2,
               bottom: widget.size.height * 0.2,
@@ -573,15 +583,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 });
                               }
                             },
-                            onCameraButtonPressed: () {
-                              if (_cameras != null && _cameras!.isNotEmpty) {
-                                _openCamera(_cameras![0]);
-                                chatConnection.emitEvent("enter_shooting_room");
-                              } else {
-                                print("No available cameras found.");
-                                // もしご希望であれば、ユーザーにエラーメッセージを表示する処理も追加できます。
-                              }
-                            },
+                            // onCameraButtonPressed: () {
+                            //   if (_cameras != null && _cameras!.isNotEmpty) {
+                            //     _openCamera(_cameras![0]);
+                            //     chatConnection.emitEvent("enter_shooting_room");
+                            //   } else {
+                            //     print("No available cameras found.");
+                            //     // もしご希望であれば、ユーザーにエラーメッセージを表示する処理も追加できます。
+                            //   }
+                            // },
                             // cameraDescription: snapshot.data!.first,
                           ),
                         );
@@ -591,7 +601,50 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ),
               ),
             ),
+            JumpToTop(
+              key: _jumpToTopKey,
+              size: Size(widget.size.width, widget.size.height),
+              showBadge: showCameraBadge,
+              onPressed: () {
+                // リストを最上部にスクロール
+                _pickerController.animateToItem(
+                  0,
+                  duration: Duration(milliseconds: 100),
+                  curve: Curves.easeInOut,
+                );
 
+                // このメソッドはサーバーからcurrentShootingGroupIDを待つ
+                Future<String?> _waitForGroupId() async {
+                  Completer<String?> completer = Completer();
+
+                  // 'assign_group_id' イベントのリスナーを設定
+                  chatConnection.on('assign_group_id', (data) {
+                    completer.complete(data as String?);
+                    // イベントリスナーを解除
+                    chatConnection.off('assign_group_id');
+                  });
+
+                  return completer.future;
+                }
+
+                // カメラボタンが中央にある場合のみカメラを起動
+                if (_jumpToTopKey.currentState?.isCentered == true) {
+                  if (_cameras != null && _cameras!.isNotEmpty) {
+                    chatConnection.emitEvent("enter_shooting_room");
+                    _waitForGroupId().then((groupID) {
+                      if(groupID != null) {
+                        _openCamera(_cameras![0], groupID);
+                        print("get groupID = $groupID");
+                      } else {
+                        print("Failed to get the group ID.");
+                      }
+                    });
+                  } else {
+                    print("No available cameras found.");
+                  }
+                }
+              },
+            ),
             ZoomControl(
               size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
               right: widget.size.width * 0.05,

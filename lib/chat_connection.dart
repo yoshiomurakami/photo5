@@ -8,7 +8,20 @@ import 'timeline_providers.dart';
 
 IO.Socket?socket;
 
+// このProviderを使用して、アプリのどこからでもshootingGroupIdを参照・更新できます。
+final shootingGroupIdProvider = StateProvider<String?>((ref) => null);
+
 class ChatConnection {
+
+  // 任意のイベントのリスナーを追加するメソッド
+  void on(String eventName, void Function(dynamic) callback) {
+    socket?.on(eventName, callback);
+  }
+
+  // 任意のイベントのリスナーを削除するメソッド
+  void off(String eventName) {
+    socket?.off(eventName);
+  }
 
   // void connect({Function? onNewPhoto}){
   void connect(){

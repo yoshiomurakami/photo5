@@ -600,7 +600,7 @@ class _StartupState extends State<Startup> {
     } catch (e) {
       // If the table doesn't exist, create it
       await db.execute(
-        "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT)",
+        "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
       );
     }
   }

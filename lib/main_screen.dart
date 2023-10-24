@@ -1,4 +1,4 @@
-import 'dart:async';
+// import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:camera/camera.dart';
@@ -24,7 +24,7 @@ class _MainScreenContent extends StatefulWidget {
 class _MainScreenState extends State<_MainScreenContent> {
   final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
   bool _programmaticPageChange = false;
-  Future<List<CameraDescription>>? _camerasFuture;
+  // Future<List<CameraDescription>>? _camerasFuture;
   ChatConnection? chatConnection;
 
   // String? latestPhotoChange;
@@ -33,7 +33,7 @@ class _MainScreenState extends State<_MainScreenContent> {
   @override
   void initState() {
     super.initState();
-    _camerasFuture = availableCameras();
+    // _camerasFuture = availableCameras();
   }
 
   @override
@@ -42,11 +42,14 @@ class _MainScreenState extends State<_MainScreenContent> {
     super.dispose();
   }
 
-  void _openCamera(CameraDescription camera) {
+  void _openCamera(CameraDescription cameraDescription, String groupID) { // groupIDを引数として追加
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => CameraScreen(camera: camera),
+        builder: (context) => CameraScreen(
+          camera: cameraDescription,
+          groupID: groupID, // CameraScreenにgroupIDを渡す
+        ),
       ),
     );
   }
@@ -78,12 +81,12 @@ class _MainScreenState extends State<_MainScreenContent> {
             pageController: _pageController,
             programmaticPageChange: _programmaticPageChange,
             updateGeocodedLocation: updateGeocodedLocation,
-            onCameraButtonPressed: () async {
-              List<CameraDescription>? cameras = await _camerasFuture;
-              if (cameras != null && cameras.isNotEmpty) {
-                _openCamera(cameras.first);
-              }
-            },
+            // onCameraButtonPressed: () async {
+            //   List<CameraDescription>? cameras = await _camerasFuture;
+            //   if (cameras != null && cameras.isNotEmpty) {
+            //     _openCamera(cameras.first);
+            //   }
+            // },
           );
         },
         loading: () => timelineMapWidget = Center(child: CircularProgressIndicator()),

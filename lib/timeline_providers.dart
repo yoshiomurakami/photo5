@@ -20,6 +20,7 @@ class TimelineItem {
   final String imageFilename;
   final String thumbnailFilename;
   final String localtime;
+  final String groupID;
   String? geocodedCountry;  // This is from geocoding
   String? geocodedCity;  // This is from geocoding
 
@@ -33,6 +34,7 @@ class TimelineItem {
     required this.imageFilename,
     required this.thumbnailFilename,
     required this.localtime,
+    required this.groupID,
     this.geocodedCountry,
     this.geocodedCity,
   });
@@ -50,6 +52,7 @@ class TimelineItem {
       'imageFilename': '03.png',
       'thumbnailFilename': '03.png',
       'localtime': 'dummy',
+      'groupID': 'dummy',
     };
   }
 
@@ -64,6 +67,7 @@ class TimelineItem {
       imageFilename: json['imageFilename'] ?? '03.png',
       thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
       localtime: json['localtime'] ?? 'dummy',
+      groupID: json['groupID'] ?? 'dummy',
       geocodedCountry: json['geocodedCountry'] as String?,  // デフォルト値としてnullを返す
       geocodedCity: json['geocodedCity'] as String?,  // デフォルト値としてnullを返す
     );
@@ -71,7 +75,7 @@ class TimelineItem {
 
   @override
   String toString() {
-    return 'TimelineItem(id: $id, userId: $userId, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
+    return 'TimelineItem(id: $id, userId: $userId, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
   }
 }
 

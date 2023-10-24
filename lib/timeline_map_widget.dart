@@ -10,7 +10,7 @@ class TimelineMapWidget extends StatelessWidget {
   final PageController pageController;
   final bool programmaticPageChange;
   final Function updateGeocodedLocation;
-  final VoidCallback onCameraButtonPressed;
+  // final VoidCallback onCameraButtonPressed;
 
   TimelineMapWidget({
     required this.timelineItems,
@@ -19,7 +19,7 @@ class TimelineMapWidget extends StatelessWidget {
     required this.pageController,
     required this.programmaticPageChange,
     required this.updateGeocodedLocation,
-    required this.onCameraButtonPressed,
+    // required this.onCameraButtonPressed,
   });
 
   @override

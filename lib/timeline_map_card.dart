@@ -12,7 +12,7 @@ class TimelineCard extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final VoidCallback? onTapCallback;
-  final VoidCallback? onCameraButtonPressed;
+  // final VoidCallback? onCameraButtonPressed;
 
   TimelineCard({
     Key? key,
@@ -23,7 +23,7 @@ class TimelineCard extends StatefulWidget {
     required this.pickerController,
     required this.items,
     required this.onTapCallback,
-    required this.onCameraButtonPressed,
+    // required this.onCameraButtonPressed,
   }) : super(key: key);
 
   @override

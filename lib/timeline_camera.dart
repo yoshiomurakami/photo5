@@ -61,10 +61,12 @@ import 'dart:convert';
 class CameraScreen extends StatefulWidget {
 
   final CameraDescription camera;
+  final String groupID;
 
   const CameraScreen({
     Key? key,
     required this.camera,
+    required this.groupID,
   }) : super(key: key);
 
   @override
@@ -250,14 +252,15 @@ class _CameraScreenState extends State<CameraScreen> {
     });
   }
 
-  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng) async {
-    await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng);
-    await _uploadImage(imagePath, thumbnailPath);
+  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
+    await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, widget.groupID);
+    await _uploadImage(imagePath, thumbnailPath, widget.groupID);
+    print("groupID = $groupID");
   }
 
-  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng) async {
+  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
     final paths = await _saveFiles(imagePath, thumbnailPath);
-    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng);
+    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID);
   }
 
   Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
@@ -289,14 +292,14 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
 
-  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng) async {
+  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
     // Open the database or create it if it doesn't exist
     final database = openDatabase(
       p.join(await getDatabasesPath(), 'images_database.db'),
       onCreate: (db, version) {
         // Create images table if it doesn't exist
         return db.execute(
-          "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT)",
+          "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
         );
       },
       version: 1,
@@ -314,7 +317,8 @@ class _CameraScreenState extends State<CameraScreen> {
           'userId': userId,
           'imageCountry': imageCountry,
           'imageLat': imageLat,
-          'imageLng': imageLng
+          'imageLng': imageLng,
+          'groupID': groupID
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -325,7 +329,7 @@ class _CameraScreenState extends State<CameraScreen> {
   }
 
 
-  Future<void> _uploadImage(String imagePath, String thumbnailPath) async {
+  Future<void> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
     if (_uploading) return; // アップロード中の場合は処理しない
 
     setState(() {
@@ -370,9 +374,13 @@ class _CameraScreenState extends State<CameraScreen> {
     request.fields['photo_lat'] = _imageLat ?? '';
     request.fields['photo_lng'] = _imageLng ?? '';
     request.fields['localtime'] = _localTimestamp;
+    request.fields['localtime'] = _localTimestamp;
+    request.fields['groupID'] = widget.groupID;
+
 
     print('Timestamp: $_timestamp');
     print('Local timestamp: $_localTimestamp');
+    print('Add the extra data to the request_groupID: $groupID');
 
     // Check the connectivity status.
     if (!await _checkConnectivity(context)) {
@@ -405,6 +413,7 @@ class _CameraScreenState extends State<CameraScreen> {
           'localtime': responseBody['photo']['localtime'],
           'imageFilename': responseBody['photo']['imageFilename'],
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
+          'groupID': responseBody['photo']['groupID'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
         // print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
@@ -514,7 +523,8 @@ class _CameraScreenState extends State<CameraScreen> {
                                       userId,
                                       _imageCountry ?? 'Unknown',
                                       _imageLat ?? '',
-                                      _imageLng ?? ''
+                                      _imageLng ?? '',
+                                      widget.groupID
                                   );
                                 }
                               }
