@@ -1,8 +1,95 @@
 import 'package:flutter/material.dart';
+// import 'package:flutter/rendering.dart' as rendering;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'timeline_providers.dart';
 import 'chat_connection.dart';
 import 'dart:async';
+
+
+class HorizontalGroupedItems extends StatefulWidget {
+  final List<TimelineItem> itemsInGroup;
+  final Size size;
+  final FixedExtentScrollController controller;
+  final int currentIndex;
+  final FixedExtentScrollController pickerController;
+  final List<TimelineItem> items;
+  final VoidCallback? onTapCallback;
+  final VoidCallback? onCameraButtonPressed;
+
+  HorizontalGroupedItems({
+    required this.itemsInGroup,
+    required this.size,
+    required this.controller,
+    required this.currentIndex,
+    required this.pickerController,
+    required this.items,
+    this.onTapCallback,
+    this.onCameraButtonPressed,
+  });
+
+  @override
+  _HorizontalGroupedItemsState createState() => _HorizontalGroupedItemsState();
+}
+
+class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
+  late PageController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = PageController(
+      initialPage: 0, // 最初のアイテムをデフォルトで選択
+      viewportFraction: 0.3, // 画面の120%をアイテムが占めるように設定
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (widget.itemsInGroup.length == 1) {
+          return Center(
+            child: TimelineCard(
+              item: widget.itemsInGroup[0],
+              size: widget.size,
+              controller: widget.controller,
+              currentIndex: widget.currentIndex,
+              pickerController: widget.pickerController,
+              items: widget.items,
+              onTapCallback: widget.onTapCallback,
+              onCameraButtonPressed: widget.onCameraButtonPressed,
+            ),
+          );
+        }
+
+        return PageView.builder(
+          controller: _scrollController,
+          itemCount: widget.itemsInGroup.length,
+          itemBuilder: (context, index) {
+            return Padding(
+              padding: EdgeInsets.symmetric(horizontal: 0.0),
+              child: TimelineCard(
+                item: widget.itemsInGroup[index],
+                size: widget.size,
+                controller: widget.controller,
+                currentIndex: widget.currentIndex,
+                pickerController: widget.pickerController,
+                items: widget.items,
+                onTapCallback: widget.onTapCallback,
+                onCameraButtonPressed: widget.onCameraButtonPressed,
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+
+
+
+
 
 class TimelineCard extends StatefulWidget {
   final TimelineItem item;
@@ -43,6 +130,7 @@ class _TimelineCardState extends State<TimelineCard> {
   }
 
 
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -51,7 +139,6 @@ class _TimelineCardState extends State<TimelineCard> {
           widget.onTapCallback!();
         }
       },
-
       child: Container(
         child: Align(
           alignment: Alignment.center,
@@ -64,8 +151,8 @@ class _TimelineCardState extends State<TimelineCard> {
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-              child: widget.item.id == "343hg5q0858jwir"  // ここで条件を追加
-              ? Stack(
+              child: widget.item.id == "343hg5q0858jwir"
+                  ? Stack(
                 children: <Widget>[
                   Align(
                     alignment: Alignment.center,
@@ -73,8 +160,6 @@ class _TimelineCardState extends State<TimelineCard> {
                       width: MediaQuery.of(context).size.width * 0.15,
                       height: MediaQuery.of(context).size.width * 0.15,
                       child: FloatingActionButton(
-                        // key: cameraButtonKey,
-                        // heroTag: "camera", // HeroTag設定
                         backgroundColor: Color(0xFFFFCC4D),
                         foregroundColor: Colors.black,
                         elevation: 0,
@@ -95,15 +180,12 @@ class _TimelineCardState extends State<TimelineCard> {
                   ),
                 ],
               )
-                  : Stack(
+                  : Row(
+                mainAxisAlignment: MainAxisAlignment.center, // 写真を中央寄せにする
                 children: <Widget>[
-                  Image.asset('assets/placeholder_thumb.png'),
-                  FadeInImage.assetNetwork(
-                    placeholder: 'assets/placeholder_thumb_transparent.png',
-                    image: 'https://photo5.world/${widget.item.thumbnailFilename}',
-                    fit: BoxFit.cover,
-                    fadeInDuration: Duration(milliseconds: 300),
-                  ),
+                  _buildImageWidget(context, widget.item.thumbnailFilename),
+                  // SizedBox(width: 10), // 10ピクセルのスペースを追加
+                  // _buildImageWidget(context, widget.item.thumbnailFilename),
                 ],
               ),
             ),
@@ -112,7 +194,36 @@ class _TimelineCardState extends State<TimelineCard> {
       ),
     );
   }
+
 }
+
+Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
+  double imageSize = MediaQuery.of(context).size.width * 0.2;
+
+  return Container(
+    width: imageSize,
+    height: imageSize,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(imageSize * 0.1),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(imageSize * 0.1),
+      child: Stack(
+        children: <Widget>[
+          Image.asset('assets/placeholder_thumb.png'),
+          FadeInImage.assetNetwork(
+            placeholder: 'assets/placeholder_thumb_transparent.png',
+            image: 'https://photo5.world/$thumbnailFilename',
+            fit: BoxFit.cover,
+            fadeInDuration: Duration(milliseconds: 300),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
 
 class FullScreenImageViewer extends ConsumerWidget {
   final List<TimelineItem> items;
@@ -173,10 +284,10 @@ class _FullScreenImageViewerState extends ConsumerState<_FullScreenImageViewerSt
 
   @override
   void dispose() {
-    // Future.delayed(Duration.zero, () {
+    Future.delayed(Duration.zero, () {
       final chatNotifier = ref.read(chatNotifierProvider);
       chatNotifier.fullScreenImageViewerController = null;
-    // });
+    });
     super.dispose();
   }
 

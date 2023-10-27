@@ -192,7 +192,7 @@ Future<void> updateGeocodedLocation(List<TimelineItem> timelineItems) async {
 
 Future<List<TimelineItem>> getTimelineWithGeocoding() async {
   List<TimelineItem> timelineItems = await getTimeline();
-  await updateGeocodedLocation(timelineItems);
+  // await updateGeocodedLocation(timelineItems);
   return timelineItems;
 }
 
@@ -227,9 +227,9 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
   List<TimelineItem> timelineItems = await getTimeline();
   // timelineItems = await getTimelineWithGeocoding();
 
-  await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
-
-  // print('Timeline Items: $timelineItems');
+  // await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
+  //
+  // // print('Timeline Items: $timelineItems');
   return timelineItems;
 });
 

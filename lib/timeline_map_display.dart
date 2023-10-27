@@ -217,7 +217,6 @@ class JumpToTop extends StatefulWidget {
   _JumpToTopState createState() => _JumpToTopState();
 }
 
-
 class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _positionController;
@@ -370,8 +369,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
 }
 
 
-
-
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
@@ -379,6 +376,7 @@ class MapDisplay extends ConsumerWidget {
   final PageController pageController;
   final bool programmaticPageChange;
   final Function updateTimeline;
+
 
   MapDisplay({
     required this.currentLocation,
@@ -410,6 +408,8 @@ class _MapDisplayStateful extends ConsumerStatefulWidget {
   final bool programmaticPageChange;
   final Function updateTimeline;
 
+
+
   _MapDisplayStateful({
     required this.currentLocation,
     required this.timelineItems,
@@ -435,32 +435,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   ChatConnection chatConnection = ChatConnection();
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
   bool showCameraBadge = false;
+  late FixedExtentScrollController _scrollController;
 
-
-
-
-  void _updateMapToSelectedItem(List<TimelineItem> items) {
-    int index = _pickerController.selectedItem;
-
-    // 範囲外アクセスを防ぐ
-    if (index >= 0 && index < items.length) {
-      print("Selected Item ID after stopped scrolling: ${items[index].id}");
-
-      // Get the lat and lng of the selected item
-      double lat = items[index].lat;
-      double lng = items[index].lng;
-
-      // Update the map location
-      MapController.instance.updateMapLocation(lat, lng);
-    } else {
-      print("Selected index out of range: $index");
-    }
-  }
 
 
   @override
   void initState() {
     super.initState();
+    _scrollController = FixedExtentScrollController();
     _pickerController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
@@ -481,6 +463,25 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     });
 
     chatConnection.listenToRoomCount(context);
+  }
+
+
+  void _updateMapToSelectedItem(List<TimelineItem> items) {
+    int index = _pickerController.selectedItem;
+
+    // 範囲外アクセスを防ぐ
+    if (index >= 0 && index < items.length) {
+      print("Selected Item ID after stopped scrolling: ${items[index].id}");
+
+      // Get the lat and lng of the selected item
+      double lat = items[index].lat;
+      double lng = items[index].lng;
+
+      // Update the map location
+      MapController.instance.updateMapLocation(lat, lng);
+    } else {
+      print("Selected index out of range: $index");
+    }
   }
 
   void _scrollListener() {
@@ -511,12 +512,53 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
+  // このメソッドはサーバーからcurrentShootingGroupIDを待つ
+  Future<String?> _waitForGroupId() async {
+    Completer<String?> completer = Completer();
+
+    // 'assign_group_id' イベントのリスナーを設定
+    chatConnection.on('assign_group_id', (data) {
+      completer.complete(data as String?);
+      // イベントリスナーを解除
+      chatConnection.off('assign_group_id');
+    });
+
+    return completer.future;
+  }
+
+  List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
+    // groupIDをキーとして持つマップを作成
+    Map<String, List<TimelineItem>> groupedMap = {};
+
+    for (var item in items) {
+      if (groupedMap.containsKey(item.groupID)) {
+        groupedMap[item.groupID]!.add(item);
+      } else {
+        groupedMap[item.groupID] = [item];
+      }
+    }
+
+    // マップの値をリストとして返す
+    return groupedMap.values.toList();
+  }
+
+  void onTapCallback() {
+    print("Card was tapped!");
+    // ここにタップ時の処理を追加できます
+  }
+
+  void onCameraButtonPressed() {
+    print("Camera button pressed!");
+    // ここにカメラボタンが押されたときの処理を追加できます
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer(
       builder: (BuildContext context, WidgetRef ref, Widget? child) {
         final items = ref.watch(timelineAddProvider);
         ref.watch(chatNotifierProvider);
+        List<List<TimelineItem>> groupedItemsList = groupItemsByGroupId(items);
 
 
         return Stack(
@@ -559,86 +601,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
                     },
-                    magnification: 1.3,
-                    useMagnifier: true,
+                    // magnification: 1.3,
+                    // useMagnifier: false,
                     physics: FixedExtentScrollPhysics(),
                     children: List<Widget>.generate(
-                      items.length,
+                      groupedItemsList.length, // groupIDごとにグルーピングされたアイテムのリストのリスト
                           (int index) {
-                        return Center(
-                          child: TimelineCard(
-                            key: items[index].key,
-                            item: items[index],
-                            size: widget.size,
-                            controller: _pickerController,
-                            currentIndex: index,
-                            pickerController: _pickerController,
-                            items: items,
-                            onTapCallback: () {
-                              // タップされたアイテムが中央のアイテムでない場合
-                              if (_pickerController.selectedItem != index) {
-                                _pickerController.animateToItem(
-                                  index,
-                                  duration: Duration(milliseconds: 250),
-                                  curve: Curves.easeInOut,
-                                );
-                              } else {
-                                setState(() {
-                                  isFullScreenMode = !isFullScreenMode;
-                                });
-                              }
-                            },
-                            onCameraButtonPressed: () {
-                              // リストを最上部にスクロール
-                              _pickerController.animateToItem(
-                                0,
-                                duration: Duration(milliseconds: 100),
-                                curve: Curves.easeInOut,
-                              );
-
-                              // このメソッドはサーバーからcurrentShootingGroupIDを待つ
-                              Future<String?> _waitForGroupId() async {
-                                Completer<String?> completer = Completer();
-
-                                // 'assign_group_id' イベントのリスナーを設定
-                                chatConnection.on('assign_group_id', (data) {
-                                  completer.complete(data as String?);
-                                  // イベントリスナーを解除
-                                  chatConnection.off('assign_group_id');
-                                });
-
-                                return completer.future;
-                              }
-
-                              // カメラボタンが中央にある場合のみカメラを起動
-                              if (_jumpToTopKey.currentState?.isCentered == true) {
-                                if (_cameras != null && _cameras!.isNotEmpty) {
-                                  chatConnection.emitEvent("enter_shooting_room");
-                                  _waitForGroupId().then((groupID) {
-                                    if(groupID != null) {
-                                      _openCamera(_cameras![0], groupID);
-                                      print("get groupID = $groupID");
-                                    } else {
-                                      print("Failed to get the group ID.");
-                                    }
-                                  });
-                                } else {
-                                  print("No available cameras found.");
-                                }
-                              }
-                            },
-                            // onCameraButtonPressed: () {
-                            //   if (_cameras != null && _cameras!.isNotEmpty) {
-                            //     _openCamera(_cameras![0]);
-                            //     chatConnection.emitEvent("enter_shooting_room");
-                            //   } else {
-                            //     print("No available cameras found.");
-                            //     // もしご希望であれば、ユーザーにエラーメッセージを表示する処理も追加できます。
-                            //   }
-                            // },
-                            // cameraDescription: snapshot.data!.first,
-                          ),
-                        );
+                            return Center(
+                              child: HorizontalGroupedItems(
+                                itemsInGroup: groupedItemsList[index],
+                                size: MediaQuery.of(context).size,
+                                controller: _scrollController,
+                                currentIndex: index,
+                                pickerController: _pickerController,
+                                items: items,
+                                onTapCallback: onTapCallback,
+                                // onCameraButtonPressed: onCameraButtonPressed,
+                              ),
+                            );
                       },
                     ),
                   ),
@@ -653,23 +633,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 // リストを最上部にスクロール
                 _pickerController.animateToItem(
                   0,
-                  duration: Duration(milliseconds: 100),
+                  duration: Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                 );
-
-                // このメソッドはサーバーからcurrentShootingGroupIDを待つ
-                Future<String?> _waitForGroupId() async {
-                  Completer<String?> completer = Completer();
-
-                  // 'assign_group_id' イベントのリスナーを設定
-                  chatConnection.on('assign_group_id', (data) {
-                    completer.complete(data as String?);
-                    // イベントリスナーを解除
-                    chatConnection.off('assign_group_id');
-                  });
-
-                  return completer.future;
-                }
 
                 // カメラボタンが中央にある場合のみカメラを起動
                 if (_jumpToTopKey.currentState?.isCentered == true) {
@@ -730,6 +696,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     // リスナーの解除処理
     chatConnection.removeListeners();
     _pickerController.removeListener(_scrollListener);
+    _scrollController.dispose();
     super.dispose();
   }
 
