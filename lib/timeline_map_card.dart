@@ -13,8 +13,9 @@ class HorizontalGroupedItems extends StatefulWidget {
   final int currentIndex;
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
-  final VoidCallback? onTapCallback;
+  final void Function(TimelineItem)? onTapCallback;
   final VoidCallback? onCameraButtonPressed;
+  final ValueChanged<int> onHorizontalIndexChanged;
 
   HorizontalGroupedItems({
     required this.itemsInGroup,
@@ -25,6 +26,7 @@ class HorizontalGroupedItems extends StatefulWidget {
     required this.items,
     this.onTapCallback,
     this.onCameraButtonPressed,
+    required this.onHorizontalIndexChanged,
   });
 
   @override
@@ -34,6 +36,15 @@ class HorizontalGroupedItems extends StatefulWidget {
 class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   late PageController _scrollController;
 
+  void _onScrollChange() {
+    int currentIndex = _scrollController.page!.round();  // 現在のページを取得（丸めて整数に）
+
+    // 現在のインデックスを親ウィジェットに通知
+    widget.onHorizontalIndexChanged(currentIndex);
+    // print("1029currentIndex = $currentIndex");
+  }
+
+
   @override
   void initState() {
     super.initState();
@@ -41,6 +52,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       initialPage: 0, // 最初のアイテムをデフォルトで選択
       viewportFraction: 0.3, // 画面の120%をアイテムが占めるように設定
     );
+    _scrollController.addListener(_onScrollChange);  // リスナーを追加
   }
 
   @override
@@ -48,16 +60,23 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     return LayoutBuilder(
       builder: (context, constraints) {
         if (widget.itemsInGroup.length == 1) {
-          return Center(
-            child: TimelineCard(
-              item: widget.itemsInGroup[0],
-              size: widget.size,
-              controller: widget.controller,
-              currentIndex: widget.currentIndex,
-              pickerController: widget.pickerController,
-              items: widget.items,
-              onTapCallback: widget.onTapCallback,
-              onCameraButtonPressed: widget.onCameraButtonPressed,
+          return GestureDetector(
+            onTap: () {
+              if (widget.onTapCallback != null) {
+                widget.onTapCallback!(widget.itemsInGroup[0]);
+              }
+            },
+            child: Center(
+              child: TimelineCard(
+                item: widget.itemsInGroup[0],
+                size: widget.size,
+                controller: widget.controller,
+                currentIndex: widget.currentIndex,
+                pickerController: widget.pickerController,
+                items: widget.items,
+                // onTapCallback: widget.onTapCallback,
+                onCameraButtonPressed: widget.onCameraButtonPressed,
+              ),
             ),
           );
         }
@@ -66,17 +85,24 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
           controller: _scrollController,
           itemCount: widget.itemsInGroup.length,
           itemBuilder: (context, index) {
-            return Padding(
-              padding: EdgeInsets.symmetric(horizontal: 0.0),
-              child: TimelineCard(
-                item: widget.itemsInGroup[index],
-                size: widget.size,
-                controller: widget.controller,
-                currentIndex: widget.currentIndex,
-                pickerController: widget.pickerController,
-                items: widget.items,
-                onTapCallback: widget.onTapCallback,
-                onCameraButtonPressed: widget.onCameraButtonPressed,
+            return GestureDetector(
+              onTap: () {
+                if (widget.onTapCallback != null) {
+                  widget.onTapCallback!(widget.itemsInGroup[index]);
+                }
+              },
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 0.0),
+                child: TimelineCard(
+                  item: widget.itemsInGroup[index],
+                  size: widget.size,
+                  controller: widget.controller,
+                  currentIndex: widget.currentIndex,
+                  pickerController: widget.pickerController,
+                  items: widget.items,
+                  onTapCallback: widget.onTapCallback,
+                  onCameraButtonPressed: widget.onCameraButtonPressed,
+                ),
               ),
             );
           },
@@ -84,6 +110,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       },
     );
   }
+
 }
 
 
@@ -98,7 +125,7 @@ class TimelineCard extends StatefulWidget {
   final int currentIndex;
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
-  final VoidCallback? onTapCallback;
+  final void Function(TimelineItem)? onTapCallback;
   final VoidCallback? onCameraButtonPressed;
 
   TimelineCard({
@@ -109,7 +136,7 @@ class TimelineCard extends StatefulWidget {
     required this.currentIndex,
     required this.pickerController,
     required this.items,
-    required this.onTapCallback,
+    this.onTapCallback,
     required this.onCameraButtonPressed,
   }) : super(key: key);
 
@@ -136,7 +163,7 @@ class _TimelineCardState extends State<TimelineCard> {
     return GestureDetector(
       onTap: () {
         if (widget.onTapCallback != null) {
-          widget.onTapCallback!();
+          widget.onTapCallback!(widget.item);
         }
       },
       child: Container(

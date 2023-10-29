@@ -436,6 +436,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
   bool showCameraBadge = false;
   late FixedExtentScrollController _scrollController;
+  int _horizontalIndex = 0;
+  List<List<TimelineItem>> groupedItemsList = [];  // このように定義
 
 
 
@@ -447,7 +449,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems);
-    print('_pickerController initial item: ${_pickerController.initialItem}');
+
     _initializeCamera();
     // listenToCameraEventを呼び出す
     chatConnection.listenToCameraEvent(context, (String data) {
@@ -466,23 +468,35 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
-  void _updateMapToSelectedItem(List<TimelineItem> items) {
-    int index = _pickerController.selectedItem;
+  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems) {
+    int groupIndex = _pickerController.selectedItem;
 
     // 範囲外アクセスを防ぐ
-    if (index >= 0 && index < items.length) {
-      print("Selected Item ID after stopped scrolling: ${items[index].id}");
+    if (groupIndex >= 0 && groupIndex < groupedItems.length) {
+      // ここで選択されているグループ内のアイテムを取得
+      List<TimelineItem> selectedGroup = groupedItems[groupIndex];
+
+      // _horizontalIndexが範囲外の場合の処理
+      if (_horizontalIndex >= selectedGroup.length) {
+        _horizontalIndex = 0;
+      }
+
+      TimelineItem selectedItem = selectedGroup[_horizontalIndex];
+
+      print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
 
       // Get the lat and lng of the selected item
-      double lat = items[index].lat;
-      double lng = items[index].lng;
+      double lat = selectedItem.lat;
+      double lng = selectedItem.lng;
 
       // Update the map location
       MapController.instance.updateMapLocation(lat, lng);
     } else {
-      print("Selected index out of range: $index");
+      print("Selected group index out of range: $groupIndex");
     }
   }
+
+
 
   void _scrollListener() {
     if (_pickerController.selectedItem == 0) {
@@ -538,13 +552,19 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       }
     }
 
+    var groupedItems = groupedMap.values.toList();
+
+    for (var items in groupedItems) {
+      print(items);
+    }
+
     // マップの値をリストとして返す
     return groupedMap.values.toList();
   }
 
-  void onTapCallback() {
+  void onTapCallback(TimelineItem item) {
     print("Card was tapped!");
-    // ここにタップ時の処理を追加できます
+    print(item.imageFilename);
   }
 
   void onCameraButtonPressed() {
@@ -559,6 +579,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         final items = ref.watch(timelineAddProvider);
         ref.watch(chatNotifierProvider);
         List<List<TimelineItem>> groupedItemsList = groupItemsByGroupId(items);
+
 
 
         return Stack(
@@ -587,7 +608,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   onNotification: (notification) {
                     if (notification is ScrollEndNotification) {
                       print("Stopped scrolling");
-                      _updateMapToSelectedItem(items);
+                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
+                      _updateMapToSelectedItem(groupedItems);
                     }
                     return true;
                   },
@@ -617,6 +639,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 items: items,
                                 onTapCallback: onTapCallback,
                                 // onCameraButtonPressed: onCameraButtonPressed,
+                                onHorizontalIndexChanged: (int newIndex) {
+                                  // ここで新しいインデックスを処理します。
+                                  // 例えばステートの変数に保存するなど...
+                                  setState(() {
+                                    _horizontalIndex = newIndex;
+                                    // print('Updated horizontal index: $_horizontalIndex');
+                                  });
+                                },
                               ),
                             );
                       },
