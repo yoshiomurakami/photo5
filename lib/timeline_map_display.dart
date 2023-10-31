@@ -437,6 +437,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool showCameraBadge = false;
   late FixedExtentScrollController _scrollController;
   int _horizontalIndex = 0;
+  int _selectedHorizontalIndex = 0;
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
 
 
@@ -475,14 +476,24 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     if (groupIndex >= 0 && groupIndex < groupedItems.length) {
       // ここで選択されているグループ内のアイテムを取得
       List<TimelineItem> selectedGroup = groupedItems[groupIndex];
+      print("selectedGroup = $selectedGroup");
 
-      // _horizontalIndexが範囲外の場合の処理
-      if (_horizontalIndex >= selectedGroup.length) {
-        _horizontalIndex = 0;
+      // 新しいグループの現在の選択されたアイテムのインデックスを取得
+      int newSelectedIndex = _horizontalIndex;
+
+      // インデックスが新しいグループの範囲を超えていれば、最後のアイテムのインデックスを設定
+      if (newSelectedIndex >= selectedGroup.length) {
+        newSelectedIndex = selectedGroup.length - 1;
+      }
+      _selectedHorizontalIndex = newSelectedIndex;
+
+      // _selectedHorizontalIndexが範囲外の場合の処理
+      if (_selectedHorizontalIndex >= selectedGroup.length) {
+        _selectedHorizontalIndex = 0;
       }
 
-      TimelineItem selectedItem = selectedGroup[_horizontalIndex];
-
+      TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
+      print("selectedItem = $selectedItem");
       print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
 
       // Get the lat and lng of the selected item
@@ -495,6 +506,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       print("Selected group index out of range: $groupIndex");
     }
   }
+
+
 
 
 
@@ -610,6 +623,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       print("Stopped scrolling");
                       List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
                       _updateMapToSelectedItem(groupedItems);
+                      // ここで選択されているHorizontalGroupedItemsの中のアイテムを取得
+                      int groupIndex = _pickerController.selectedItem;
+                      if (groupIndex >= 0 && groupIndex < groupedItems.length) {
+                        List<TimelineItem> selectedGroup = groupedItems[groupIndex];
+                        if (_selectedHorizontalIndex < selectedGroup.length) {
+                          TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
+                          print("Currently selected item in HorizontalGroupedItems: ${selectedItem.id}");
+                        }
+                      }
                     }
                     return true;
                   },
@@ -642,9 +664,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 onHorizontalIndexChanged: (int newIndex) {
                                   // ここで新しいインデックスを処理します。
                                   // 例えばステートの変数に保存するなど...
+                                  _selectedHorizontalIndex = newIndex;
                                   setState(() {
                                     _horizontalIndex = newIndex;
-                                    // print('Updated horizontal index: $_horizontalIndex');
                                   });
                                 },
                               ),

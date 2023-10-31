@@ -41,7 +41,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
 
     // 現在のインデックスを親ウィジェットに通知
     widget.onHorizontalIndexChanged(currentIndex);
-    // print("1029currentIndex = $currentIndex");
+    print("1029currentIndex = $currentIndex");
   }
 
 
