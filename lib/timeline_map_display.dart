@@ -439,7 +439,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   int _horizontalIndex = 0;
   int _selectedHorizontalIndex = 0;
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
-
+  late Map<String, int> selectedItemsMap = {};
+  int centralRowIndex = 0; // 初期値は適宜設定
 
 
   @override
@@ -469,7 +470,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
-  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems) {
+  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems, int mapIndex) {
     int groupIndex = _pickerController.selectedItem;
 
     // 範囲外アクセスを防ぐ
@@ -478,21 +479,21 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       List<TimelineItem> selectedGroup = groupedItems[groupIndex];
       print("selectedGroup = $selectedGroup");
 
-      // 新しいグループの現在の選択されたアイテムのインデックスを取得
-      int newSelectedIndex = _horizontalIndex;
+      // // 新しいグループの現在の選択されたアイテムのインデックスを取得
+      // int newSelectedIndex = _horizontalIndex;
+      //
+      // // インデックスが新しいグループの範囲を超えていれば、最後のアイテムのインデックスを設定
+      // if (newSelectedIndex >= selectedGroup.length) {
+      //   newSelectedIndex = selectedGroup.length - 1;
+      // }
+      // _selectedHorizontalIndex = newSelectedIndex;
+      //
+      // // _selectedHorizontalIndexが範囲外の場合の処理
+      // if (_selectedHorizontalIndex >= selectedGroup.length) {
+      //   _selectedHorizontalIndex = 0;
+      // }
 
-      // インデックスが新しいグループの範囲を超えていれば、最後のアイテムのインデックスを設定
-      if (newSelectedIndex >= selectedGroup.length) {
-        newSelectedIndex = selectedGroup.length - 1;
-      }
-      _selectedHorizontalIndex = newSelectedIndex;
-
-      // _selectedHorizontalIndexが範囲外の場合の処理
-      if (_selectedHorizontalIndex >= selectedGroup.length) {
-        _selectedHorizontalIndex = 0;
-      }
-
-      TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
+      TimelineItem selectedItem = selectedGroup[mapIndex];
       print("selectedItem = $selectedItem");
       print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
 
@@ -621,21 +622,21 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   onNotification: (notification) {
                     if (notification is ScrollEndNotification) {
                       print("Stopped scrolling");
-                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
-                      _updateMapToSelectedItem(groupedItems);
+                      // List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
+                      // _updateMapToSelectedItem(groupedItems, selectedItemIndex);
                       // ここで選択されているHorizontalGroupedItemsの中のアイテムを取得
-                      int groupIndex = _pickerController.selectedItem;
-                      if (groupIndex >= 0 && groupIndex < groupedItems.length) {
-                        List<TimelineItem> selectedGroup = groupedItems[groupIndex];
-                        if (_selectedHorizontalIndex < selectedGroup.length) {
-                          TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
-                          print("Currently selected item in HorizontalGroupedItems: ${selectedItem.id}");
-                        }
-                      }
+                      // int groupIndex = _pickerController.selectedItem;
+                      // if (groupIndex >= 0 && groupIndex < groupedItems.length) {
+                      //   List<TimelineItem> selectedGroup = groupedItems[groupIndex];
+                      //   if (_selectedHorizontalIndex < selectedGroup.length) {
+                      //     TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
+                      //     print("Currently selected item in HorizontalGroupedItems: ${selectedItem.id}");
+                      //   }
+                      // }
                     }
                     return true;
                   },
-                  child: ListWheelScrollView(
+                    child: ListWheelScrollView(
                     controller: _pickerController,
                     itemExtent: MediaQuery.of(context).size.height / 10,
                     diameterRatio: 1.25,
@@ -644,7 +645,23 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       if (index > items.length - 5) {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
+
+                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);//グループIDでソートされた配列
+                      String groupID = groupedItemsList[index].first.groupID; // 移動した先のグループID
+                      int selectedItemIndex = selectedItemsMap[groupID] ?? 0; // 該当するアイテムのインデックスを取得、なければ0
+                      print("groupedItemsList = $groupedItemsList[$index]");
+                      print("selectedItemIndex = $selectedItemIndex");
+
+                      _updateMapToSelectedItem(groupedItems, selectedItemIndex);
+
+                      setState(() {
+                        centralRowIndex = index;
+                        print("Central Row Index updated to: $centralRowIndex"); // 追加
+                        // ... その他の処理 ...
+                      });
+
                     },
+
                     // magnification: 1.3,
                     // useMagnifier: false,
                     physics: FixedExtentScrollPhysics(),
@@ -661,13 +678,22 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 items: items,
                                 onTapCallback: onTapCallback,
                                 // onCameraButtonPressed: onCameraButtonPressed,
+                                centralRowIndex: centralRowIndex,
+                                selectedItemsMap: selectedItemsMap,
                                 onHorizontalIndexChanged: (int newIndex) {
                                   // ここで新しいインデックスを処理します。
                                   // 例えばステートの変数に保存するなど...
-                                  _selectedHorizontalIndex = newIndex;
-                                  setState(() {
-                                    _horizontalIndex = newIndex;
-                                  });
+                                  String groupID = groupedItemsList[index].first.groupID; // グループIDの取得
+                                  selectedItemsMap[groupID] = newIndex; // マップを更新
+                                  print("selectedItemsMap[groupID] = $newIndex");
+                                  List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);//グループIDでソートされた配列
+                                  _updateMapToSelectedItem(groupedItems, newIndex);
+
+
+                                  // _selectedHorizontalIndex = newIndex;
+                                  // setState(() {
+                                  //   _horizontalIndex = newIndex;
+                                  // });
                                 },
                               ),
                             );

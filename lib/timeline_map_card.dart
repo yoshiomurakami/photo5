@@ -16,6 +16,8 @@ class HorizontalGroupedItems extends StatefulWidget {
   final void Function(TimelineItem)? onTapCallback;
   final VoidCallback? onCameraButtonPressed;
   final ValueChanged<int> onHorizontalIndexChanged;
+  final Map<String, int> selectedItemsMap;
+  final int centralRowIndex; // 追加
 
   HorizontalGroupedItems({
     required this.itemsInGroup,
@@ -27,6 +29,8 @@ class HorizontalGroupedItems extends StatefulWidget {
     this.onTapCallback,
     this.onCameraButtonPressed,
     required this.onHorizontalIndexChanged,
+    required this.selectedItemsMap,
+    required this.centralRowIndex, // 追加
   });
 
   @override
@@ -35,14 +39,20 @@ class HorizontalGroupedItems extends StatefulWidget {
 
 class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   late PageController _scrollController;
+  int centralRowIndex = 0;
 
   void _onScrollChange() {
-    int currentIndex = _scrollController.page!.round();  // 現在のページを取得（丸めて整数に）
-
-    // 現在のインデックスを親ウィジェットに通知
-    widget.onHorizontalIndexChanged(currentIndex);
-    print("1029currentIndex = $currentIndex");
+    int currentIndex = _scrollController.page!.round();
+    String groupID = widget.itemsInGroup.first.groupID;
+    widget.selectedItemsMap[groupID] = currentIndex;
+    if (widget.currentIndex == widget.centralRowIndex) {
+      widget.onHorizontalIndexChanged(currentIndex);
+      // selectedItemsMap の更新
+      String groupID = widget.itemsInGroup.first.groupID;
+      widget.selectedItemsMap[groupID] = currentIndex;
+    }
   }
+
 
 
   @override
