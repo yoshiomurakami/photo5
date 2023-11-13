@@ -54,16 +54,24 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   }
 
 
-
   @override
   void initState() {
     super.initState();
+
+    // groupID を取得
+    String groupID = widget.itemsInGroup.first.groupID;
+
+    // selectedItemsMap から現在のグループの最後に選択されたアイテムのインデックスを取得
+    int initialPageIndex = widget.selectedItemsMap[groupID] ?? 0;
+
+    // PageController を初期化。以前のスクロール位置に基づいて initialPage を設定
     _scrollController = PageController(
-      initialPage: 0, // 最初のアイテムをデフォルトで選択
-      viewportFraction: 0.3, // 画面の120%をアイテムが占めるように設定
+      initialPage: initialPageIndex,
+      viewportFraction: 0.3,
     );
-    _scrollController.addListener(_onScrollChange);  // リスナーを追加
+    _scrollController.addListener(_onScrollChange);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -84,7 +92,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
                 currentIndex: widget.currentIndex,
                 pickerController: widget.pickerController,
                 items: widget.items,
-                // onTapCallback: widget.onTapCallback,
+                onTapCallback: widget.onTapCallback,
                 onCameraButtonPressed: widget.onCameraButtonPressed,
               ),
             ),

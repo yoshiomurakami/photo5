@@ -436,8 +436,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
   bool showCameraBadge = false;
   late FixedExtentScrollController _scrollController;
-  int _horizontalIndex = 0;
-  int _selectedHorizontalIndex = 0;
+  // int _horizontalIndex = 0;
+  // int _selectedHorizontalIndex = 0;
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
   late Map<String, int> selectedItemsMap = {};
   int centralRowIndex = 0; // 初期値は適宜設定
@@ -619,20 +619,19 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               child: Container(
                 // color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
                 child: NotificationListener<ScrollNotification>(
-                  onNotification: (notification) {
+                  onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
-                      print("Stopped scrolling");
-                      // List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
-                      // _updateMapToSelectedItem(groupedItems, selectedItemIndex);
-                      // ここで選択されているHorizontalGroupedItemsの中のアイテムを取得
-                      // int groupIndex = _pickerController.selectedItem;
-                      // if (groupIndex >= 0 && groupIndex < groupedItems.length) {
-                      //   List<TimelineItem> selectedGroup = groupedItems[groupIndex];
-                      //   if (_selectedHorizontalIndex < selectedGroup.length) {
-                      //     TimelineItem selectedItem = selectedGroup[_selectedHorizontalIndex];
-                      //     print("Currently selected item in HorizontalGroupedItems: ${selectedItem.id}");
-                      //   }
-                      // }
+                      // スクロールが完全に停止した場合の処理
+                      int index = _pickerController.selectedItem;
+                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
+                      String groupID = groupedItemsList[index].first.groupID;
+                      int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                      _updateMapToSelectedItem(groupedItems, selectedItemIndex);
+
+                      setState(() {
+                        centralRowIndex = index;
+                        print("Central Row Index updated to: $centralRowIndex");
+                      });
                     }
                     return true;
                   },
@@ -645,20 +644,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       if (index > items.length - 5) {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
-
-                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);//グループIDでソートされた配列
-                      String groupID = groupedItemsList[index].first.groupID; // 移動した先のグループID
-                      int selectedItemIndex = selectedItemsMap[groupID] ?? 0; // 該当するアイテムのインデックスを取得、なければ0
-                      print("groupedItemsList = $groupedItemsList[$index]");
-                      print("selectedItemIndex = $selectedItemIndex");
-
-                      _updateMapToSelectedItem(groupedItems, selectedItemIndex);
-
-                      setState(() {
-                        centralRowIndex = index;
-                        print("Central Row Index updated to: $centralRowIndex"); // 追加
-                        // ... その他の処理 ...
-                      });
 
                     },
 
@@ -688,12 +673,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                   print("selectedItemsMap[groupID] = $newIndex");
                                   List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);//グループIDでソートされた配列
                                   _updateMapToSelectedItem(groupedItems, newIndex);
-
-
-                                  // _selectedHorizontalIndex = newIndex;
-                                  // setState(() {
-                                  //   _horizontalIndex = newIndex;
-                                  // });
                                 },
                               ),
                             );
