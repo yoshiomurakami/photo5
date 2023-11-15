@@ -53,6 +53,10 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     }
   }
 
+  // void onTapCallback(TimelineItem item) {
+  //   print("timeline_map_card.dart__Card was tapped!");
+  //   print(item.imageFilename);
+  // }
 
   @override
   void initState() {
@@ -67,7 +71,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     // PageController を初期化。以前のスクロール位置に基づいて initialPage を設定
     _scrollController = PageController(
       initialPage: initialPageIndex,
-      viewportFraction: 0.3,
+      viewportFraction: 0.165,
     );
     _scrollController.addListener(_onScrollChange);
   }
@@ -202,8 +206,8 @@ class _TimelineCardState extends State<TimelineCard> {
                   Align(
                     alignment: Alignment.center,
                     child: Container(
-                      width: MediaQuery.of(context).size.width * 0.15,
-                      height: MediaQuery.of(context).size.width * 0.15,
+                      width: MediaQuery.of(context).size.width * 0.18,
+                      height: MediaQuery.of(context).size.width * 0.18,
                       child: FloatingActionButton(
                         backgroundColor: Color(0xFFFFCC4D),
                         foregroundColor: Colors.black,

@@ -509,9 +509,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 
-
-
-
   void _scrollListener() {
     if (_pickerController.selectedItem == 0) {
       _jumpToTopKey.currentState?.centerButton();
@@ -519,6 +516,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       _jumpToTopKey.currentState?.moveButton();
     }
   }
+
+
 
 
   Future<void> _initializeCamera() async {
@@ -576,15 +575,26 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return groupedMap.values.toList();
   }
 
-  void onTapCallback(TimelineItem item) {
-    print("Card was tapped!");
-    print(item.imageFilename);
+  void onTapCallback(TimelineItem item, int index) {
+    scrollToCenter(index);
   }
 
-  void onCameraButtonPressed() {
-    print("Camera button pressed!");
-    // ここにカメラボタンが押されたときの処理を追加できます
+  void scrollToCenter(int index) {
+    final Duration duration = Duration(milliseconds: 300);
+    final Curve curve = Curves.easeInOut;
+
+    _pickerController.animateToItem(
+      index,
+      duration: duration,
+      curve: curve,
+    );
   }
+
+
+  // void onCameraButtonPressed() {
+  //   print("Camera button pressed!");
+  //   // ここにカメラボタンが押されたときの処理を追加できます
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -612,10 +622,20 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             ),
 
             Positioned(
+              top: widget.size.height * 0.5 - (MediaQuery.of(context).size.height / 8) / 2,
+              left: 0,
+              right: 0,
+              height: MediaQuery.of(context).size.height / 8,
+              child: Container(
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
+
+            Positioned(
               top: widget.size.height * 0.2,
               bottom: widget.size.height * 0.2,
-              left: widget.size.width * 0.15,
-              right: widget.size.width * 0.15,
+              left: widget.size.width * -0.18, //0.15
+              right: widget.size.width * -0.18, //0.15
               child: Container(
                 // color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
                 child: NotificationListener<ScrollNotification>(
@@ -644,9 +664,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       if (index > items.length - 5) {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
-
                     },
-
                     // magnification: 1.3,
                     // useMagnifier: false,
                     physics: FixedExtentScrollPhysics(),
@@ -661,18 +679,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 currentIndex: index,
                                 pickerController: _pickerController,
                                 items: items,
-                                onTapCallback: onTapCallback,
+                                onTapCallback: (TimelineItem item) => onTapCallback(item, index),
                                 // onCameraButtonPressed: onCameraButtonPressed,
                                 centralRowIndex: centralRowIndex,
                                 selectedItemsMap: selectedItemsMap,
                                 onHorizontalIndexChanged: (int newIndex) {
-                                  // ここで新しいインデックスを処理します。
-                                  // 例えばステートの変数に保存するなど...
-                                  String groupID = groupedItemsList[index].first.groupID; // グループIDの取得
-                                  selectedItemsMap[groupID] = newIndex; // マップを更新
+                                  String groupID = groupedItemsList[index].first.groupID;
+                                  selectedItemsMap[groupID] = newIndex;
                                   print("selectedItemsMap[groupID] = $newIndex");
-                                  List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);//グループIDでソートされた配列
-                                  _updateMapToSelectedItem(groupedItems, newIndex);
                                 },
                               ),
                             );
@@ -738,7 +752,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   },
                 ),
               ),
-
 
           ],
         );
