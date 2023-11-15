@@ -228,6 +228,8 @@ class ChatNotifier extends ChangeNotifier {
     chatConnection.onNewPhoto((data) async {
       print("onNewPhoto=$data");
 
+
+
       try {
         double latitude = data['lat'];
         double longitude = data['lng'];
@@ -245,15 +247,29 @@ class ChatNotifier extends ChangeNotifier {
           // 更新された配列情報を出力
           print("Updated Data with Geocoding=$data");
 
-          // Convert the updated data to a TimelineItem object
           TimelineItem newItem = TimelineItem.fromJson(data);
           print("maked_TimelineItem newItem=$newItem");
 
-          // printTimelineItems();
           final timelineItems = await ref.read(timelineAddProvider);
 
-          // Add the new item to the beginning of the list
-          timelineItems.insert(1, newItem);
+          // groupIDが一致する既存のアイテムが存在するか確認
+          bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
+
+          // 新しいアイテムをリストに追加
+          if (isNewRow) {
+            // 新しい行が生成される場合はリストの先頭に追加
+            timelineItems.insert(1, newItem);
+          } else {
+            // groupIDが一致する最初のアイテムのインデックスを探す
+            int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
+            if (insertIndex != -1) {
+              // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
+              timelineItems.insert(insertIndex, newItem);
+            } else {
+              // 同じgroupIDを持つアイテムがない場合、新しい行としてリストの先頭に追加
+              timelineItems.insert(1, newItem);
+            }
+          }
           print("added_timelineItems=$timelineItems");
 
           // Notify listeners about the change
@@ -268,10 +284,14 @@ class ChatNotifier extends ChangeNotifier {
 
           print("currentIndex=$currentIndex");
           if (currentIndex != null && currentIndex != 0) {
-            print("currentIndex=$currentIndex");
-            // 現在のインデックスを1増やして次のページへ移動
-            currentIndex = ++currentIndex;
-            pickerController.jumpToItem(currentIndex); // アニメーションなしでジャンプ
+            if (isNewRow) {
+              currentIndex = ++currentIndex;
+              pickerController.jumpToItem(currentIndex);
+            } else {
+              pickerController.jumpToItem(currentIndex);
+            }
+          } else {
+            // pickerController.jumpToItem(0);
           }
 
           // 新しい画像が受信された際の上層リストビューの処理

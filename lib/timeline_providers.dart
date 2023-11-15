@@ -92,6 +92,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
   Future<void> addMoreItems() async {
     List<TimelineItem> newItems = await getMoreTimelineItems();
     state = [...state, ...newItems];
+    print("addMoreItems!");
   }
 }
 

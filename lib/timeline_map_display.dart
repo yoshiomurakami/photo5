@@ -580,7 +580,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
   void scrollToCenter(int index) {
-    final Duration duration = Duration(milliseconds: 300);
+    final Duration duration = Duration(milliseconds: 150);
     final Curve curve = Curves.easeInOut;
 
     _pickerController.animateToItem(
@@ -660,8 +660,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                     itemExtent: MediaQuery.of(context).size.height / 10,
                     diameterRatio: 1.25,
                     onSelectedItemChanged: (int index) {
-                      print('_pickerController selected item: $index');
-                      if (index > items.length - 5) {
+                      print('_pickerController selected item: ${groupedItemsList.length}');
+                      print("index = $index");
+                      if (index > groupedItemsList.length - 5) {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
                     },
