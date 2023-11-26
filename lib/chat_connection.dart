@@ -200,35 +200,58 @@ class _ConnectionNumberState extends State<ConnectionNumber> {
 }
 
 
-
-
-
-
-
-
-
-
 class ChatNotifier extends ChangeNotifier {
 
   final ChangeNotifierProviderRef<Object?> ref;
-
-  ChatNotifier(this.ref);
 
   final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
   PageController? fullScreenImageViewerController;
 
-  // List<TimelineItem> _timelineItems = [];
+  List<List<TimelineItem>> groupedItemsList = [];
+
+  ChatNotifier(this.ref);
+
+  Map<String, int> selectedItemsMap = {};
 
   // Getter for timelineItems
   // List<TimelineItem> get timelineItems => _timelineItems;
 
-  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems) {
+
+
+  // selectedItemsMap に新しい groupID を挿入する補助関数
+  Map<String, int> insertIntoSelectedItemsMap(Map<String, int> originalMap, String newGroupId) {
+    // 新しい Map を作成
+    Map<String, int> updatedMap = {};
+
+    // 最初の要素を追加
+    String firstKey = originalMap.keys.first;
+    updatedMap[firstKey] = originalMap[firstKey]!;
+
+    // 新しい groupID を追加
+    updatedMap[newGroupId] = 0;
+
+    // 残りの要素を追加
+    originalMap.forEach((key, value) {
+      if (key != firstKey) {
+        updatedMap[key] = value;
+      }
+    });
+
+    return updatedMap;
+  }
+
+  // selectedItemsMap を更新するメソッド
+  void updateSelectedItemsMap(Map<String, int> originalMap, String newGroupId) {
+    selectedItemsMap = insertIntoSelectedItemsMap(selectedItemsMap, newGroupId);
+    print("selectedItemsMap_here = $selectedItemsMap");
+    notifyListeners();
+  }
+
+  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId) {
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
       print("onNewPhoto=$data");
-
-
 
       try {
         double latitude = data['lat'];
@@ -255,6 +278,12 @@ class ChatNotifier extends ChangeNotifier {
           // groupIDが一致する既存のアイテムが存在するか確認
           bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
 
+          // 新しいアイテムをリストに追加する前に、selectedItemsMap を更新
+          if (isNewRow) {
+            updateSelectedItemsMap(selectedItemsMap, newItem.groupID);
+            // print("selectedItemsMap!addphoto!!=$selectedItemsMap");
+          }
+
           // 新しいアイテムをリストに追加
           if (isNewRow) {
             // 新しい行が生成される場合はリストの先頭に追加
@@ -272,8 +301,8 @@ class ChatNotifier extends ChangeNotifier {
           }
           print("added_timelineItems=$timelineItems");
 
-          // Notify listeners about the change
-          notifyListeners();
+          groupedItemsList = groupItemsByGroupId(timelineItems);
+
 
           int? currentIndex;
           if (pageController.hasClients) {
@@ -282,7 +311,6 @@ class ChatNotifier extends ChangeNotifier {
             currentIndex = pickerController.selectedItem; // この行を変更
           }
 
-          print("currentIndex=$currentIndex");
           if (currentIndex != null && currentIndex != 0) {
             if (isNewRow) {
               currentIndex = ++currentIndex;
@@ -294,14 +322,17 @@ class ChatNotifier extends ChangeNotifier {
             // pickerController.jumpToItem(0);
           }
 
+          // Notify listeners about the change
+          notifyListeners();
+
           // 新しい画像が受信された際の上層リストビューの処理
-          if (fullScreenImageViewerController != null && fullScreenImageViewerController!.hasClients) {
-            int? currentIndex = fullScreenImageViewerController!.page?.round();
-            if (currentIndex != null && currentIndex != 0) {
-              currentIndex = ++currentIndex;
-              fullScreenImageViewerController!.jumpToPage(currentIndex); // アニメーションなしでジャンプ
-            }
-          }
+          // if (fullScreenImageViewerController != null && fullScreenImageViewerController!.hasClients) {
+          //   int? currentIndex = fullScreenImageViewerController!.page?.round();
+          //   if (currentIndex != null && currentIndex != 0) {
+          //     currentIndex = ++currentIndex;
+          //     fullScreenImageViewerController!.jumpToPage(currentIndex); // アニメーションなしでジャンプ
+          //   }
+          // }
 
 
         } else {

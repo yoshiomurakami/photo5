@@ -16,8 +16,9 @@ class HorizontalGroupedItems extends StatefulWidget {
   final void Function(TimelineItem)? onTapCallback;
   final VoidCallback? onCameraButtonPressed;
   final ValueChanged<int> onHorizontalIndexChanged;
-  final Map<String, int> selectedItemsMap;
+  // final Map<String, int> selectedItemsMap;
   final int centralRowIndex; // 追加
+  final ChatNotifier chatNotifier; // ChatNotifier を追加
 
   HorizontalGroupedItems({
     required this.itemsInGroup,
@@ -29,8 +30,9 @@ class HorizontalGroupedItems extends StatefulWidget {
     this.onTapCallback,
     this.onCameraButtonPressed,
     required this.onHorizontalIndexChanged,
-    required this.selectedItemsMap,
+    // required this.selectedItemsMap,
     required this.centralRowIndex, // 追加
+    required this.chatNotifier, // ChatNotifier を引数として追加
   });
 
   @override
@@ -42,14 +44,11 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   int centralRowIndex = 0;
 
   void _onScrollChange() {
-    int currentIndex = _scrollController.page!.round();
+    int newIndex = _scrollController.page!.round();
     String groupID = widget.itemsInGroup.first.groupID;
-    widget.selectedItemsMap[groupID] = currentIndex;
+    widget.chatNotifier.selectedItemsMap[groupID] = newIndex; // ChatNotifier を使用するように変更
     if (widget.currentIndex == widget.centralRowIndex) {
-      widget.onHorizontalIndexChanged(currentIndex);
-      // selectedItemsMap の更新
-      String groupID = widget.itemsInGroup.first.groupID;
-      widget.selectedItemsMap[groupID] = currentIndex;
+      widget.onHorizontalIndexChanged(newIndex);
     }
   }
 
@@ -66,7 +65,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     String groupID = widget.itemsInGroup.first.groupID;
 
     // selectedItemsMap から現在のグループの最後に選択されたアイテムのインデックスを取得
-    int initialPageIndex = widget.selectedItemsMap[groupID] ?? 0;
+    int initialPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
 
     // PageController を初期化。以前のスクロール位置に基づいて initialPage を設定
     _scrollController = PageController(
