@@ -214,6 +214,8 @@ class ChatNotifier extends ChangeNotifier {
 
   Map<String, int> selectedItemsMap = {};
 
+  bool isUpdating = false;
+
   // Getter for timelineItems
   // List<TimelineItem> get timelineItems => _timelineItems;
 
@@ -221,34 +223,31 @@ class ChatNotifier extends ChangeNotifier {
 
   // selectedItemsMap に新しい groupID を挿入する補助関数
   Map<String, int> insertIntoSelectedItemsMap(Map<String, int> originalMap, String newGroupId) {
-    // 新しい Map を作成
     Map<String, int> updatedMap = {};
-
-    // 最初の要素を追加
     String firstKey = originalMap.keys.first;
     updatedMap[firstKey] = originalMap[firstKey]!;
-
-    // 新しい groupID を追加
-    updatedMap[newGroupId] = 0;
-
-    // 残りの要素を追加
+    updatedMap[newGroupId] = 0;  // 新しい groupID を追加
     originalMap.forEach((key, value) {
       if (key != firstKey) {
         updatedMap[key] = value;
       }
     });
-
+    print("updatedMap! = $updatedMap");
     return updatedMap;
   }
 
-  // selectedItemsMap を更新するメソッド
-  void updateSelectedItemsMap(Map<String, int> originalMap, String newGroupId) {
-    selectedItemsMap = insertIntoSelectedItemsMap(selectedItemsMap, newGroupId);
-    print("selectedItemsMap_here = $selectedItemsMap");
-    notifyListeners();
+  // // selectedItemsMap を更新するメソッド
+  void updateSelectedItemsMap(String newGroupId) {
+    if (!isUpdating) {
+      selectedItemsMap = insertIntoSelectedItemsMap(selectedItemsMap, newGroupId);  // 修正箇所
+      print("selectedItemsMap_here = $selectedItemsMap");
+      notifyListeners();
+    }
   }
 
+
   void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId) {
+
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
       print("onNewPhoto=$data");
@@ -277,62 +276,32 @@ class ChatNotifier extends ChangeNotifier {
 
           // groupIDが一致する既存のアイテムが存在するか確認
           bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
-
           // 新しいアイテムをリストに追加する前に、selectedItemsMap を更新
           if (isNewRow) {
-            updateSelectedItemsMap(selectedItemsMap, newItem.groupID);
+            // preUpdateSelectedItemsMap(timelineItems, newItem.groupID);
+            // updateSelectedItemsMap(newItem.groupID);
             // print("selectedItemsMap!addphoto!!=$selectedItemsMap");
           }
 
-          // 新しいアイテムをリストに追加
+
           if (isNewRow) {
-            // 新しい行が生成される場合はリストの先頭に追加
+            int currentSelection = pickerController.selectedItem; // 現在の選択されているアイテムのインデックス
+
+            // 新しい行がリストに追加される前に、selectedItemsMapを更新
+            updateSelectedItemsMap(newItem.groupID);
+
+            // 新しいアイテムをリストに追加
             timelineItems.insert(1, newItem);
-          } else {
-            // groupIDが一致する最初のアイテムのインデックスを探す
-            int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
-            if (insertIndex != -1) {
-              // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
-              timelineItems.insert(insertIndex, newItem);
-            } else {
-              // 同じgroupIDを持つアイテムがない場合、新しい行としてリストの先頭に追加
-              timelineItems.insert(1, newItem);
-            }
+
+            // selectedItemsMapの参照を適切に更新
+            shiftSelectedItemsMap(timelineItems);
+
+            // 遅延してpickerControllerの位置を更新
+            Future.delayed(Duration(milliseconds: 100), () {
+              pickerController.jumpToItem(currentSelection + 1);
+              notifyListeners(); // 更新を通知
+            });
           }
-          print("added_timelineItems=$timelineItems");
-
-          groupedItemsList = groupItemsByGroupId(timelineItems);
-
-
-          int? currentIndex;
-          if (pageController.hasClients) {
-            currentIndex = pageController.page?.round();
-          } else {
-            currentIndex = pickerController.selectedItem; // この行を変更
-          }
-
-          if (currentIndex != null && currentIndex != 0) {
-            if (isNewRow) {
-              currentIndex = ++currentIndex;
-              pickerController.jumpToItem(currentIndex);
-            } else {
-              pickerController.jumpToItem(currentIndex);
-            }
-          } else {
-            // pickerController.jumpToItem(0);
-          }
-
-          // Notify listeners about the change
-          notifyListeners();
-
-          // 新しい画像が受信された際の上層リストビューの処理
-          // if (fullScreenImageViewerController != null && fullScreenImageViewerController!.hasClients) {
-          //   int? currentIndex = fullScreenImageViewerController!.page?.round();
-          //   if (currentIndex != null && currentIndex != 0) {
-          //     currentIndex = ++currentIndex;
-          //     fullScreenImageViewerController!.jumpToPage(currentIndex); // アニメーションなしでジャンプ
-          //   }
-          // }
 
 
         } else {
@@ -347,6 +316,19 @@ class ChatNotifier extends ChangeNotifier {
 
     });
   }
+
+  void shiftSelectedItemsMap(List<TimelineItem> timelineItems) {
+    Map<String, int> newMap = {};
+    selectedItemsMap.forEach((groupID, index) {
+      // インデックス値は変更せずに、groupIDの参照する行の位置を1つ下げる
+      int newIndex = timelineItems.indexWhere((item) => item.groupID == groupID) + 1;
+      newMap[groupID] = newIndex >= timelineItems.length ? 0 : index;  // インデックスを1つずらす
+    });
+    selectedItemsMap = newMap;
+  }
+
+
+
 
 }
 

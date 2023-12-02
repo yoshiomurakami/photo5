@@ -52,6 +52,19 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     }
   }
 
+  void _updateScrollPosition() {
+    String groupID = widget.itemsInGroup.first.groupID;
+    int newSelectedIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
+
+    if (_scrollController.hasClients && _scrollController.page!.round() != newSelectedIndex) {
+      _scrollController.animateToPage(
+        newSelectedIndex,
+        duration: Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   // void onTapCallback(TimelineItem item) {
   //   print("timeline_map_card.dart__Card was tapped!");
   //   print(item.imageFilename);
@@ -73,6 +86,25 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       viewportFraction: 0.165,
     );
     _scrollController.addListener(_onScrollChange);
+
+    // ChatNotifierからの変更をリッスンし、PageControllerを更新
+    widget.chatNotifier.addListener(() {
+      String groupID = widget.itemsInGroup.first.groupID;
+      int newPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
+      if (_scrollController.hasClients) {
+        _scrollController.jumpToPage(newPageIndex);
+      }
+    });
+
+    // ChatNotifierが更新されたときに呼ばれるリスナーを追加
+    widget.chatNotifier.addListener(_updateScrollPosition);
+  }
+
+  @override
+  void dispose() {
+    // リスナーを削除
+    widget.chatNotifier.removeListener(_updateScrollPosition);
+    super.dispose();
   }
 
 
@@ -176,6 +208,7 @@ class _TimelineCardState extends State<TimelineCard> {
     super.initState();
     currentSelectedItem = widget.currentIndex;
   }
+
 
 
 

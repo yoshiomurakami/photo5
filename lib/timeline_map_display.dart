@@ -469,6 +469,29 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     chatConnection.listenToRoomCount(context);
   }
 
+
+  //
+  // void updateSelectedItemsMap(String newGroupId, List<TimelineItem> timelineItems) {
+  //   if (!isUpdating) {
+  //     Map<String, int> newSelectedItemsMap = {};
+  //
+  //     // 既存の各グループIDに対してインデックスを保持する
+  //     timelineItems.forEach((item) {
+  //       newSelectedItemsMap[item.groupID] = selectedItemsMap[item.groupID] ?? 0;
+  //     });
+  //
+  //     // 新しいグループIDに対してインデックス0を設定する
+  //     newSelectedItemsMap[newGroupId] = 0;
+  //
+  //     // 更新されたselectedItemsMapを設定する
+  //     selectedItemsMap = newSelectedItemsMap;
+  //     notifyListeners();
+  //   }
+  // }
+
+
+
+
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
     for (var group in groupedItemsList) {
@@ -479,7 +502,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       }
     }
   }
-
 
   void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems, int mapIndex) {
     int groupIndex = _pickerController.selectedItem;
@@ -601,15 +623,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
-  void updateSelectedItemsMap(List<List<TimelineItem>> groupedItemsList, ChatNotifier chatNotifier) {
-    for (var group in groupedItemsList) {
-      String groupID = group.first.groupID;
-      if (!chatNotifier.selectedItemsMap.containsKey(groupID)) {
-        chatNotifier.selectedItemsMap[groupID] = 0;
-      }
-    }
-  }
-
   // void onCameraButtonPressed() {
   //   print("Camera button pressed!");
   //   // ここにカメラボタンが押されたときの処理を追加できます
@@ -674,14 +687,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       String groupID = groupedItemsList[index].first.groupID;
                       print("groupID!=$groupID");
                       int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                      print("selectedItemsMap!=$selectedItemsMap");
                       print("selectedItemIndex!=$selectedItemIndex");
+                      // print("selectedItemIndex!=$selectedItemIndex");
                       _updateMapToSelectedItem(groupedItems, selectedItemIndex);
 
-                      setState(() {
-                        centralRowIndex = index;
-                        print("Central Row Index updated to: $centralRowIndex");
-                      });
+                      // setState(() {
+                      //   centralRowIndex = index;
+                      //   print("Central Row Index updated to: $centralRowIndex");
+                      // });
                     }
                     return true;
                   },
@@ -717,7 +730,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 items: items,
                                 onTapCallback: (TimelineItem item) => onTapCallback(item, index),
                                 centralRowIndex: centralRowIndex,
-                                chatNotifier: ref.read(chatNotifierProvider), // ChatNotifier インスタンスを渡す
+                                chatNotifier: chatNotifier,
                                 onHorizontalIndexChanged: (int newIndex) {
                                   // ここはそのままでOKです。HorizontalGroupedItems内で処理される
                                   String groupID = groupedItemsList[index].first.groupID;
