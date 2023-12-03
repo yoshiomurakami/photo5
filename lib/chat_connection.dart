@@ -277,11 +277,27 @@ class ChatNotifier extends ChangeNotifier {
           // groupIDが一致する既存のアイテムが存在するか確認
           bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
           // 新しいアイテムをリストに追加する前に、selectedItemsMap を更新
-          if (isNewRow) {
+          // if (isNewRow) {
             // preUpdateSelectedItemsMap(timelineItems, newItem.groupID);
             // updateSelectedItemsMap(newItem.groupID);
             // print("selectedItemsMap!addphoto!!=$selectedItemsMap");
-          }
+          // }
+
+          // if (isNewRow) {
+          //   int currentSelection = pickerController.selectedItem;
+          //
+          //   // 新しい行がリストに追加される前に、selectedItemsMapの更新と参照の適切な更新を行う
+          //   shiftAndUpdateSelectedItemsMap(timelineItems, newItem.groupID);
+          //
+          //   // 新しいアイテムをリストに追加
+          //   timelineItems.insert(1, newItem);
+          //
+          //   // pickerControllerの位置を即座に更新
+          //   pickerController.jumpToItem(currentSelection + 1);
+          //
+          //   // UIのリフレッシュをトリガーする
+          //   notifyListeners();
+          // }
 
 
           if (isNewRow) {
@@ -292,16 +308,25 @@ class ChatNotifier extends ChangeNotifier {
 
             // 新しいアイテムをリストに追加
             timelineItems.insert(1, newItem);
-
+            pickerController.jumpToItem(currentSelection + 1);
             // selectedItemsMapの参照を適切に更新
             shiftSelectedItemsMap(timelineItems);
 
             // 遅延してpickerControllerの位置を更新
-            Future.delayed(Duration(milliseconds: 100), () {
-              pickerController.jumpToItem(currentSelection + 1);
+            Future.delayed(Duration(milliseconds: 50), () {
               notifyListeners(); // 更新を通知
             });
+          } else {
+          // groupIDが一致する既存のアイテムが見つかった場合
+          // groupIDが一致する最初のアイテムのインデックスを探す
+          int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
+          if (insertIndex != -1) {
+            // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
+            timelineItems.insert(insertIndex + 1, newItem);
           }
+          // UIの更新をトリガーする
+          notifyListeners();
+        }
 
 
         } else {
@@ -316,6 +341,7 @@ class ChatNotifier extends ChangeNotifier {
 
     });
   }
+
 
   void shiftSelectedItemsMap(List<TimelineItem> timelineItems) {
     Map<String, int> newMap = {};
