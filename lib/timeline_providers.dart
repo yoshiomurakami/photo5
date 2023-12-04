@@ -52,7 +52,7 @@ class TimelineItem {
       'imageFilename': '03.png',
       'thumbnailFilename': '03.png',
       'localtime': 'dummy',
-      'groupID': 'dummy',
+      'groupID': 'camera',
     };
   }
 
@@ -159,7 +159,11 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       // デバッグ情報として、取得したデータを出力
       print('Received data: ${data.length} items. Details: $data');
 
-      List<TimelineItem> timelineItems = data.map((item) => TimelineItem.fromJson(item)).toList();
+      var filteredData = data.where((item) => item['groupID'] != null).toList();
+
+      List<TimelineItem> timelineItems = filteredData
+          .map((item) => TimelineItem.fromJson(item))
+          .toList();
 
       // ジオコーディング処理の追加
       await updateGeocodedLocation(timelineItems);
@@ -207,22 +211,22 @@ class TimelineState {
   TimelineState({required this.items, this.isLoading = false});
 }
 
-class TimelineAddNotifier extends StateNotifier<TimelineState> {
-  TimelineAddNotifier() : super(TimelineState(items: [])) {
-    _loadInitialData();
-  }
-
-  Future<void> _loadInitialData() async {
-    List<TimelineItem> initialData = await getTimeline();
-    state = TimelineState(items: initialData);
-  }
-
-  Future<void> addMoreItems() async {
-    state = TimelineState(items: state.items, isLoading: true);
-    List<TimelineItem> newItems = await getMoreTimelineItems();
-    state = TimelineState(items: [...state.items, ...newItems], isLoading: false);
-  }
-}
+// class TimelineAddNotifier extends StateNotifier<TimelineState> {
+//   TimelineAddNotifier() : super(TimelineState(items: [])) {
+//     _loadInitialData();
+//   }
+//
+//   Future<void> _loadInitialData() async {
+//     List<TimelineItem> initialData = await getTimeline();
+//     state = TimelineState(items: initialData);
+//   }
+//
+//   Future<void> addMoreItems() async {
+//     state = TimelineState(items: state.items, isLoading: true);
+//     List<TimelineItem> newItems = await getMoreTimelineItems();
+//     state = TimelineState(items: [...state.items, ...newItems], isLoading: false);
+//   }
+// }
 
 final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
   List<TimelineItem> timelineItems = await getTimeline();
