@@ -308,12 +308,13 @@ class ChatNotifier extends ChangeNotifier {
 
             // 新しいアイテムをリストに追加
             timelineItems.insert(1, newItem);
-            pickerController.jumpToItem(currentSelection + 1);
+            // pickerController.jumpToItem(currentSelection + 1);
             // selectedItemsMapの参照を適切に更新
             shiftSelectedItemsMap(timelineItems);
 
             // 遅延してpickerControllerの位置を更新
             Future.delayed(Duration(milliseconds: 50), () {
+              pickerController.jumpToItem(currentSelection + 1);
               notifyListeners(); // 更新を通知
             });
           } else {
@@ -342,7 +343,6 @@ class ChatNotifier extends ChangeNotifier {
     });
   }
 
-
   void shiftSelectedItemsMap(List<TimelineItem> timelineItems) {
     Map<String, int> newMap = {};
     selectedItemsMap.forEach((groupID, index) {
@@ -352,10 +352,6 @@ class ChatNotifier extends ChangeNotifier {
     });
     selectedItemsMap = newMap;
   }
-
-
-
-
 }
 
 final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) => ChatNotifier(ref));

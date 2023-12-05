@@ -239,7 +239,7 @@ class _StartupState extends State<Startup> {
                     ),
                     child: Center(
                       child: Text(
-                        "✋",
+                        "\u{1F590}",
                         style: TextStyle(
                           fontSize: MediaQuery.of(context).size.width * 0.1,
                         ),

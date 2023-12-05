@@ -18,45 +18,6 @@ import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
 import 'chat_connection.dart';
 import 'dart:convert';
-// import 'camera_utilities.dart';
-
-// class CameraButton extends StatelessWidget {
-//   final VoidCallback onPressed;
-//
-//   CameraButton({required this.onPressed});
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     final Size size = MediaQuery.of(context).size;
-//     return Positioned(
-//       left: size.width * 0.4,
-//       top: size.height * 0.75,
-//       child: Container(
-//         width: size.width * 0.2,
-//         height: size.width * 0.2,
-//         // child: FloatingActionButton(
-//         //   // key: cameraButtonKey,
-//         //   heroTag: "camera", // HeroTag設定
-//         //   backgroundColor: Color(0xFFFFCC4D),
-//         //   foregroundColor: Colors.black,
-//         //   elevation: 0,
-//         //   shape: CircleBorder(side: BorderSide(color: Colors.black, width: 2.0)),
-//         //   child: Center(
-//         //     child: Text(
-//         //       '📷',
-//         //       textAlign: TextAlign.center,
-//         //       style: TextStyle(
-//         //         fontSize: size.width * 0.1,
-//         //         height: 1.0,
-//         //       ),
-//         //     ),
-//         //   ),
-//         //   onPressed: onPressed,
-//         // ),
-//       ),
-//     );
-//   }
-// }
 
 class CameraScreen extends StatefulWidget {
 
@@ -472,15 +433,21 @@ class _CameraScreenState extends State<CameraScreen> {
                   ),
                   // The controls should be outside the scaled preview
                   if (!_showImage)  // Only show the buttons if _showImage is false
+                    Positioned.fill(
+                      child: GestureDetector(
+                        onTap: _takePicture,
+                        child: Container(color: Colors.transparent),
+                      ),
+                    ),
                     Positioned(
                       bottom: 0,
                       left: 0,
                       child: Row(
                         children: [
-                          ElevatedButton(
-                            onPressed: _takePicture,
-                            child: Text('Take Picture'),
-                          ),
+                          // ElevatedButton(
+                          //   onPressed: _takePicture,
+                          //   child: Text('Take Picture'),
+                          // ),
                           ElevatedButton(
                             onPressed: () {
                               chatConnection.emitEvent("leave_shooting_room");
@@ -507,31 +474,36 @@ class _CameraScreenState extends State<CameraScreen> {
                           ),
                         ),
                         Positioned(
-                            bottom: 20,
-                            left: 20,
-                            child: ElevatedButton(
-                              child: Text('Send'),
-                              onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                                  ? () async {  // make it asynchronous
-                                if (_uploadImagePath != null && _uploadThumbnailPath != null) {
-                                  SharedPreferences prefs = await SharedPreferences.getInstance();
-                                  String userId = prefs.getString('userID') ?? "";
+                          bottom: 20,
+                          left: 20,
+                          child: ElevatedButton(
+                            child: Text('Send'),
+                            onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
+                                ? () async {
+                              if (_uploadImagePath != null && _uploadThumbnailPath != null) {
+                                SharedPreferences prefs = await SharedPreferences.getInstance();
+                                String userId = prefs.getString('userID') ?? "";
 
-                                  // call _progressUpload with necessary arguments
-                                  _progressUpload(
-                                      _uploadImagePath!,
-                                      _uploadThumbnailPath!,
-                                      userId,
-                                      _imageCountry ?? 'Unknown',
-                                      _imageLat ?? '',
-                                      _imageLng ?? '',
-                                      widget.groupID
-                                  );
-                                }
+                                // call _progressUpload with necessary arguments
+                                await _progressUpload(
+                                    _uploadImagePath!,
+                                    _uploadThumbnailPath!,
+                                    userId,
+                                    _imageCountry ?? 'Unknown',
+                                    _imageLat ?? '',
+                                    _imageLng ?? '',
+                                    widget.groupID
+                                );
+
+                                // 送信後、カメラを終了する
+                                _controller.dispose();
+                                Navigator.pop(context);
                               }
-                                  : null,  // Enable the button only if the conversion is completed
-                            )
+                            }
+                                : null,  // Enable the button only if the conversion is completed
+                          ),
                         ),
+
                         Positioned(
                           bottom: 20,
                           right: 20,

@@ -247,7 +247,7 @@ class _TimelineCardState extends State<TimelineCard> {
                         shape: CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
                         child: Center(
                           child: Text(
-                            '📷',
+                            '\u{1F4F8}',
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 24,
