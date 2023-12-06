@@ -91,9 +91,12 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
 
   Future<void> addMoreItems() async {
     List<TimelineItem> newItems = await getMoreTimelineItems();
-    state = [...state, ...newItems];
+    // 重複を避けるために、既にリストに存在するアイテムを除外します
+    var uniqueNewItems = newItems.where((newItem) => !state.any((existingItem) => existingItem.id == newItem.id)).toList();
+    state = [...state, ...uniqueNewItems];
     print("addMoreItems!");
   }
+
 }
 
 Future<Map<String, String>> getGeocodedLocation(LatLng position) async {
