@@ -469,29 +469,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     chatConnection.listenToRoomCount(context);
   }
 
-
-  //
-  // void updateSelectedItemsMap(String newGroupId, List<TimelineItem> timelineItems) {
-  //   if (!isUpdating) {
-  //     Map<String, int> newSelectedItemsMap = {};
-  //
-  //     // 既存の各グループIDに対してインデックスを保持する
-  //     timelineItems.forEach((item) {
-  //       newSelectedItemsMap[item.groupID] = selectedItemsMap[item.groupID] ?? 0;
-  //     });
-  //
-  //     // 新しいグループIDに対してインデックス0を設定する
-  //     newSelectedItemsMap[newGroupId] = 0;
-  //
-  //     // 更新されたselectedItemsMapを設定する
-  //     selectedItemsMap = newSelectedItemsMap;
-  //     notifyListeners();
-  //   }
-  // }
-
-
-
-
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
     for (var group in groupedItemsList) {
@@ -586,7 +563,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return completer.future;
   }
 
-  List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
+    List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
     // groupIDをキーとして持つマップを作成
     Map<String, List<TimelineItem>> groupedMap = {};
 
@@ -598,11 +575,11 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       }
     }
 
-    var groupedItems = groupedMap.values.toList();
+    // var groupedItems = groupedMap.values.toList();
 
-    for (var items in groupedItems) {
-      print(items);
-    }
+    // for (var items in groupedItems) {
+    //   print(items);
+    // }
 
     // マップの値をリストとして返す
     return groupedMap.values.toList();

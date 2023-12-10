@@ -91,22 +91,26 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
 
   Future<void> addMoreItems() async {
     List<TimelineItem> newItems = await getMoreTimelineItems();
-    // 重複を避けるために、既にリストに存在するアイテムを除外します
+    // 重複を避けるために、既にリストに存在するアイテムを除外
     var uniqueNewItems = newItems.where((newItem) => !state.any((existingItem) => existingItem.id == newItem.id)).toList();
-    state = [...state, ...uniqueNewItems];
+
+    if (uniqueNewItems.isNotEmpty) {
+      // 既存のリストに新しいアイテムを追加
+      state = [...state, ...uniqueNewItems];
+    }
     print("addMoreItems!");
   }
-
 }
 
+
 Future<Map<String, String>> getGeocodedLocation(LatLng position) async {
-  final places = await placemarkFromCoordinates(position.latitude, position.longitude);
-  if (places.isNotEmpty) {
-    final country = places[0].country ?? '';
-    final city = places[0].locality ?? '';
-    print('Geocoded location: $city, $country');
-    return {'country': country, 'city': city};
-  }
+  // final places = await placemarkFromCoordinates(position.latitude, position.longitude);
+  // if (places.isNotEmpty) {
+  //   final country = places[0].country ?? '';
+  //   final city = places[0].locality ?? '';
+  //   print('Geocoded location: $city, $country');
+  //   return {'country': country, 'city': city};
+  // }
   return {'country': 'unknown', 'city': 'unknown'}; // エラーを返さずに未知の値を返す
 }
 
@@ -198,11 +202,11 @@ Future<void> updateGeocodedLocation(List<TimelineItem> timelineItems) async {
   }
 }
 
-Future<List<TimelineItem>> getTimelineWithGeocoding() async {
-  List<TimelineItem> timelineItems = await getTimeline();
-  // await updateGeocodedLocation(timelineItems);
-  return timelineItems;
-}
+// Future<List<TimelineItem>> getTimelineWithGeocoding() async {
+//   List<TimelineItem> timelineItems = await getTimeline();
+//   // await updateGeocodedLocation(timelineItems);
+//   return timelineItems;
+// }
 
 
 

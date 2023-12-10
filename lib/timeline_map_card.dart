@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
 // import 'package:flutter/rendering.dart' as rendering;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path_provider/path_provider.dart';
 import 'timeline_providers.dart';
 import 'chat_connection.dart';
 import 'dart:async';
@@ -275,34 +278,118 @@ class _TimelineCardState extends State<TimelineCard> {
       ),
     );
   }
-
 }
+
 
 Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
   double imageSize = MediaQuery.of(context).size.width * 0.2;
 
-  return Container(
-    width: imageSize,
-    height: imageSize,
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(imageSize * 0.1),
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(imageSize * 0.1),
-      child: Stack(
-        children: <Widget>[
-          Image.asset('assets/placeholder_thumb.png'),
-          FadeInImage.assetNetwork(
-            placeholder: 'assets/placeholder_thumb_transparent.png',
-            image: 'https://photo5.world/$thumbnailFilename',
+  // 画像の読み込みが始まる前にグレーのサムネイルを表示
+  return FutureBuilder<File>(
+    future: _getCachedImage(thumbnailFilename),
+    builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+      if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
+        // フェードイン効果で画像を表示
+        return _imageContainer(
+          imageSize,
+          FadeInImage(
+            placeholder: AssetImage('assets/placeholder_thumb.png'),
+            image: FileImage(snapshot.data!),
             fit: BoxFit.cover,
             fadeInDuration: Duration(milliseconds: 300),
           ),
-        ],
-      ),
+        );
+      } else {
+        // ロード中の表示（グレーのサムネイル）
+        return _imageContainer(imageSize, _buildGreyThumbnail(imageSize));
+      }
+    },
+  );
+}
+
+Widget _buildGreyThumbnail(double size) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: Colors.grey,
+      borderRadius: BorderRadius.circular(size * 0.1),
     ),
   );
 }
+
+Widget _imageContainer(double size, Widget child) {
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(size * 0.1),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.1),
+      child: child,
+    ),
+  );
+}
+
+
+
+Future<File> _getCachedImage(String thumbnailFilename) async {
+  String cacheDirPath = (await getTemporaryDirectory()).path;
+  File cachedImage = File('$cacheDirPath/$thumbnailFilename');
+
+  if (!cachedImage.existsSync()) {
+    // ネットワークから画像をダウンロードし、キャッシュに保存
+    try {
+      var response = await http.get(Uri.parse('https://photo5.world/$thumbnailFilename'));
+      if (response.statusCode == 200) {
+        await cachedImage.writeAsBytes(response.bodyBytes);
+      }
+    } catch (e) {
+      // エラーハンドリング
+      print('Image download error: $e');
+    }
+  }
+  return cachedImage;
+}
+
+
+
+// Future<void> _downloadAndCacheImage(String thumbnailFilename, File imageFile) async {
+//   try {
+//     var response = await http.get(Uri.parse('https://photo5.world/$thumbnailFilename'));
+//     if (response.statusCode == 200) {
+//       await imageFile.writeAsBytes(response.bodyBytes);
+//     }
+//   } catch (e) {
+//     print('Image download error: $e');
+//   }
+// }
+//
+//
+// Future<String?> _findOrDownloadImage(String thumbnailFilename) async {
+//   String cacheDirPath = (await getTemporaryDirectory()).path;
+//   File imageFile = File('$cacheDirPath/$thumbnailFilename');
+//
+//   if (!imageFile.existsSync()) {
+//     // ネットワークから画像をダウンロードし、キャッシュに保存
+//     try {
+//       var response = await http.get(Uri.parse('https://photo5.world/$thumbnailFilename'));
+//       if (response.statusCode == 200) {
+//         await imageFile.writeAsBytes(response.bodyBytes);
+//         return imageFile.path;
+//       }
+//     } catch (e) {
+//       // ダウンロード失敗時のエラー処理
+//       print('Image download error: $e');
+//     }
+//   }
+//   return imageFile.existsSync() ? imageFile.path : null;
+// }
+
+
+
+
 
 
 
