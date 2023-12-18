@@ -261,7 +261,7 @@ class _CameraScreenState extends State<CameraScreen> {
       onCreate: (db, version) {
         // Create images table if it doesn't exist
         return db.execute(
-          "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
+          "CREATE TABLE images(_id INTEGER PRIMARY KEY, imageFilename TEXT, thumbnailFilename TEXT, userID TEXT, country TEXT, lat TEXT, lng TEXT, groupID TEXT)",
         );
       },
       version: 1,

@@ -308,15 +308,19 @@ Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
 }
 
 Widget _buildGreyThumbnail(double size) {
-  return Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      color: Colors.grey,
-      borderRadius: BorderRadius.circular(size * 0.1),
+  return Opacity(
+    opacity: 0,  // 透明度を50%に設定
+    child: Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.grey,
+        borderRadius: BorderRadius.circular(size * 0.1),
+      ),
     ),
   );
 }
+
 
 Widget _imageContainer(double size, Widget child) {
   return Container(

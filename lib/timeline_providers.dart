@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:geocoding/geocoding.dart';
+// import 'package:geocoding/geocoding.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -246,3 +246,15 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
 });
 
 final timelineAddProvider = StateNotifierProvider<TimelineNotifier, List<TimelineItem>>((ref) => TimelineNotifier());
+
+// final newTimelineAddProvider = StateNotifierProvider<NewTimelineNotifier, List<List<TimelineItem>>>((ref) {
+//   return NewTimelineNotifier();
+// });
+//
+// class NewTimelineNotifier extends StateNotifier<List<List<TimelineItem>>> {
+//   NewTimelineNotifier() : super([]);
+//
+//   void setNewGroupedItemsList(List<List<TimelineItem>> newGroupedItemsList) {
+//     state = newGroupedItemsList;
+//   }
+// }

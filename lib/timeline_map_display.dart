@@ -9,6 +9,9 @@ import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_camera.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
+
 
 
 class MapController {
@@ -428,6 +431,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool programmaticChange = false;
   bool isFullScreen = false;
   late FixedExtentScrollController _pickerController;
+  late FixedExtentScrollController _scrollController;
   bool isScrolling = false;
   bool isFullScreenMode = false;
   List<CameraDescription>? _cameras;
@@ -435,12 +439,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   ChatConnection chatConnection = ChatConnection();
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
   bool showCameraBadge = false;
-  late FixedExtentScrollController _scrollController;
   // int _horizontalIndex = 0;
   // int _selectedHorizontalIndex = 0;
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
   // late Map<String, int> selectedItemsMap = {};
   int centralRowIndex = 0; // 初期値は適宜設定
+  bool showNewListWheelScrollView = false;
+  bool isCustomListActive = false; // カスタムリストの表示フラグ
 
 
   @override
@@ -475,7 +480,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       String groupID = group.first.groupID;
       if (!chatNotifier.selectedItemsMap.containsKey(groupID)) {
         chatNotifier.selectedItemsMap[groupID] = 0;
-        print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
+        // print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
       }
     }
   }
@@ -563,27 +568,53 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return completer.future;
   }
 
-    List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
-    // groupIDをキーとして持つマップを作成
-    Map<String, List<TimelineItem>> groupedMap = {};
+  List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
+  // groupIDをキーとして持つマップを作成
+  Map<String, List<TimelineItem>> groupedMap = {};
 
-    for (var item in items) {
-      if (groupedMap.containsKey(item.groupID)) {
-        groupedMap[item.groupID]!.add(item);
-      } else {
-        groupedMap[item.groupID] = [item];
-      }
+  for (var item in items) {
+    if (groupedMap.containsKey(item.groupID)) {
+      groupedMap[item.groupID]!.add(item);
+    } else {
+      groupedMap[item.groupID] = [item];
     }
-
-    // var groupedItems = groupedMap.values.toList();
-
-    // for (var items in groupedItems) {
-    //   print(items);
-    // }
-
-    // マップの値をリストとして返す
-    return groupedMap.values.toList();
   }
+
+  // var groupedItems = groupedMap.values.toList();
+
+  // for (var items in groupedItems) {
+  //   print(items);
+  // }
+
+  // マップの値をリストとして返す
+  return groupedMap.values.toList();
+}
+
+  // List<List<TimelineItem>> convertMapsToGroupedItemsList(List<Map<String, dynamic>> maps) {
+  //   Map<String, List<TimelineItem>> groupedMap = {};
+  //   for (var map in maps) {
+  //     var json = {
+  //       '_key': map['id'].toString(),
+  //       '_id': map['id'].toString(),
+  //       'userID': map['userId'],
+  //       'country': map['imageCountry'],
+  //       'lat': map['imageLat'],
+  //       'lng': map['imageLng'],
+  //       'imageFilename': map['imagePath'],
+  //       'thumbnailFilename': map['thumbnailPath'],
+  //       'localtime': 'Unknown', // 適宜修正
+  //       'groupID': map['groupID'],
+  //     };
+  //     TimelineItem item = TimelineItem.fromJson(json);
+  //     String groupId = item.groupID;
+  //     if (!groupedMap.containsKey(groupId)) {
+  //       groupedMap[groupId] = [];
+  //     }
+  //     groupedMap[groupId]!.add(item);
+  //   }
+  //   return groupedMap.values.toList();
+  // }
+
 
   void onTapCallback(TimelineItem item, int index) {
     scrollToCenter(index);
@@ -600,9 +631,18 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
-  // void onCameraButtonPressed() {
-  //   print("Camera button pressed!");
-  //   // ここにカメラボタンが押されたときの処理を追加できます
+  // void toggleList() async {
+  //   // groupedItemsListを切り替える
+  //   setState(() {
+  //     if (isCustomListActive) {
+  //       // 既存のリストに戻す
+  //       // groupedItemsList = groupItemsByGroupId(items);
+  //     } else {
+  //       // 新しいリストに切り替える
+  //       groupedItemsList = GroupedAlbumList;
+  //     }
+  //     isCustomListActive = !isCustomListActive;
+  //   });
   // }
 
   @override
@@ -648,7 +688,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               ),
             ),
 
-            Positioned(
+            if (!showNewListWheelScrollView)Positioned(
               top: widget.size.height * 0.2,
               bottom: widget.size.height * 0.2,
               left: widget.size.width * -0.18, //0.15
@@ -723,6 +763,94 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ),
               ),
             ),
+            if (showNewListWheelScrollView)Positioned(
+                top: widget.size.height * 0.2,
+                bottom: widget.size.height * 0.2,
+                left: widget.size.width * -0.18, //0.15
+                right: widget.size.width * -0.18, //0.15
+                child: Container(
+                  color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (ScrollNotification notification) {
+                      if (notification is ScrollEndNotification) {
+                        // スクロールが完全に停止した場合の処理
+                        int index = _pickerController.selectedItem;
+                        List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
+                        String groupID = groupedItemsList[index].first.groupID;
+                        print("groupID!=$groupID");
+                        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                        print("selectedItemIndex!=$selectedItemIndex");
+                        // print("selectedItemIndex!=$selectedItemIndex");
+                        _updateMapToSelectedItem(groupedItems, selectedItemIndex);
+
+                        // setState(() {
+                        //   centralRowIndex = index;
+                        //   print("Central Row Index updated to: $centralRowIndex");
+                        // });
+                      }
+                      return true;
+                    },
+                    child: ListWheelScrollView(
+                      controller: _pickerController,
+                      itemExtent: MediaQuery.of(context).size.height / 10,
+                      diameterRatio: 1.25,
+                      onSelectedItemChanged: (int index) {
+                        print('_pickerController selected item: ${groupedItemsList.length}');
+                        print("index = $index");
+                        if (index > groupedItemsList.length - 5) {
+                          ref.read(timelineAddProvider.notifier).addMoreItems();
+                        }
+                        print("addPostedPhoto!!");
+                        // setState(() {
+                        //   print("www");
+                        // });
+                      },
+                      // magnification: 1.3,
+                      // useMagnifier: false,
+                      physics: FixedExtentScrollPhysics(),
+                      children: List<Widget>.generate(
+                        groupedItemsList.length, // groupIDごとにグルーピングされたアイテムのリストのリスト
+                            (int index) {
+                          String groupID = groupedItemsList[index].first.groupID;
+                          int currentIndex = selectedItemsMap[groupID] ?? 0;
+                          return Center(
+                            child: HorizontalGroupedItems(
+                              itemsInGroup: groupedItemsList[index],
+                              size: MediaQuery.of(context).size,
+                              controller: _scrollController,
+                              currentIndex: currentIndex,
+                              pickerController: _pickerController,
+                              items: items,
+                              onTapCallback: (TimelineItem item) => onTapCallback(item, index),
+                              centralRowIndex: centralRowIndex,
+                              chatNotifier: chatNotifier,
+                              onHorizontalIndexChanged: (int newIndex) {
+                                // ここはそのままでOKです。HorizontalGroupedItems内で処理される
+                                String groupID = groupedItemsList[index].first.groupID;
+                                selectedItemsMap[groupID] = newIndex;
+                                print("selectedItemsMap[groupID] = $selectedItemsMap");
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // 切り替えボタン
+            Positioned(
+              right: widget.size.width * 0.05,
+              top: (widget.size.height * 0.3) ,
+              child: ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    showNewListWheelScrollView = !showNewListWheelScrollView;
+                  });
+                },
+                child: Text(showNewListWheelScrollView ? '旧ListView表示' : '新ListView表示'),
+              ),
+            ),
             JumpToTop(
               key: _jumpToTopKey,
               size: Size(widget.size.width, widget.size.height),
@@ -759,9 +887,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: (widget.size.height) - (widget.size.height * 0.3) ,
             ),
 
-
-
-
             if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
               Positioned(
                 top: 0,
@@ -786,6 +911,21 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
+  Future<void> _printImageData() async {
+    final db = await openDatabase(
+      p.join(await getDatabasesPath(), 'images_database.db'),
+    );
+
+    final List<Map<String, dynamic>> maps = await db.query(
+      'images',
+      orderBy: 'id DESC',
+    );
+
+    for (var map in maps) {
+      print(map);
+    }
+  }
+
 
   @override
   void dispose() {
@@ -798,3 +938,4 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
 }
+
