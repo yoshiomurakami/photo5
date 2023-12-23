@@ -4,13 +4,15 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 // import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_camera.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart' as p;
+import 'album_timeline.dart';
+
 
 
 
@@ -446,6 +448,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   int centralRowIndex = 0; // 初期値は適宜設定
   bool showNewListWheelScrollView = false;
   bool isCustomListActive = false; // カスタムリストの表示フラグ
+  List<AlbumTimeLine> _albumList = [];  // アルバムデータを保持するためのリスト
 
 
   @override
@@ -493,20 +496,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       // ここで選択されているグループ内のアイテムを取得
       List<TimelineItem> selectedGroup = groupedItems[groupIndex];
       print("selectedGroup = $selectedGroup");
-
-      // // 新しいグループの現在の選択されたアイテムのインデックスを取得
-      // int newSelectedIndex = _horizontalIndex;
-      //
-      // // インデックスが新しいグループの範囲を超えていれば、最後のアイテムのインデックスを設定
-      // if (newSelectedIndex >= selectedGroup.length) {
-      //   newSelectedIndex = selectedGroup.length - 1;
-      // }
-      // _selectedHorizontalIndex = newSelectedIndex;
-      //
-      // // _selectedHorizontalIndexが範囲外の場合の処理
-      // if (_selectedHorizontalIndex >= selectedGroup.length) {
-      //   _selectedHorizontalIndex = 0;
-      // }
 
       TimelineItem selectedItem = selectedGroup[mapIndex];
       print("selectedItem = $selectedItem");
@@ -579,42 +568,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       groupedMap[item.groupID] = [item];
     }
   }
-
-  // var groupedItems = groupedMap.values.toList();
-
-  // for (var items in groupedItems) {
-  //   print(items);
-  // }
-
   // マップの値をリストとして返す
   return groupedMap.values.toList();
 }
-
-  // List<List<TimelineItem>> convertMapsToGroupedItemsList(List<Map<String, dynamic>> maps) {
-  //   Map<String, List<TimelineItem>> groupedMap = {};
-  //   for (var map in maps) {
-  //     var json = {
-  //       '_key': map['id'].toString(),
-  //       '_id': map['id'].toString(),
-  //       'userID': map['userId'],
-  //       'country': map['imageCountry'],
-  //       'lat': map['imageLat'],
-  //       'lng': map['imageLng'],
-  //       'imageFilename': map['imagePath'],
-  //       'thumbnailFilename': map['thumbnailPath'],
-  //       'localtime': 'Unknown', // 適宜修正
-  //       'groupID': map['groupID'],
-  //     };
-  //     TimelineItem item = TimelineItem.fromJson(json);
-  //     String groupId = item.groupID;
-  //     if (!groupedMap.containsKey(groupId)) {
-  //       groupedMap[groupId] = [];
-  //     }
-  //     groupedMap[groupId]!.add(item);
-  //   }
-  //   return groupedMap.values.toList();
-  // }
-
 
   void onTapCallback(TimelineItem item, int index) {
     scrollToCenter(index);
@@ -631,19 +587,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
-  // void toggleList() async {
-  //   // groupedItemsListを切り替える
-  //   setState(() {
-  //     if (isCustomListActive) {
-  //       // 既存のリストに戻す
-  //       // groupedItemsList = groupItemsByGroupId(items);
-  //     } else {
-  //       // 新しいリストに切り替える
-  //       groupedItemsList = GroupedAlbumList;
-  //     }
-  //     isCustomListActive = !isCustomListActive;
-  //   });
-  // }
+  void _loadAlbumData() async {
+    // アルバムデータを非同期で取得し、状態を更新
+    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
+    setState(() {
+      _albumList = albumData;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -763,95 +713,36 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 ),
               ),
             ),
-            if (showNewListWheelScrollView)Positioned(
+            if (showNewListWheelScrollView && _albumList.isNotEmpty)
+              AlbumTimeLineView(
                 top: widget.size.height * 0.2,
                 bottom: widget.size.height * 0.2,
-                left: widget.size.width * -0.18, //0.15
-                right: widget.size.width * -0.18, //0.15
-                child: Container(
-                  color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
-                  child: NotificationListener<ScrollNotification>(
-                    onNotification: (ScrollNotification notification) {
-                      if (notification is ScrollEndNotification) {
-                        // スクロールが完全に停止した場合の処理
-                        int index = _pickerController.selectedItem;
-                        List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
-                        String groupID = groupedItemsList[index].first.groupID;
-                        print("groupID!=$groupID");
-                        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                        print("selectedItemIndex!=$selectedItemIndex");
-                        // print("selectedItemIndex!=$selectedItemIndex");
-                        _updateMapToSelectedItem(groupedItems, selectedItemIndex);
-
-                        // setState(() {
-                        //   centralRowIndex = index;
-                        //   print("Central Row Index updated to: $centralRowIndex");
-                        // });
-                      }
-                      return true;
-                    },
-                    child: ListWheelScrollView(
-                      controller: _pickerController,
-                      itemExtent: MediaQuery.of(context).size.height / 10,
-                      diameterRatio: 1.25,
-                      onSelectedItemChanged: (int index) {
-                        print('_pickerController selected item: ${groupedItemsList.length}');
-                        print("index = $index");
-                        if (index > groupedItemsList.length - 5) {
-                          ref.read(timelineAddProvider.notifier).addMoreItems();
-                        }
-                        print("addPostedPhoto!!");
-                        // setState(() {
-                        //   print("www");
-                        // });
-                      },
-                      // magnification: 1.3,
-                      // useMagnifier: false,
-                      physics: FixedExtentScrollPhysics(),
-                      children: List<Widget>.generate(
-                        groupedItemsList.length, // groupIDごとにグルーピングされたアイテムのリストのリスト
-                            (int index) {
-                          String groupID = groupedItemsList[index].first.groupID;
-                          int currentIndex = selectedItemsMap[groupID] ?? 0;
-                          return Center(
-                            child: HorizontalGroupedItems(
-                              itemsInGroup: groupedItemsList[index],
-                              size: MediaQuery.of(context).size,
-                              controller: _scrollController,
-                              currentIndex: currentIndex,
-                              pickerController: _pickerController,
-                              items: items,
-                              onTapCallback: (TimelineItem item) => onTapCallback(item, index),
-                              centralRowIndex: centralRowIndex,
-                              chatNotifier: chatNotifier,
-                              onHorizontalIndexChanged: (int newIndex) {
-                                // ここはそのままでOKです。HorizontalGroupedItems内で処理される
-                                String groupID = groupedItemsList[index].first.groupID;
-                                selectedItemsMap[groupID] = newIndex;
-                                print("selectedItemsMap[groupID] = $selectedItemsMap");
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
+                left: widget.size.width * -0.18,
+                right: widget.size.width * -0.18,
+                albumList: _albumList,  // 取得したアルバムリストを渡す
+                size: MediaQuery.of(context).size,  // 現在のコンテキストからサイズを取得
+                // child: Container(
+                //   color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
+                // ),
               ),
             // 切り替えボタン
             Positioned(
               right: widget.size.width * 0.05,
-              top: (widget.size.height * 0.3) ,
+              top: widget.size.height * 0.3,
               child: ElevatedButton(
                 onPressed: () {
                   setState(() {
                     showNewListWheelScrollView = !showNewListWheelScrollView;
                   });
+                  if (showNewListWheelScrollView) {
+                    // 新しいListView表示の時だけアルバムデータをロード
+                    _loadAlbumData();
+                  }
                 },
                 child: Text(showNewListWheelScrollView ? '旧ListView表示' : '新ListView表示'),
               ),
             ),
-            JumpToTop(
+            if (!showNewListWheelScrollView)JumpToTop(
               key: _jumpToTopKey,
               size: Size(widget.size.width, widget.size.height),
               showBadge: showCameraBadge,
