@@ -210,12 +210,14 @@ class JumpToTop extends StatefulWidget {
   final Size size;
   final VoidCallback onPressed;
   final bool showBadge;
+  final FixedExtentScrollController scrollController;  // 追加
 
   JumpToTop({
     Key? key,
     required this.size,
     required this.onPressed,
     this.showBadge = false,
+    required this.scrollController,  // 追加
   }) : super(key: key);
 
   @override
@@ -277,6 +279,29 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
       }
     });
 
+    // スクロールコントローラーのリスナーを追加
+    widget.scrollController.addListener(() {
+      // 現在の選択アイテムに基づいてボタンの位置を更新
+      bool isCameraButtonCentered = widget.scrollController.selectedItem == 0;
+      if (isCentered != isCameraButtonCentered) {
+        if (isCameraButtonCentered) {
+          centerButton();
+        } else {
+          moveButton();
+        }
+      }
+    });
+  }
+
+  // _pickerControllerの現在のアイテムに基づいてisCenteredを更新する
+  void _pickerControllerListener() {
+    bool isCameraButtonCentered = widget.scrollController.selectedItem == 0; // カメラボタンが中央にあるか
+    print("isCentered = $isCentered");
+    if (isCentered != isCameraButtonCentered) {
+      setState(() {
+        isCentered = isCameraButtonCentered;
+      });
+    }
   }
 
   void _updateFadeControllerValue() {
@@ -369,6 +394,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   void dispose() {
     _fadeController.dispose();
     _positionController.dispose();
+    widget.scrollController.removeListener(_pickerControllerListener);
     super.dispose();
   }
 }
@@ -432,7 +458,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   String? currentCardId;
   bool programmaticChange = false;
   bool isFullScreen = false;
-  late FixedExtentScrollController _pickerController;
+  // late FixedExtentScrollController _pickerController;
   late FixedExtentScrollController _scrollController;
   bool isScrolling = false;
   bool isFullScreenMode = false;
@@ -449,13 +475,16 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool showNewListWheelScrollView = false;
   bool isCustomListActive = false; // カスタムリストの表示フラグ
   List<AlbumTimeLine> _albumList = [];  // アルバムデータを保持するためのリスト
+  String _lastSelectedGroupID = '';
+  Map<String, int> _lastSelectedIndexes = {};
+  late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
 
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    _pickerController = FixedExtentScrollController();
+    // _pickerController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId);
@@ -475,6 +504,23 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     });
 
     chatConnection.listenToRoomCount(context);
+
+
+
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    print("here!! _lastSelectedIndexes = $_lastSelectedIndexes & _lastSelectedGroupID = $_lastSelectedGroupID");
+    // if (showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
+      int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
+      print("lastIndex!! = $lastIndex");
+      if (lastIndex != null) {
+        _pickerController.jumpToItem(lastIndex);
+        print("here!!!!!!");
+      }
+    // }
   }
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
@@ -514,13 +560,19 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
 
   void _scrollListener() {
-    if (_pickerController.selectedItem == 0) {
+    // 現在選択されているアイテムのインデックスを取得
+    int currentIndex = _pickerController.selectedItem;
+
+    // カメラボタン（先頭のアイテム）が選択されているかどうかを確認
+    if (currentIndex == 0) {
       _jumpToTopKey.currentState?.centerButton();
     } else {
       _jumpToTopKey.currentState?.moveButton();
     }
-  }
 
+    // タイムラインの選択状態を保存
+    _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
+  }
 
 
 
@@ -658,6 +710,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       // print("selectedItemIndex!=$selectedItemIndex");
                       _updateMapToSelectedItem(groupedItems, selectedItemIndex);
 
+                      _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
+
                       // setState(() {
                       //   centralRowIndex = index;
                       //   print("Central Row Index updated to: $centralRowIndex");
@@ -676,6 +730,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
                       print("addPostedPhoto!!");
+                      String groupID = groupedItemsList[index].first.groupID;
+                      _lastSelectedIndexes[groupID] = index;  // ここで最新のインデックスを保存
                       // setState(() {
                       //   print("www");
                       // });
@@ -731,9 +787,31 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.3,
               child: ElevatedButton(
                 onPressed: () {
+                  if (!showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
+                    // "タイムライン"に戻る前に、前回の位置にスクロールを復元
+                    int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
+                    if (lastIndex != null) {
+                      _pickerController = FixedExtentScrollController(initialItem: lastIndex);
+                    }
+                  }
+
                   setState(() {
                     showNewListWheelScrollView = !showNewListWheelScrollView;
                   });
+                  print("lastSelectedIndexes = $_lastSelectedIndexes");
+                  print("_lastSelectedGroupID = $_lastSelectedGroupID");
+                  // if (!showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
+                  //   // "タイムライン"ビューに戻ったときに、前回の位置にスクロールを復元
+                  //   int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];  // 前回選択されたgroupIDに基づく最後のインデックス
+                  //   if (lastIndex != null) {
+                  //     // フレームの終わりまで処理を遅延させ、ListWheelScrollViewがビルドされた後に実行します。
+                  //     WidgetsBinding.instance!.addPostFrameCallback((_) {
+                  //       print("now!!!!");
+                  //       _pickerController.jumpToItem(lastIndex);
+                  //     });
+                  //   }
+                  //   didChangeDependencies();
+                  // }
                   if (showNewListWheelScrollView) {
                     // 新しいListView表示の時だけアルバムデータをロード
                     _loadAlbumData();
@@ -747,30 +825,33 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               size: Size(widget.size.width, widget.size.height),
               showBadge: showCameraBadge,
               onPressed: () {
-                // リストを最上部にスクロール
-                _pickerController.animateToItem(
-                  0,
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-
-                // カメラボタンが中央にある場合のみカメラを起動
-                if (_jumpToTopKey.currentState?.isCentered == true) {
-                  if (_cameras != null && _cameras!.isNotEmpty) {
-                    chatConnection.emitEvent("enter_shooting_room");
-                    _waitForGroupId().then((groupID) {
-                      if(groupID != null) {
-                        _openCamera(_cameras![0], groupID);
-                        print("get groupID = $groupID");
-                      } else {
-                        print("Failed to get the group ID.");
-                      }
-                    });
-                  } else {
-                    print("No available cameras found.");
+                if (_jumpToTopKey.currentState!.isCentered) {
+                  // カメラボタンが中央にある場合のみカメラを起動
+                  if (_jumpToTopKey.currentState?.isCentered == true) {
+                    if (_cameras != null && _cameras!.isNotEmpty) {
+                      chatConnection.emitEvent("enter_shooting_room");
+                      _waitForGroupId().then((groupID) {
+                        if(groupID != null) {
+                          _openCamera(_cameras![0], groupID);
+                          print("get groupID = $groupID");
+                        } else {
+                          print("Failed to get the group ID.");
+                        }
+                      });
+                    } else {
+                      print("No available cameras found.");
+                    }
                   }
+                } else {
+                  // リストを最上部にスクロール
+                  _pickerController.animateToItem(
+                    0,
+                    duration: Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
                 }
               },
+              scrollController: _pickerController,
             ),
             ZoomControl(
               size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
