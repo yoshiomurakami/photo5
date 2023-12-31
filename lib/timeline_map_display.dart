@@ -236,7 +236,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-
     if (_positionAnimation == null) {
       _positionAnimation = Tween<double>(
         begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2,
@@ -245,10 +244,25 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         ..addListener(() {
           setState(() {
             _bottomPosition = _positionAnimation!.value;
-
           });
         });
     }
+
+    // フレームの描画が完了した後に実行する処理をスケジュール
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // スクロールコントローラーがクライアントを持っていて、アイテムが存在することを確認
+      if (widget.scrollController.hasClients) {
+        bool isCameraButtonCentered = widget.scrollController.selectedItem == 0;
+        // isCenteredの値に基づいて適切なメソッドを呼び出す
+        if (isCentered != isCameraButtonCentered) {
+          if (isCameraButtonCentered) {
+            centerButton();
+          } else {
+            moveButton();
+          }
+        }
+      }
+    });
   }
 
   @override
@@ -509,19 +523,19 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    print("here!! _lastSelectedIndexes = $_lastSelectedIndexes & _lastSelectedGroupID = $_lastSelectedGroupID");
-    // if (showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
-      int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
-      print("lastIndex!! = $lastIndex");
-      if (lastIndex != null) {
-        _pickerController.jumpToItem(lastIndex);
-        print("here!!!!!!");
-      }
-    // }
-  }
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   print("here!! _lastSelectedIndexes = $_lastSelectedIndexes & _lastSelectedGroupID = $_lastSelectedGroupID");
+  //   // if (showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
+  //     int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
+  //     print("lastIndex!! = $lastIndex");
+  //     if (lastIndex != null) {
+  //       _pickerController.jumpToItem(lastIndex);
+  //       print("here!!!!!!");
+  //     }
+  //   // }
+  // }
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
