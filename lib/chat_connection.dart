@@ -301,22 +301,32 @@ class ChatNotifier extends ChangeNotifier {
 
 
           if (isNewRow) {
-            int currentSelection = pickerController.selectedItem; // 現在の選択されているアイテムのインデックス
+            // カメラから戻ったときにpickerControllerが未構築のケースではcurrentSelection=0にしておく。
+            int currentSelection = 0;
+            if (pickerController.hasClients) {
+              currentSelection = pickerController.selectedItem;
+            } else {
+              currentSelection = 0;
+            }
+
 
             // 新しい行がリストに追加される前に、selectedItemsMapを更新
             updateSelectedItemsMap(newItem.groupID);
 
             // 新しいアイテムをリストに追加
             timelineItems.insert(1, newItem);
-            // pickerController.jumpToItem(currentSelection + 1);
+            if (currentSelection != 0){
+              pickerController.jumpToItem(currentSelection + 1);
+            }
+            notifyListeners(); // 更新を通知
             // selectedItemsMapの参照を適切に更新
             shiftSelectedItemsMap(timelineItems);
 
             // 遅延してpickerControllerの位置を更新
-            Future.delayed(Duration(milliseconds: 50), () {
-              pickerController.jumpToItem(currentSelection + 1);
-              notifyListeners(); // 更新を通知
-            });
+            // Future.delayed(Duration(milliseconds: 50), () {
+            //   pickerController.jumpToItem(currentSelection + 1);
+            //   notifyListeners(); // 更新を通知
+            // });
           } else {
           // groupIDが一致する既存のアイテムが見つかった場合
           // groupIDが一致する最初のアイテムのインデックスを探す

@@ -735,7 +735,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   },
                     child: ListWheelScrollView(
                     controller: _pickerController,
-                    itemExtent: MediaQuery.of(context).size.height / 10,
+                    itemExtent: MediaQuery.of(context).size.width * 0.2,
                     diameterRatio: 1.25,
                     onSelectedItemChanged: (int index) {
                       print('_pickerController selected item: ${groupedItemsList.length}');

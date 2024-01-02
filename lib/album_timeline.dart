@@ -110,7 +110,7 @@ class AlbumTimeLineView extends StatelessWidget {
 
 
   Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine albumItem) {
-    double imageSize = size.width * 0.2; // 画像サイズを画面幅の20%に設定
+    double imageSize = MediaQuery.of(context).size.width * 0.2;
 
     // ローカルに保存された画像のパスから画像を表示
     return Container(
@@ -162,7 +162,7 @@ class AlbumTimeLineView extends StatelessWidget {
       right: right,
       child: Container(
         child: ListWheelScrollView(
-          itemExtent: MediaQuery.of(context).size.height / 10,
+          itemExtent: MediaQuery.of(context).size.width * 0.2,
           diameterRatio: 1.25,
           children: albumList.map((albumItem) => _buildAlbumItemWidget(context, albumItem)).toList(),
         ),
@@ -175,6 +175,6 @@ class AlbumTimeLineView extends StatelessWidget {
 
 
   void updateMapLocation(AlbumTimeLine selectedItem) {
-    // 選択されたアイテムの位置情報に基づいてマップを更新するロジックをここに記述
+    print("void updateMapLocation!!");
   }
 }
