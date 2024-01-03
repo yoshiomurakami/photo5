@@ -491,6 +491,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   List<AlbumTimeLine> _albumList = [];  // アルバムデータを保持するためのリスト
   String _lastSelectedGroupID = '';
   Map<String, int> _lastSelectedIndexes = {};
+  // Map<String, Key> _lastSelectedKeys = {};
+  // Map<Key, int> keyToIndexMap = {};
   late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
 
 
@@ -584,8 +586,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       _jumpToTopKey.currentState?.moveButton();
     }
 
-    // タイムラインの選択状態を保存
-    _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
+    // // タイムラインの選択状態を保存
+    // _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
+    // print("_lastSelectedIndexes[_lastSelectedGroupID] = $currentIndex");
   }
 
 
@@ -725,6 +728,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       _updateMapToSelectedItem(groupedItems, selectedItemIndex);
 
                       _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
+                      print("_lastSelectedGroupID = $groupID");
 
                       // setState(() {
                       //   centralRowIndex = index;
@@ -743,9 +747,18 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       if (index > groupedItemsList.length - 5) {
                         ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
-                      print("addPostedPhoto!!");
-                      String groupID = groupedItemsList[index].first.groupID;
-                      _lastSelectedIndexes[groupID] = index;  // ここで最新のインデックスを保存
+                      String lastSelectedGroupID = groupedItemsList[index].first.groupID;
+                      print("qaqaqa groupID = $lastSelectedGroupID");
+                      _lastSelectedIndexes[lastSelectedGroupID] = index;  // ここで最新のインデックスを保存
+                      print("qaqaqa _lastSelectedGroupID = $lastSelectedGroupID");
+
+                      // Key itemKey = groupedItemsList[index].first.key;  // 選択されたアイテムのkeyを取得
+                      // _lastSelectedKeys[groupID] = itemKey;  // keyを保存
+
+                      // for (int i = 0; i < groupedItemsList.length; i++) {
+                      //   keyToIndexMap[groupedItemsList[i].first.key] = i;
+                      // }
+
                       // setState(() {
                       //   print("www");
                       // });
@@ -801,17 +814,38 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.3,
               child: ElevatedButton(
                 onPressed: () {
-                  if (!showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
-                    // "タイムライン"に戻る前に、前回の位置にスクロールを復元
-                    int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
-                    if (lastIndex != null) {
-                      _pickerController = FixedExtentScrollController(initialItem: lastIndex);
-                    }
-                  }
-
                   setState(() {
                     showNewListWheelScrollView = !showNewListWheelScrollView;
                   });
+
+                  if (!showNewListWheelScrollView && _lastSelectedGroupID != null) {
+                    // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+                    int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
+                    print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+                    print("wawawa targetIndex = $targetIndex");
+
+                    // 対象のアイテムが見つかった場合
+                    if (targetIndex != -1) {
+                      _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+                      // スクロールビューを更新して指定されたアイテムにスクロールする
+                    }
+                  }
+                  // if (!showNewListWheelScrollView && _lastSelectedKeys.isNotEmpty) {
+                  //   // "タイムライン"に戻る前に、前回の位置にスクロールを復元
+                  //   Key? lastKey = _lastSelectedKeys[_lastSelectedGroupID];
+                  //   if (lastKey != null) {
+                  //     _pickerController = FixedExtentScrollController(initialItem: lastKey);
+                  //   }
+                  // }
+
+                  // if (lastKey != null) {
+                  //   int? lastIndex = keyToIndexMap[lastKey];  // Keyからインデックスを逆引き
+                  //   if (lastIndex != null) {
+                  //     _pickerController = FixedExtentScrollController(initialItem: lastIndex);
+                  //   }
+                  // }
+
+
                   print("lastSelectedIndexes = $_lastSelectedIndexes");
                   print("_lastSelectedGroupID = $_lastSelectedGroupID");
                   // if (!showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
