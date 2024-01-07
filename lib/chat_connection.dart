@@ -311,16 +311,21 @@ class ChatNotifier extends ChangeNotifier {
 
 
             // 新しい行がリストに追加される前に、selectedItemsMapを更新
-            updateSelectedItemsMap(newItem.groupID);
+            // updateSelectedItemsMap(newItem.groupID);
 
             // 新しいアイテムをリストに追加
             timelineItems.insert(1, newItem);
-            if (currentSelection != 0){
-              pickerController.jumpToItem(currentSelection + 1);
-            }
-            notifyListeners(); // 更新を通知
+
+
+
+
+
+            // if (currentSelection != 0){
+            //   pickerController.jumpToItem(currentSelection + 1);
+            // }
+            // notifyListeners(); // 更新を通知
             // selectedItemsMapの参照を適切に更新
-            shiftSelectedItemsMap(timelineItems);
+            // shiftSelectedItemsMap(timelineItems);
 
             // 遅延してpickerControllerの位置を更新
             // Future.delayed(Duration(milliseconds: 50), () {
