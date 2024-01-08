@@ -246,7 +246,7 @@ class ChatNotifier extends ChangeNotifier {
   }
 
 
-  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId) {
+  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleListViewAndScroll) {
 
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
@@ -301,21 +301,16 @@ class ChatNotifier extends ChangeNotifier {
 
 
           if (isNewRow) {
-            // カメラから戻ったときにpickerControllerが未構築のケースではcurrentSelection=0にしておく。
-            int currentSelection = 0;
-            if (pickerController.hasClients) {
-              currentSelection = pickerController.selectedItem;
-            } else {
-              currentSelection = 0;
-            }
+            toggleListViewAndScroll();
+            Future.delayed(Duration(milliseconds: 50), () {
+              toggleListViewAndScroll();
+            });
 
+              // 新しいアイテムをリストに追加
+              timelineItems.insert(1, newItem);
 
-            // 新しい行がリストに追加される前に、selectedItemsMapを更新
-            // updateSelectedItemsMap(newItem.groupID);
-
-            // 新しいアイテムをリストに追加
-            timelineItems.insert(1, newItem);
-
+            // shiftSelectedItemsMap(timelineItems);
+            // notifyListeners(); // 更新を通知
 
 
 
@@ -326,7 +321,7 @@ class ChatNotifier extends ChangeNotifier {
             // notifyListeners(); // 更新を通知
             // selectedItemsMapの参照を適切に更新
             // shiftSelectedItemsMap(timelineItems);
-
+            // notifyListeners(); // 更新を通知
             // 遅延してpickerControllerの位置を更新
             // Future.delayed(Duration(milliseconds: 50), () {
             //   pickerController.jumpToItem(currentSelection + 1);

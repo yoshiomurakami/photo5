@@ -489,7 +489,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool showNewListWheelScrollView = false;
   bool isCustomListActive = false; // カスタムリストの表示フラグ
   List<AlbumTimeLine> _albumList = [];  // アルバムデータを保持するためのリスト
-  String _lastSelectedGroupID = '';
+  String _lastSelectedGroupID = 'camera';
   Map<String, int> _lastSelectedIndexes = {};
   // Map<String, Key> _lastSelectedKeys = {};
   // Map<Key, int> keyToIndexMap = {};
@@ -503,7 +503,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     // _pickerController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
-    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId);
+    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId, toggleListViewAndScroll);
 
     _initializeCamera();
     // listenToCameraEventを呼び出す
@@ -538,6 +538,45 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   //     }
   //   // }
   // }
+
+  void toggleListViewAndScroll() {
+    setState(() {
+      showNewListWheelScrollView = !showNewListWheelScrollView;
+    });
+
+    if (!showNewListWheelScrollView && _lastSelectedGroupID != null) {
+      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
+      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+      print("wawawa targetIndex = $targetIndex");
+
+      // 対象のアイテムが見つかった場合
+      if (targetIndex != -1) {
+        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+        // スクロールビューを更新して指定されたアイテムにスクロールする
+      }
+    }
+
+    if (showNewListWheelScrollView) {
+      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
+      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+      print("wawawa targetIndex = $targetIndex");
+
+      // 対象のアイテムが見つかった場合
+      if (targetIndex != -1) {
+        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+        // スクロールビューを更新して指定されたアイテムにスクロールする
+      }
+      // 新しいListView表示の時だけアルバムデータをロード
+      // Future.delayed(Duration(milliseconds: 30), () {
+      setState(() {
+        _albumList = [];
+      });
+      _loadAlbumData();
+      // });
+    }
+  }
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
@@ -657,10 +696,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
   void _loadAlbumData() async {
+
     // アルバムデータを非同期で取得し、状態を更新
     List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
-    setState(() {
-      _albumList = albumData;
+
+    // 100ミリ秒後にアルバムデータでリストを更新
+    Future.delayed(Duration(milliseconds: 100), () {
+      setState(() {
+        _albumList = albumData; // ここでalbumDataは新しいアルバムデータのリストです。
+      });
     });
   }
 
@@ -718,18 +762,20 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
                       // スクロールが完全に停止した場合の処理
-                      int index = _pickerController.selectedItem;
-                      List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
-                      String groupID = groupedItemsList[index].first.groupID;
-                      print("groupID!=$groupID");
-                      int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                      print("selectedItemIndex!=$selectedItemIndex");
-                      // print("selectedItemIndex!=$selectedItemIndex");
-                      _updateMapToSelectedItem(groupedItems, selectedItemIndex);
+                      if (_pickerController.hasClients) {
+                        int index = _pickerController.selectedItem;
+                        List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
+                        String groupID = groupedItemsList[index].first.groupID;
+                        print("groupID!=$groupID");
+                        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                        print("selectedItemIndex!=$selectedItemIndex");
+                        // print("selectedItemIndex!=$selectedItemIndex");
+                        _updateMapToSelectedItem(
+                            groupedItems, selectedItemIndex);
 
-                      _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
-                      print("_lastSelectedGroupID = $groupID");
-
+                        _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
+                        print("_lastSelectedGroupID = $groupID");
+                      }
                       // setState(() {
                       //   centralRowIndex = index;
                       //   print("Central Row Index updated to: $centralRowIndex");
@@ -813,59 +859,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: widget.size.height * 0.3,
               child: ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    showNewListWheelScrollView = !showNewListWheelScrollView;
-                  });
-
-                  if (!showNewListWheelScrollView && _lastSelectedGroupID != null) {
-                    // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-                    int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
-                    print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-                    print("wawawa targetIndex = $targetIndex");
-
-                    // 対象のアイテムが見つかった場合
-                    if (targetIndex != -1) {
-                      _pickerController = FixedExtentScrollController(initialItem: targetIndex);
-                      // スクロールビューを更新して指定されたアイテムにスクロールする
-                    }
-                  }
-                  // if (!showNewListWheelScrollView && _lastSelectedKeys.isNotEmpty) {
-                  //   // "タイムライン"に戻る前に、前回の位置にスクロールを復元
-                  //   Key? lastKey = _lastSelectedKeys[_lastSelectedGroupID];
-                  //   if (lastKey != null) {
-                  //     _pickerController = FixedExtentScrollController(initialItem: lastKey);
-                  //   }
-                  // }
-
-                  // if (lastKey != null) {
-                  //   int? lastIndex = keyToIndexMap[lastKey];  // Keyからインデックスを逆引き
-                  //   if (lastIndex != null) {
-                  //     _pickerController = FixedExtentScrollController(initialItem: lastIndex);
-                  //   }
-                  // }
-
-
-                  print("lastSelectedIndexes = $_lastSelectedIndexes");
-                  print("_lastSelectedGroupID = $_lastSelectedGroupID");
-                  // if (!showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
-                  //   // "タイムライン"ビューに戻ったときに、前回の位置にスクロールを復元
-                  //   int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];  // 前回選択されたgroupIDに基づく最後のインデックス
-                  //   if (lastIndex != null) {
-                  //     // フレームの終わりまで処理を遅延させ、ListWheelScrollViewがビルドされた後に実行します。
-                  //     WidgetsBinding.instance!.addPostFrameCallback((_) {
-                  //       print("now!!!!");
-                  //       _pickerController.jumpToItem(lastIndex);
-                  //     });
-                  //   }
-                  //   didChangeDependencies();
-                  // }
-                  if (showNewListWheelScrollView) {
-                    // 新しいListView表示の時だけアルバムデータをロード
-                    _loadAlbumData();
-                  }
-                },
-                child: Text(showNewListWheelScrollView ? '旧ListView表示' : '新ListView表示'),
+                onPressed:toggleListViewAndScroll,
+                child: Text(showNewListWheelScrollView ? '戻る' : 'アルバム'),
               ),
             ),
             if (!showNewListWheelScrollView)JumpToTop(
