@@ -246,7 +246,7 @@ class ChatNotifier extends ChangeNotifier {
   }
 
 
-  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleListViewAndScroll) {
+  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum) {
 
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
@@ -276,49 +276,17 @@ class ChatNotifier extends ChangeNotifier {
 
           // groupIDが一致する既存のアイテムが存在するか確認
           bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
-          // 新しいアイテムをリストに追加する前に、selectedItemsMap を更新
-          // if (isNewRow) {
-            // preUpdateSelectedItemsMap(timelineItems, newItem.groupID);
-            // updateSelectedItemsMap(newItem.groupID);
-            // print("selectedItemsMap!addphoto!!=$selectedItemsMap");
-          // }
-
-          // if (isNewRow) {
-          //   int currentSelection = pickerController.selectedItem;
-          //
-          //   // 新しい行がリストに追加される前に、selectedItemsMapの更新と参照の適切な更新を行う
-          //   shiftAndUpdateSelectedItemsMap(timelineItems, newItem.groupID);
-          //
-          //   // 新しいアイテムをリストに追加
-          //   timelineItems.insert(1, newItem);
-          //
-          //   // pickerControllerの位置を即座に更新
-          //   pickerController.jumpToItem(currentSelection + 1);
-          //
-          //   // UIのリフレッシュをトリガーする
-          //   notifyListeners();
-          // }
-
 
           if (isNewRow) {
-            toggleListViewAndScroll();
+
+            toggleTimelineAndAlbum();
             Future.delayed(Duration(milliseconds: 50), () {
-              toggleListViewAndScroll();
+              toggleTimelineAndAlbum();
             });
 
               // 新しいアイテムをリストに追加
               timelineItems.insert(1, newItem);
 
-            // shiftSelectedItemsMap(timelineItems);
-            // notifyListeners(); // 更新を通知
-
-
-
-
-            // if (currentSelection != 0){
-            //   pickerController.jumpToItem(currentSelection + 1);
-            // }
-            // notifyListeners(); // 更新を通知
             // selectedItemsMapの参照を適切に更新
             // shiftSelectedItemsMap(timelineItems);
             // notifyListeners(); // 更新を通知

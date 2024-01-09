@@ -503,7 +503,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     // _pickerController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
     final ChatNotifier = ref.read(chatNotifierProvider);
-    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId, toggleListViewAndScroll);
+    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
 
     _initializeCamera();
     // listenToCameraEventを呼び出す
@@ -539,9 +539,10 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   //   // }
   // }
 
-  void toggleListViewAndScroll() {
+  void toggleTimelineAndAlbum() {
     setState(() {
       showNewListWheelScrollView = !showNewListWheelScrollView;
+      // isFullScreenMode = !isFullScreenMode;
     });
 
     if (!showNewListWheelScrollView && _lastSelectedGroupID != null) {
@@ -568,8 +569,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         _pickerController = FixedExtentScrollController(initialItem: targetIndex);
         // スクロールビューを更新して指定されたアイテムにスクロールする
       }
-      // 新しいListView表示の時だけアルバムデータをロード
-      // Future.delayed(Duration(milliseconds: 30), () {
+      // アルバムデータをロード。タイムラインの瞬間往復のときに邪魔にならないように毎回空欄状態を見せる。
       setState(() {
         _albumList = [];
       });
@@ -859,7 +859,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: widget.size.height * 0.3,
               child: ElevatedButton(
-                onPressed:toggleListViewAndScroll,
+                onPressed:toggleTimelineAndAlbum,
                 child: Text(showNewListWheelScrollView ? '戻る' : 'アルバム'),
               ),
             ),
