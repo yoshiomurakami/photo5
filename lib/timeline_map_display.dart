@@ -228,7 +228,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _positionController;
   Animation<double>? _positionAnimation;
-  double? _bottomPosition;
   bool isCentered = true;
   String buttonText = '';
 
@@ -240,12 +239,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
       _positionAnimation = Tween<double>(
         begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2,
         end: MediaQuery.of(context).size.height * 0.05,
-      ).animate(_positionController)
-        ..addListener(() {
-          setState(() {
-            _bottomPosition = _positionAnimation!.value;
-          });
-        });
+      ).animate(_positionController);
     }
 
     // フレームの描画が完了した後に実行する処理をスケジュール
@@ -545,7 +539,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       // isFullScreenMode = !isFullScreenMode;
     });
 
-    if (!showNewListWheelScrollView && _lastSelectedGroupID != null) {
+    if (!showNewListWheelScrollView) {
       // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
       int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
       print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
@@ -949,6 +943,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     chatConnection.removeListeners();
     _pickerController.removeListener(_scrollListener);
     _scrollController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
