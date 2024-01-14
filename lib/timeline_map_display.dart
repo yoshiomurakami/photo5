@@ -4,8 +4,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart' as p;
+// import 'package:sqflite/sqflite.dart';
+// import 'package:path/path.dart' as p;
 // import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
@@ -381,7 +381,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
               style: ElevatedButton.styleFrom(
                 shape: CircleBorder(),
                 // primary: buttonText == 'expand_less' ? Colors.white : Color(0xFFFFCC4D),
-                primary: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
+                backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
 
                 // side: BorderSide(color: Colors.black, width: 2.0),
                 side: BorderSide(color: Colors.transparent, width: 2.0),
