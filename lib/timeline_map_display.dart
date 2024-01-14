@@ -209,14 +209,14 @@ class _ZoomControlState extends State<ZoomControl> {
 class JumpToTop extends StatefulWidget {
   final Size size;
   final VoidCallback onPressed;
-  final bool showBadge;
+  // final bool showBadge;
   final FixedExtentScrollController scrollController;  // 追加
 
   JumpToTop({
     Key? key,
     required this.size,
     required this.onPressed,
-    this.showBadge = false,
+    // this.showBadge = false,
     required this.scrollController,  // 追加
   }) : super(key: key);
 
@@ -230,6 +230,8 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   Animation<double>? _positionAnimation;
   bool isCentered = true;
   String buttonText = '';
+  ChatConnection chatConnection = ChatConnection();
+  bool showCameraBadge = false;
 
 
   @override
@@ -237,7 +239,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
     super.didChangeDependencies();
     if (_positionAnimation == null) {
       _positionAnimation = Tween<double>(
-        begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.15) / 2,
+        begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.18) / 2,
         end: MediaQuery.of(context).size.height * 0.05,
       ).animate(_positionController);
     }
@@ -299,6 +301,19 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         }
       }
     });
+
+    chatConnection.listenToCameraEvent(context, (String data) {
+      if (data == "someone_start_camera") {
+        setState(() {
+          showCameraBadge = true;
+        });
+      } else if (data == "someone_leave_camera") {
+        setState(() {
+          showCameraBadge = false;
+        });
+      }
+    });
+
   }
 
   // _pickerControllerの現在のアイテムに基づいてisCenteredを更新する
@@ -315,6 +330,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   void _updateFadeControllerValue() {
     if (_positionController.isAnimating) {
       double fadeValue = 1 - (_positionController.value - 1).abs() * 2.0;
+
       _fadeController.value = fadeValue.clamp(0.0, 1.0) as double;
     } else {
       _fadeController.value = 1.0;
@@ -343,7 +359,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
       builder: (context, child) {
         return Positioned(
           bottom: _positionAnimation!.value,
-          left: widget.size.width * 0.5 - (widget.size.width * 0.15 * 1.3) / 2,
+          left: widget.size.width * 0.5 - (widget.size.width * 0.18) / 2,
         child: Stack(
         children: [
           FadeTransition(
@@ -370,31 +386,29 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                 // side: BorderSide(color: Colors.black, width: 2.0),
                 side: BorderSide(color: Colors.transparent, width: 2.0),
 
-                fixedSize: Size(widget.size.width * 0.15, widget.size.width * 0.15),
+                fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
                 elevation: 0, // これで影をなくします
               ),
             ),
           ),
 
-
-
-          if (widget.showBadge)
-              Positioned(
-                top: 0,
-                right: 10,
-                child: Container(
-                  width: 12,
-                  height: 12,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
+          if (showCameraBadge)
+            Positioned(
+              top: 0,
+              right: 10,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
                 ),
               ),
+            ),
         ],
         ),
         );
-        },
+      },
     );
   }
 
@@ -474,7 +488,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   late CameraController _controller;
   ChatConnection chatConnection = ChatConnection();
   final _jumpToTopKey = GlobalKey<_JumpToTopState>();
-  bool showCameraBadge = false;
+  // bool showCameraBadge = false;
   // int _horizontalIndex = 0;
   // int _selectedHorizontalIndex = 0;
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
@@ -489,6 +503,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   // Map<Key, int> keyToIndexMap = {};
   late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
 
+  late Map<String, List<AlbumTimeLine>> groupedAlbums;
+  late List<String> groupKeys;
+
 
   @override
   void initState() {
@@ -501,206 +518,27 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
     _initializeCamera();
     // listenToCameraEventを呼び出す
-    chatConnection.listenToCameraEvent(context, (String data) {
-      if (data == "someone_start_camera") {
-        setState(() {
-          showCameraBadge = true;
-        });
-      } else if (data == "someone_leave_camera") {
-        setState(() {
-          showCameraBadge = false;
-        });
-      }
-    });
+    // chatConnection.listenToCameraEvent(context, (String data) {
+    //   if (data == "someone_start_camera") {
+    //     setState(() {
+    //       showCameraBadge = true;
+    //     });
+    //   } else if (data == "someone_leave_camera") {
+    //     setState(() {
+    //       showCameraBadge = false;
+    //     });
+    //   }
+    // });
 
     chatConnection.listenToRoomCount(context);
 
-
-
-  }
-
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   print("here!! _lastSelectedIndexes = $_lastSelectedIndexes & _lastSelectedGroupID = $_lastSelectedGroupID");
-  //   // if (showNewListWheelScrollView && _lastSelectedIndexes.isNotEmpty) {
-  //     int? lastIndex = _lastSelectedIndexes[_lastSelectedGroupID];
-  //     print("lastIndex!! = $lastIndex");
-  //     if (lastIndex != null) {
-  //       _pickerController.jumpToItem(lastIndex);
-  //       print("here!!!!!!");
-  //     }
-  //   // }
-  // }
-
-  void toggleTimelineAndAlbum() {
-    setState(() {
-      showNewListWheelScrollView = !showNewListWheelScrollView;
-      // isFullScreenMode = !isFullScreenMode;
-    });
-
-    if (!showNewListWheelScrollView) {
-      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
-      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-      print("wawawa targetIndex = $targetIndex");
-
-      // 対象のアイテムが見つかった場合
-      if (targetIndex != -1) {
-        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
-        // スクロールビューを更新して指定されたアイテムにスクロールする
-      }
-    }
-
-    if (showNewListWheelScrollView) {
-      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
-      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-      print("wawawa targetIndex = $targetIndex");
-
-      // 対象のアイテムが見つかった場合
-      if (targetIndex != -1) {
-        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
-        // スクロールビューを更新して指定されたアイテムにスクロールする
-      }
-      // アルバムデータをロード。タイムラインの瞬間往復のときに邪魔にならないように毎回空欄状態を見せる。
-      setState(() {
-        _albumList = [];
-      });
-      _loadAlbumData();
-      // });
-    }
-  }
-
-  void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
-    groupedItemsList = groupItemsByGroupId(items);
-    for (var group in groupedItemsList) {
-      String groupID = group.first.groupID;
-      if (!chatNotifier.selectedItemsMap.containsKey(groupID)) {
-        chatNotifier.selectedItemsMap[groupID] = 0;
-        // print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
-      }
-    }
-  }
-
-  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems, int mapIndex) {
-    int groupIndex = _pickerController.selectedItem;
-
-    // 範囲外アクセスを防ぐ
-    if (groupIndex >= 0 && groupIndex < groupedItems.length) {
-      // ここで選択されているグループ内のアイテムを取得
-      List<TimelineItem> selectedGroup = groupedItems[groupIndex];
-      print("selectedGroup = $selectedGroup");
-
-      TimelineItem selectedItem = selectedGroup[mapIndex];
-      print("selectedItem = $selectedItem");
-      print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
-
-      // Get the lat and lng of the selected item
-      double lat = selectedItem.lat;
-      double lng = selectedItem.lng;
-
-      // Update the map location
-      MapController.instance.updateMapLocation(lat, lng);
-    } else {
-      print("Selected group index out of range: $groupIndex");
-    }
-  }
-
-
-  void _scrollListener() {
-    // 現在選択されているアイテムのインデックスを取得
-    int currentIndex = _pickerController.selectedItem;
-
-    // カメラボタン（先頭のアイテム）が選択されているかどうかを確認
-    if (currentIndex == 0) {
-      _jumpToTopKey.currentState?.centerButton();
-    } else {
-      _jumpToTopKey.currentState?.moveButton();
-    }
-
-    // // タイムラインの選択状態を保存
-    // _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
-    // print("_lastSelectedIndexes[_lastSelectedGroupID] = $currentIndex");
+    // _albumList は、アルバムデータのリストを保持する変数です
+    groupedAlbums = groupAlbumsByGroupId(_albumList);
+    groupKeys = groupedAlbums.keys.toList();
   }
 
 
 
-  Future<void> _initializeCamera() async {
-    _cameras = await availableCameras();
-    if (_cameras!.isNotEmpty) {
-      _controller = CameraController(_cameras![0], ResolutionPreset.medium);
-    }
-  }
-
-  void _openCamera(CameraDescription cameraDescription, String groupID) { // groupIDを引数として追加
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CameraScreen(
-          camera: cameraDescription,
-          groupID: groupID, // CameraScreenにgroupIDを渡す
-        ),
-      ),
-    );
-  }
-
-  // このメソッドはサーバーからcurrentShootingGroupIDを待つ
-  Future<String?> _waitForGroupId() async {
-    Completer<String?> completer = Completer();
-
-    // 'assign_group_id' イベントのリスナーを設定
-    chatConnection.on('assign_group_id', (data) {
-      completer.complete(data as String?);
-      // イベントリスナーを解除
-      chatConnection.off('assign_group_id');
-    });
-
-    return completer.future;
-  }
-
-  List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
-  // groupIDをキーとして持つマップを作成
-  Map<String, List<TimelineItem>> groupedMap = {};
-
-  for (var item in items) {
-    if (groupedMap.containsKey(item.groupID)) {
-      groupedMap[item.groupID]!.add(item);
-    } else {
-      groupedMap[item.groupID] = [item];
-    }
-  }
-  // マップの値をリストとして返す
-  return groupedMap.values.toList();
-}
-
-  void onTapCallback(TimelineItem item, int index) {
-    scrollToCenter(index);
-  }
-
-  void scrollToCenter(int index) {
-    final Duration duration = Duration(milliseconds: 150);
-    final Curve curve = Curves.easeInOut;
-
-    _pickerController.animateToItem(
-      index,
-      duration: duration,
-      curve: curve,
-    );
-  }
-
-  void _loadAlbumData() async {
-
-    // アルバムデータを非同期で取得し、状態を更新
-    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
-
-    // 100ミリ秒後にアルバムデータでリストを更新
-    Future.delayed(Duration(milliseconds: 100), () {
-      setState(() {
-        _albumList = albumData; // ここでalbumDataは新しいアルバムデータのリストです。
-      });
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -835,18 +673,14 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                   ),
                 ),
               ),
-            ),
+            ),  //タイムライン
             if (showNewListWheelScrollView && _albumList.isNotEmpty)
-              AlbumTimeLineView(
+              Positioned(
                 top: widget.size.height * 0.2,
                 bottom: widget.size.height * 0.2,
                 left: widget.size.width * -0.18,
                 right: widget.size.width * -0.18,
-                albumList: _albumList,  // 取得したアルバムリストを渡す
-                size: MediaQuery.of(context).size,  // 現在のコンテキストからサイズを取得
-                // child: Container(
-                //   color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
-                // ),
+                child: AlbumTimeLineView(size: MediaQuery.of(context).size, albumList: _albumList),
               ),
             // 切り替えボタン
             Positioned(
@@ -860,7 +694,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
             if (!showNewListWheelScrollView)JumpToTop(
               key: _jumpToTopKey,
               size: Size(widget.size.width, widget.size.height),
-              showBadge: showCameraBadge,
+              // showBadge: showCameraBadge,
               onPressed: () {
                 if (_jumpToTopKey.currentState!.isCentered) {
                   // カメラボタンが中央にある場合のみカメラを起動
@@ -920,20 +754,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     );
   }
 
-  Future<void> _printImageData() async {
-    final db = await openDatabase(
-      p.join(await getDatabasesPath(), 'images_database.db'),
-    );
 
-    final List<Map<String, dynamic>> maps = await db.query(
-      'images',
-      orderBy: 'id DESC',
-    );
-
-    for (var map in maps) {
-      print(map);
-    }
-  }
 
 
   @override
@@ -945,6 +766,175 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void toggleTimelineAndAlbum() {
+    setState(() {
+      showNewListWheelScrollView = !showNewListWheelScrollView;
+      // isFullScreenMode = !isFullScreenMode;
+    });
+
+    if (!showNewListWheelScrollView) {
+      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
+      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+      print("wawawa targetIndex = $targetIndex");
+
+      // 対象のアイテムが見つかった場合
+      if (targetIndex != -1) {
+        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+        // スクロールビューを更新して指定されたアイテムにスクロールする
+      }
+    }
+
+    if (showNewListWheelScrollView) {
+      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
+      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+      print("wawawa targetIndex = $targetIndex");
+
+      // 対象のアイテムが見つかった場合
+      if (targetIndex != -1) {
+        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+        // スクロールビューを更新して指定されたアイテムにスクロールする
+      }
+      // アルバムデータをロード。タイムラインの瞬間往復のときに邪魔にならないように毎回空欄状態を見せる。
+      setState(() {
+        _albumList = [];
+      });
+      _loadAlbumData();
+      // });
+    }
+  }
+
+  void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
+    groupedItemsList = groupItemsByGroupId(items);
+    for (var group in groupedItemsList) {
+      String groupID = group.first.groupID;
+      if (!chatNotifier.selectedItemsMap.containsKey(groupID)) {
+        chatNotifier.selectedItemsMap[groupID] = 0;
+        // print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
+      }
+    }
+  }
+
+  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems, int mapIndex) {
+    int groupIndex = _pickerController.selectedItem;
+
+    // 範囲外アクセスを防ぐ
+    if (groupIndex >= 0 && groupIndex < groupedItems.length) {
+      // ここで選択されているグループ内のアイテムを取得
+      List<TimelineItem> selectedGroup = groupedItems[groupIndex];
+      print("selectedGroup = $selectedGroup");
+
+      TimelineItem selectedItem = selectedGroup[mapIndex];
+      print("selectedItem = $selectedItem");
+      print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
+
+      // Get the lat and lng of the selected item
+      double lat = selectedItem.lat;
+      double lng = selectedItem.lng;
+
+      // Update the map location
+      MapController.instance.updateMapLocation(lat, lng);
+    } else {
+      print("Selected group index out of range: $groupIndex");
+    }
+  }
+
+
+  void _scrollListener() {
+    // 現在選択されているアイテムのインデックスを取得
+    int currentIndex = _pickerController.selectedItem;
+
+    // カメラボタン（先頭のアイテム）が選択されているかどうかを確認
+    if (currentIndex == 0) {
+      _jumpToTopKey.currentState?.centerButton();
+    } else {
+      _jumpToTopKey.currentState?.moveButton();
+    }
+
+    // // タイムラインの選択状態を保存
+    // _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
+    // print("_lastSelectedIndexes[_lastSelectedGroupID] = $currentIndex");
+  }
+
+
+
+  Future<void> _initializeCamera() async {
+    _cameras = await availableCameras();
+    if (_cameras!.isNotEmpty) {
+      _controller = CameraController(_cameras![0], ResolutionPreset.medium);
+    }
+  }
+
+  void _openCamera(CameraDescription cameraDescription, String groupID) { // groupIDを引数として追加
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(
+          camera: cameraDescription,
+          groupID: groupID, // CameraScreenにgroupIDを渡す
+        ),
+      ),
+    );
+  }
+
+  // このメソッドはサーバーからcurrentShootingGroupIDを待つ
+  Future<String?> _waitForGroupId() async {
+    Completer<String?> completer = Completer();
+
+    // 'assign_group_id' イベントのリスナーを設定
+    chatConnection.on('assign_group_id', (data) {
+      completer.complete(data as String?);
+      // イベントリスナーを解除
+      chatConnection.off('assign_group_id');
+    });
+
+    return completer.future;
+  }
+
+  List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
+    // groupIDをキーとして持つマップを作成
+    Map<String, List<TimelineItem>> groupedMap = {};
+
+    for (var item in items) {
+      if (groupedMap.containsKey(item.groupID)) {
+        groupedMap[item.groupID]!.add(item);
+      } else {
+        groupedMap[item.groupID] = [item];
+      }
+    }
+    // マップの値をリストとして返す
+    return groupedMap.values.toList();
+  }
+
+  void onTapCallback(TimelineItem item, int index) {
+    scrollToCenter(index);
+  }
+
+  void scrollToCenter(int index) {
+    final Duration duration = Duration(milliseconds: 150);
+    final Curve curve = Curves.easeInOut;
+
+    _pickerController.animateToItem(
+      index,
+      duration: duration,
+      curve: curve,
+    );
+  }
+
+  void _loadAlbumData() async {
+
+    // アルバムデータを非同期で取得し、状態を更新
+    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
+
+    // 100ミリ秒後にアルバムデータでリストを更新
+    Future.delayed(Duration(milliseconds: 100), () {
+      setState(() {
+        _albumList = albumData; // ここでalbumDataは新しいアルバムデータのリストです。
+      });
+    });
   }
 
 }

@@ -279,10 +279,10 @@ class ChatNotifier extends ChangeNotifier {
 
           if (isNewRow) {
 
-            toggleTimelineAndAlbum();
-            Future.delayed(Duration(milliseconds: 50), () {
-              toggleTimelineAndAlbum();
-            });
+            // toggleTimelineAndAlbum();
+            // Future.delayed(Duration(milliseconds: 50), () {
+            //   toggleTimelineAndAlbum();
+            // });
 
               // 新しいアイテムをリストに追加
               timelineItems.insert(1, newItem);

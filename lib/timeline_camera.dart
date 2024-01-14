@@ -453,7 +453,7 @@ class _CameraScreenState extends State<CameraScreen> {
                               chatConnection.emitEvent("leave_shooting_room");
 
                               // カメラのリソースを解放
-                              _controller.dispose();
+                              // _controller.dispose();
 
                               _navigateBack(context);
                             },
@@ -496,7 +496,7 @@ class _CameraScreenState extends State<CameraScreen> {
                                 );
 
                                 // 送信後、カメラを終了する
-                                _controller.dispose();
+                                // _controller.dispose();
                                 Navigator.pop(context);
                               }
                             }

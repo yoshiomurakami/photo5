@@ -74,7 +74,7 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
   final path = p.join(dbPath, 'images_database.db');
   final database = openDatabase(path);
 
-  final List<Map<String, dynamic>> maps = await (await database).query('images', orderBy: 'id DESC');
+  final List<Map<String, dynamic>> maps = await (await database).query('images', orderBy: 'groupID DESC');
 
   // 結果をAlbumTimeLineのリストに変換
   List<AlbumTimeLine> albumList = List.generate(maps.length, (i) {
@@ -90,91 +90,152 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
 }
 
 
-class AlbumTimeLineView extends StatelessWidget {
-  final double top;
-  final double bottom;
-  final double left;
-  final double right;
-  final List<AlbumTimeLine> albumList; // アルバムリスト
-  final Size size; // 表示サイズ
+// アルバムのListWheelScrollViewの実装
+class AlbumTimeLineView extends StatefulWidget {
+  final Size size;
+  final List<AlbumTimeLine> albumList;
 
-  const AlbumTimeLineView({
-    Key? key,
-    required this.top,
-    required this.bottom,
-    required this.left,
-    required this.right,
-    required this.albumList,
+  AlbumTimeLineView({required this.size, required this.albumList});
+
+  @override
+  _AlbumTimeLineViewState createState() => _AlbumTimeLineViewState();
+}
+
+class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
+  late FixedExtentScrollController _scrollController;
+  late Map<String, List<AlbumTimeLine>> groupedAlbums;
+  late List<String> groupKeys;
+  int centralRowIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController = FixedExtentScrollController();
+    groupedAlbums = groupAlbumsByGroupId(widget.albumList);
+    groupKeys = groupedAlbums.keys.toList();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ListWheelScrollView.useDelegate(
+      controller: _scrollController,
+      itemExtent: MediaQuery.of(context).size.width * 0.2,
+      diameterRatio: 1.25,
+      physics: FixedExtentScrollPhysics(),
+      onSelectedItemChanged: (int index) {
+        setState(() {
+          centralRowIndex = index;
+        });
+      },
+      childDelegate: ListWheelChildBuilderDelegate(
+        builder: (context, index) {
+          if (index < 0 || index >= groupKeys.length) return null;
+          return HorizontalAlbumGroup(
+            albumsInGroup: groupedAlbums[groupKeys[index]]!,
+            size: MediaQuery.of(context).size,
+            currentIndex: centralRowIndex == index ? _scrollController.selectedItem : 0,
+            onHorizontalIndexChanged: (newIndex) {
+              // 新しいアイテムが中央に来た時の処理
+            },
+          );
+        },
+        childCount: groupedAlbums.length,
+      ),
+    );
+  }
+}
+
+// タイムラインのHorizontalGroupedItemsに対応するアルバム専用ウィジェット
+class HorizontalAlbumGroup extends StatefulWidget {
+  final List<AlbumTimeLine> albumsInGroup;
+  final Size size;
+  final int currentIndex;
+  final ValueChanged<int> onHorizontalIndexChanged;
+
+  HorizontalAlbumGroup({
+    required this.albumsInGroup,
     required this.size,
-  }) : super(key: key);
+    required this.currentIndex,
+    required this.onHorizontalIndexChanged,
+  });
 
+  @override
+  _HorizontalAlbumGroupState createState() => _HorizontalAlbumGroupState();
+}
 
-  Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine albumItem) {
+class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
+  late PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    // viewportFractionに0.2を設定することで、画面の幅の20%のサイズのアイテムを表示します。
+    _pageController = PageController(
+      initialPage: widget.currentIndex,
+      viewportFraction: 0.165,
+    );
+    _pageController.addListener(() {
+      int newIndex = _pageController.page!.round();
+      widget.onHorizontalIndexChanged(newIndex);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // PageViewでサムネイルを表示
+    return PageView.builder(
+      controller: _pageController,
+      itemCount: widget.albumsInGroup.length,
+      itemBuilder: (context, index) {
+        // サムネイルを生成
+        return _buildAlbumItemWidget(context, widget.albumsInGroup[index]);
+      },
+    );
+  }
+
+  Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine album) {
+    // MediaQueryを使用して画面の幅の20%のサイズを計算
     double imageSize = MediaQuery.of(context).size.width * 0.2;
 
-    // ローカルに保存された画像のパスから画像を表示
+    // サムネイルのコンテナを生成
     return Container(
+      margin: EdgeInsets.symmetric(horizontal: 5), // 両サイドに少しマージンを設定
       width: imageSize,
       height: imageSize,
       decoration: BoxDecoration(
         image: DecorationImage(
-          image: FileImage(File(albumItem.thumbnailPath)), // 直接FileImageを使用
+          image: FileImage(File(album.thumbnailPath)),
           fit: BoxFit.cover,
         ),
-        borderRadius: BorderRadius.circular(imageSize * 0.2),
+        borderRadius: BorderRadius.circular(widget.size.width * 0.04),
       ),
     );
   }
+}
 
-  // Widget _buildGreyThumbnail(double size) {
-  //   // グレーのサムネイルを生成
-  //   return Container(
-  //     width: size,
-  //     height: size,
-  //     decoration: BoxDecoration(
-  //       color: Colors.grey,
-  //       borderRadius: BorderRadius.circular(size * 0.1),
-  //     ),
-  //   );
-  // }
-  //
-  // Widget _imageContainer(double size, Widget child) {
-  //   // 画像を表示するコンテナ
-  //   return Container(
-  //     width: size,
-  //     height: size,
-  //     decoration: BoxDecoration(
-  //       borderRadius: BorderRadius.circular(size * 0.2),
-  //     ),
-  //     child: ClipRRect(
-  //       borderRadius: BorderRadius.circular(size * 0.2),
-  //       child: child,
-  //     ),
-  //   );
-  // }
 
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: top,
-      bottom: bottom,
-      left: left,
-      right: right,
-      child: Container(
-        child: ListWheelScrollView(
-          itemExtent: MediaQuery.of(context).size.width * 0.2,
-          diameterRatio: 1.25,
-          children: albumList.map((albumItem) => _buildAlbumItemWidget(context, albumItem)).toList(),
-        ),
-      ),
-    );
+
+// アルバムデータのグループ化
+Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums) {
+  Map<String, List<AlbumTimeLine>> groupedAlbums = {};
+  for (var album in albums) {
+    if (!groupedAlbums.containsKey(album.groupID)) {
+      groupedAlbums[album.groupID] = [];
+    }
+    groupedAlbums[album.groupID]!.add(album);
   }
-
-
-// スクロールコントローラーの初期化やイベントリスナーの設定を行う
-
-
-  void updateMapLocation(AlbumTimeLine selectedItem) {
-    print("void updateMapLocation!!");
-  }
+  print("groupedAlbums = $groupedAlbums");
+  return groupedAlbums;
 }
