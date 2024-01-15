@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:photo5/timeline_map_display.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
+
 
 class AlbumTimeLine {
   final Key key;
@@ -115,6 +117,19 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     groupKeys = groupedAlbums.keys.toList();
   }
 
+  void _updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
+    if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
+      AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
+      double lat = selectedAlbumItem.lat;
+      double lng = selectedAlbumItem.lng;
+
+      // Update the map location
+      MapController.instance.updateMapLocation(lat, lng);
+    } else {
+      print("Selected album item index out of range: $albumIndex");
+    }
+  }
+
   @override
   void dispose() {
     _scrollController.dispose();
@@ -123,29 +138,41 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
 
   @override
   Widget build(BuildContext context) {
-    return ListWheelScrollView.useDelegate(
-      controller: _scrollController,
-      itemExtent: MediaQuery.of(context).size.width * 0.2,
-      diameterRatio: 1.25,
-      physics: FixedExtentScrollPhysics(),
-      onSelectedItemChanged: (int index) {
-        setState(() {
-          centralRowIndex = index;
-        });
-      },
-      childDelegate: ListWheelChildBuilderDelegate(
-        builder: (context, index) {
-          if (index < 0 || index >= groupKeys.length) return null;
-          return HorizontalAlbumGroup(
-            albumsInGroup: groupedAlbums[groupKeys[index]]!,
-            size: MediaQuery.of(context).size,
-            currentIndex: centralRowIndex == index ? _scrollController.selectedItem : 0,
-            onHorizontalIndexChanged: (newIndex) {
-              // 新しいアイテムが中央に来た時の処理
+    return NotificationListener<ScrollNotification>(
+        onNotification: (ScrollNotification notification) {
+          if (notification is ScrollEndNotification) {
+            if (_scrollController.hasClients) {
+              int index = _scrollController.selectedItem;
+              List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
+              _updateMapToSelectedAlbumItem(selectedGroup, 0);
+            }
+          }
+          return true;
+          },
+      child: ListWheelScrollView.useDelegate(
+        controller: _scrollController,
+        itemExtent: MediaQuery.of(context).size.width * 0.2,
+        diameterRatio: 1.25,
+        physics: const FixedExtentScrollPhysics(),
+        onSelectedItemChanged: (int index) {
+          setState(() {
+            centralRowIndex = index;
+          });
+          },
+        childDelegate: ListWheelChildBuilderDelegate(
+          builder: (context, index) {
+            if (index < 0 || index >= groupKeys.length) return null;
+            return HorizontalAlbumGroup(
+              albumsInGroup: groupedAlbums[groupKeys[index]]!,
+              size: MediaQuery.of(context).size,
+              currentIndex: centralRowIndex == index ? _scrollController.selectedItem : 0,
+              onHorizontalIndexChanged: (newIndex) {
+
+              },
+            );
             },
-          );
-        },
-        childCount: groupedAlbums.length,
+          childCount: groupedAlbums.length,
+        ),
       ),
     );
   }
@@ -158,7 +185,7 @@ class HorizontalAlbumGroup extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
 
-  HorizontalAlbumGroup({
+  const HorizontalAlbumGroup({
     required this.albumsInGroup,
     required this.size,
     required this.currentIndex,
@@ -211,7 +238,7 @@ class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
 
     // サムネイルのコンテナを生成
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 5), // 両サイドに少しマージンを設定
+      margin: const EdgeInsets.symmetric(horizontal: 5), // 両サイドに少しマージンを設定
       width: imageSize,
       height: imageSize,
       decoration: BoxDecoration(

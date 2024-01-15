@@ -68,7 +68,7 @@ class _MainScreenState extends State<_MainScreenContent> {
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
       final Size size = MediaQuery.of(context).size;
-      Widget timelineMapWidget = Center(child: CircularProgressIndicator()); // 初期値を設定
+      Widget timelineMapWidget = const Center(child: CircularProgressIndicator()); // 初期値を設定
 
       final timelineItemsAsyncValue = ref.watch(timelineProvider);
       timelineItemsAsyncValue.when(

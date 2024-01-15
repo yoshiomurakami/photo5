@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
-import 'package:flutter/cupertino.dart';
+// import 'package:flutter/cupertino.dart';
 // import 'package:sqflite/sqflite.dart';
 // import 'package:path/path.dart' as p;
 // import 'timeline_photoview.dart';
@@ -18,8 +18,8 @@ import 'album_timeline.dart';
 
 class MapController {
   GoogleMapController? _controller;
-  LatLng _currentLocation = LatLng(0, 0);
-  Set<Marker> _markers = {};
+  LatLng _currentLocation = const LatLng(0, 0);
+  final Set<Marker> _markers = {};
   double _zoomLevel = 15; // 既存のズームレベル値をセット
   double get zoomLevel => _zoomLevel;
 
@@ -78,7 +78,7 @@ class ZoomControl extends StatefulWidget {
   final double right;
   final double top;
 
-  ZoomControl({required this.size, required this.right, required this.top});
+  const ZoomControl({Key? key, required this.size, required this.right, required this.top}) : super(key: key);
 
   @override
   _ZoomControlState createState() => _ZoomControlState();
@@ -89,7 +89,7 @@ class _ZoomControlState extends State<ZoomControl> {
   double _endPosition = 0;
 
   // ValueNotifierを追加
-  ValueNotifier<double> _zoomLevelNotifier = ValueNotifier<double>(2.0);
+  final ValueNotifier<double> _zoomLevelNotifier = ValueNotifier<double>(2.0);
 
   @override
   void initState() {
@@ -99,7 +99,7 @@ class _ZoomControlState extends State<ZoomControl> {
 
   @override
   Widget build(BuildContext context) {
-    final double zoomTouchLength = 300;
+    const double zoomTouchLength = 300;
     print("zoomTouchLength=$zoomTouchLength");
 
     return Positioned(
@@ -212,7 +212,7 @@ class JumpToTop extends StatefulWidget {
   // final bool showBadge;
   final FixedExtentScrollController scrollController;  // 追加
 
-  JumpToTop({
+  const JumpToTop({
     Key? key,
     required this.size,
     required this.onPressed,
