@@ -421,6 +421,31 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   }
 }
 
+class MapUpdateService {
+
+  static void updateMapLocation(dynamic selectedItem) {
+    print("selectedItemAA = $selectedItem");
+    double lat, lng;
+
+    // selectedItemがTimelineItemかAlbumTimeLineかに基づいてlatとlngを設定
+    if (selectedItem is TimelineItem) {
+      lat = selectedItem.lat;
+      lng = selectedItem.lng;
+    } else if (selectedItem is AlbumTimeLine) {
+      lat = selectedItem.lat;
+      lng = selectedItem.lng;
+    } else {
+      // 不正な型の場合は何もしない
+      print("Unsupported item type for map update.");
+      return;
+    }
+
+    // Update the map location
+    MapController.instance.updateMapLocation(lat, lng);
+  }
+}
+
+
 
 class MapDisplay extends ConsumerWidget {
   final LatLng currentLocation;
@@ -505,6 +530,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupKeys;
+
+  String _lastSelectedAlbumGroupID = ''; // 初期値は空文字列
 
 
   @override
@@ -602,8 +629,9 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
                         print("selectedItemIndex!=$selectedItemIndex");
                         // print("selectedItemIndex!=$selectedItemIndex");
-                        _updateMapToSelectedItem(
-                            groupedItems, selectedItemIndex);
+                        TimelineItem selectedItem = groupedItemsList[index][selectedItemIndex];
+                        MapUpdateService.updateMapLocation(selectedItem);
+                        // _updateMapToSelectedItem(groupedItems, selectedItemIndex);
 
                         _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
                         print("_lastSelectedGroupID = $groupID");
@@ -680,7 +708,12 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                 bottom: widget.size.height * 0.2,
                 left: widget.size.width * -0.18,
                 right: widget.size.width * -0.18,
-                child: AlbumTimeLineView(size: MediaQuery.of(context).size, albumList: _albumList),
+                child: AlbumTimeLineView(
+                  size: MediaQuery.of(context).size,
+                  albumList: _albumList,
+                  lastSelectedAlbumGroupID: _lastSelectedAlbumGroupID,
+                  updateAlbumGroupIDCallback: updateLastSelectedAlbumGroupID,
+                ),
               ),
             // 切り替えボタン
             Positioned(
@@ -766,6 +799,12 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     _scrollController.dispose();
     _controller.dispose();
     super.dispose();
+  }
+
+  void updateLastSelectedAlbumGroupID(String newGroupID) {
+    setState(() {
+      _lastSelectedAlbumGroupID = newGroupID;
+    });
   }
 
   void toggleTimelineAndAlbum() {

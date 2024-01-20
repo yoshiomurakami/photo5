@@ -101,8 +101,15 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
 class AlbumTimeLineView extends StatefulWidget {
   final Size size;
   final List<AlbumTimeLine> albumList;
+  final String lastSelectedAlbumGroupID;
+  final Function(String) updateAlbumGroupIDCallback;
 
-  AlbumTimeLineView({required this.size, required this.albumList});
+  AlbumTimeLineView({
+    required this.size,
+    required this.albumList,
+    required this.lastSelectedAlbumGroupID,
+    required this.updateAlbumGroupIDCallback,
+  });
 
   @override
   _AlbumTimeLineViewState createState() => _AlbumTimeLineViewState();
@@ -118,10 +125,16 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
   @override
   void initState() {
     super.initState();
-    _scrollController = FixedExtentScrollController();
+    // _scrollController = FixedExtentScrollController();
     groupedAlbums = groupAlbumsByGroupId(widget.albumList);
     groupKeys = groupedAlbums.keys.toList();
     selectedIndexes = {}; // 空のMapで初期化
+    // lastSelectedAlbumGroupIDからインデックスを計算
+    int initialIndex = groupKeys.indexOf(widget.lastSelectedAlbumGroupID);
+    if (initialIndex == -1) {
+      initialIndex = 0; // もし見つからない場合は、初期インデックスを0に設定
+    }
+    _scrollController = FixedExtentScrollController(initialItem: initialIndex);
   }
 
   @override
@@ -146,7 +159,10 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
               ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = selectedItemIndex;
               print("selectedItemIndex!!! = $selectedItemIndex");
 
-              updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
+              AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
+              print("selectedItemIndexBB = $selectedItemIndex");
+              MapUpdateService.updateMapLocation(selectedItem);
+              // updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
             }
             return true;
           },
@@ -161,6 +177,8 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                 // 現在選択されているグループの選択インデックスを更新
                 selectedIndexes[groupKeys[index]] = selectedAlbumIndexes[groupKeys[index]] ?? 0;
                 print("最後のグループID = ${groupKeys[index]}");
+                String selectedGroupID = groupKeys[index];
+                widget.updateAlbumGroupIDCallback(selectedGroupID); // コールバックを呼び出す
               });
             },
             childDelegate: ListWheelChildBuilderDelegate(
