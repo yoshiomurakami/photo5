@@ -3,7 +3,14 @@ import 'package:path/path.dart' as p;
 import 'package:photo5/timeline_map_display.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+
+final selectedAlbumIndexesProvider = StateProvider<Map<String, int>>((ref) {
+  return {}; // 初期状態
+});
+
+Map<String, int> selectedAlbumIndexes = {};
 
 class AlbumTimeLine {
   final Key key;
@@ -91,8 +98,6 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
   return albumList;
 }
 
-
-// アルバムのListWheelScrollViewの実装
 class AlbumTimeLineView extends StatefulWidget {
   final Size size;
   final List<AlbumTimeLine> albumList;
@@ -101,21 +106,6 @@ class AlbumTimeLineView extends StatefulWidget {
 
   @override
   _AlbumTimeLineViewState createState() => _AlbumTimeLineViewState();
-
-  void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
-    print("Updating map location for album index: $albumIndex");
-    if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
-      AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
-      double lat = selectedAlbumItem.lat;
-      double lng = selectedAlbumItem.lng;
-      print("lat = $lat / lng = $lng");
-      // Update the map location
-      MapController.instance.updateMapLocation(lat, lng);
-
-    } else {
-      print("Selected album item index out of range: $albumIndex");
-    }
-  }
 }
 
 class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
@@ -131,7 +121,88 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     _scrollController = FixedExtentScrollController();
     groupedAlbums = groupAlbumsByGroupId(widget.albumList);
     groupKeys = groupedAlbums.keys.toList();
-    selectedIndexes = Map.fromIterable(groupKeys, key: (k) => k, value: (k) => 0); // 初期化
+    selectedIndexes = {}; // 空のMapで初期化
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
+        print("selectedAlbumIndexes = $selectedAlbumIndexes");
+
+        // selectedAlbumIndexes に基づいて centralRowIndex を更新
+        for (var groupID in groupKeys) {
+          selectedIndexes[groupID] = selectedAlbumIndexes[groupID] ?? 0;
+        }
+
+        return NotificationListener<ScrollNotification>(
+          onNotification: (ScrollNotification notification) {
+            if (notification is ScrollEndNotification) {
+              int index = _scrollController.selectedItem;
+              List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
+              // 選択されたアイテムの更新
+              int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
+              ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = selectedItemIndex;
+              print("selectedItemIndex!!! = $selectedItemIndex");
+
+              updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
+            }
+            return true;
+          },
+          child: ListWheelScrollView.useDelegate(
+            controller: _scrollController,
+            itemExtent: MediaQuery.of(context).size.width * 0.2,
+            diameterRatio: 1.25,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: (int index) {
+              setState(() {
+                centralRowIndex = index;
+                // 現在選択されているグループの選択インデックスを更新
+                selectedIndexes[groupKeys[index]] = selectedAlbumIndexes[groupKeys[index]] ?? 0;
+                print("最後のグループID = ${groupKeys[index]}");
+              });
+            },
+            childDelegate: ListWheelChildBuilderDelegate(
+              builder: (context, index) {
+                if (index < 0 || index >= groupKeys.length) return null;
+                return HorizontalAlbumGroup(
+                  albumsInGroup: groupedAlbums[groupKeys[index]]!,
+                  size: MediaQuery.of(context).size,
+                  currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
+                  onHorizontalIndexChanged: (newIndex) {
+                    setState(() {
+                      selectedIndexes[groupKeys[index]] = newIndex;
+                      // selectedAlbumIndexes を更新
+                      ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = newIndex;
+                      print("横 = ${ref.read(selectedAlbumIndexesProvider)}");
+                    });
+                  },
+                );
+              },
+              childCount: groupedAlbums.length,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+
+  void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
+    print("Updating map location for album index: $albumIndex");
+    if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
+      AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
+      print("selectedAlbumItem = $selectedAlbumItem");
+      double lat = selectedAlbumItem.lat;
+      double lng = selectedAlbumItem.lng;
+      print("lat = $lat / lng = $lng");
+      // Update the map location
+      MapController.instance.updateMapLocation(lat, lng);
+
+    } else {
+      print("Selected album item index out of range: $albumIndex");
+    }
   }
 
   @override
@@ -139,61 +210,10 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     _scrollController.dispose();
     super.dispose();
   }
-
-  @override
-  Widget build(BuildContext context) {
-    return NotificationListener<ScrollNotification>(
-        onNotification: (ScrollNotification notification) {
-          if (notification is ScrollEndNotification) {
-            if (_scrollController.hasClients) {
-              // int index = _scrollController.selectedItem;
-              // List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
-              // widget.updateMapToSelectedAlbumItem(selectedGroup, 0);
-            }
-          }
-          return true;
-          },
-      child: ListWheelScrollView.useDelegate(
-        controller: _scrollController,
-        itemExtent: MediaQuery.of(context).size.width * 0.2,
-        diameterRatio: 1.25,
-        physics: const FixedExtentScrollPhysics(),
-        onSelectedItemChanged: (int index) {
-          setState(() {
-            centralRowIndex = index;
-            // 現在選択されているグループとアイテムを取得
-            String groupID = groupKeys[index];
-            int selectedItemIndex = selectedIndexes[groupID] ?? 0;
-            List<AlbumTimeLine> selectedGroup = groupedAlbums[groupID] ?? [];
-
-            // マップの位置を更新
-            widget.updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
-          });
-        },
-        childDelegate: ListWheelChildBuilderDelegate(
-          builder: (context, index) {
-            if (index < 0 || index >= groupKeys.length) return null;
-            return HorizontalAlbumGroup(
-              albumsInGroup: groupedAlbums[groupKeys[index]]!,
-              size: MediaQuery.of(context).size,
-              currentIndex: selectedIndexes[groupKeys[index]]!,
-              onHorizontalIndexChanged: (newIndex) {
-                setState(() {
-                  selectedIndexes[groupKeys[index]] = newIndex;
-                  // 現在選択されている行であるかを確認
-                  if (centralRowIndex == index) {
-                    widget.updateMapToSelectedAlbumItem(groupedAlbums[groupKeys[index]]!, newIndex);
-                  }
-                });
-              },
-            );
-          },
-          childCount: groupedAlbums.length,
-        ),
-      ),
-    );
-  }
 }
+
+
+
 
 // タイムラインのHorizontalGroupedItemsに対応するアルバム専用ウィジェット
 class HorizontalAlbumGroup extends StatefulWidget {
