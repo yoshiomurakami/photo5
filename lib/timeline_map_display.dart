@@ -531,6 +531,11 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupKeys;
 
+  // final selectedAlbumIndexesProvider = StateProvider<Map<String, int>>((ref) {
+  //   return {}; // 初期状態
+  // });
+
+
   String _lastSelectedAlbumGroupID = ''; // 初期値は空文字列
 
 
@@ -563,7 +568,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     groupedAlbums = groupAlbumsByGroupId(_albumList);
     groupKeys = groupedAlbums.keys.toList();
   }
-
 
 
 
@@ -622,24 +626,15 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                     if (notification is ScrollEndNotification) {
                       // スクロールが完全に停止した場合の処理
                       if (_pickerController.hasClients) {
+                        // 選択アイテムを取得しマップ移動
                         int index = _pickerController.selectedItem;
-                        List<List<TimelineItem>> groupedItems = groupItemsByGroupId(items);
                         String groupID = groupedItemsList[index].first.groupID;
-                        print("groupID!=$groupID");
                         int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                        print("selectedItemIndex!=$selectedItemIndex");
-                        // print("selectedItemIndex!=$selectedItemIndex");
                         TimelineItem selectedItem = groupedItemsList[index][selectedItemIndex];
                         MapUpdateService.updateMapLocation(selectedItem);
-                        // _updateMapToSelectedItem(groupedItems, selectedItemIndex);
-
-                        _lastSelectedGroupID = groupID; // ここで最後に選択されたgroupIDを更新
-                        print("_lastSelectedGroupID = $groupID");
+                        // 最後に選択されたgroupIDを更新
+                        _lastSelectedGroupID = groupID;
                       }
-                      // setState(() {
-                      //   centralRowIndex = index;
-                      //   print("Central Row Index updated to: $centralRowIndex");
-                      // });
                     }
                     return true;
                   },
@@ -808,43 +803,65 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   }
 
   void toggleTimelineAndAlbum() {
+
     setState(() {
       showNewListWheelScrollView = !showNewListWheelScrollView;
-      // isFullScreenMode = !isFullScreenMode;
+      // updateMapBasedOnCurrentSelection(); // マップの位置を更新する
     });
 
-    if (!showNewListWheelScrollView) {
-      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
-      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-      print("wawawa targetIndex = $targetIndex");
+      if (!showNewListWheelScrollView) {
+        // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+        int targetIndex = groupedItemsList.indexWhere((list) =>
+            list.any((item) => item.groupID == _lastSelectedGroupID));
+        print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
+        print("wawawa targetIndex = $targetIndex");
 
-      // 対象のアイテムが見つかった場合
-      if (targetIndex != -1) {
-        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
-        // スクロールビューを更新して指定されたアイテムにスクロールする
+        // 対象のアイテムが見つかった場合
+        if (targetIndex != -1) {
+          // スクロールビューを更新して指定されたアイテムにスクロールする
+          _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+
+          // マップ移動
+          final chatNotifier = ref.watch(chatNotifierProvider);
+          final selectedItemsMap = chatNotifier.selectedItemsMap;
+          // int index = _pickerController.selectedItem;
+          String groupID = groupedItemsList[targetIndex].first.groupID;
+          int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+          TimelineItem selectedItem = groupedItemsList[targetIndex][selectedItemIndex];
+          MapUpdateService.updateMapLocation(selectedItem);
+        }
       }
-    }
 
-    if (showNewListWheelScrollView) {
-      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-      int targetIndex = groupedItemsList.indexWhere((list) => list.any((item) => item.groupID == _lastSelectedGroupID));
-      print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-      print("wawawa targetIndex = $targetIndex");
+      if (showNewListWheelScrollView) {
+        //アルバムに切り替えたときの行指定とマップ移動は、class _AlbumTimeLineViewStateのinitstateに記述してある。
+        //ここではアルバムデータを呼び出す処理のみ記述。
 
-      // 対象のアイテムが見つかった場合
-      if (targetIndex != -1) {
-        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
-        // スクロールビューを更新して指定されたアイテムにスクロールする
+        // setState(() {
+        //   _albumList = [];
+        // });
+        _loadAlbumData();
       }
-      // アルバムデータをロード。タイムラインの瞬間往復のときに邪魔にならないように毎回空欄状態を見せる。
-      setState(() {
-        _albumList = [];
-      });
-      _loadAlbumData();
-      // });
-    }
   }
+
+  // void updateMapBasedOnCurrentSelection() {
+  //   dynamic selectedItem;
+  //   if (showNewListWheelScrollView) {
+  //     // final chatNotifier = ref.watch(chatNotifierProvider);
+  //     // final selectedItemsMap = chatNotifier.selectedItemsMap;
+  //     // int index = _pickerController.selectedItem;
+  //     // String groupID = groupedItemsList[index].first.groupID;
+  //     // int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+  //     // selectedItem = groupedItemsList[index][selectedItemIndex];
+  //   }else{
+  //     int index = _scrollController.selectedItem;
+  //     List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
+  //     int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
+  //     ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = selectedItemIndex;
+  //     selectedItem = selectedGroup[selectedItemIndex];
+  //   }
+  //   MapUpdateService.updateMapLocation(selectedItem);
+  // }
+
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
@@ -854,30 +871,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         chatNotifier.selectedItemsMap[groupID] = 0;
         // print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
       }
-    }
-  }
-
-  void _updateMapToSelectedItem(List<List<TimelineItem>> groupedItems, int mapIndex) {
-    int groupIndex = _pickerController.selectedItem;
-
-    // 範囲外アクセスを防ぐ
-    if (groupIndex >= 0 && groupIndex < groupedItems.length) {
-      // ここで選択されているグループ内のアイテムを取得
-      List<TimelineItem> selectedGroup = groupedItems[groupIndex];
-      print("selectedGroup = $selectedGroup");
-
-      TimelineItem selectedItem = selectedGroup[mapIndex];
-      print("selectedItem = $selectedItem");
-      print("Selected Item ID after stopped scrolling: ${selectedItem.id}");
-
-      // Get the lat and lng of the selected item
-      double lat = selectedItem.lat;
-      double lng = selectedItem.lng;
-
-      // Update the map location
-      MapController.instance.updateMapLocation(lat, lng);
-    } else {
-      print("Selected group index out of range: $groupIndex");
     }
   }
 

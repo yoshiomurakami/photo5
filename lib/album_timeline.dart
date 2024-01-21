@@ -135,6 +135,13 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
       initialIndex = 0; // もし見つからない場合は、初期インデックスを0に設定
     }
     _scrollController = FixedExtentScrollController(initialItem: initialIndex);
+
+    List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[initialIndex]]!;
+    int selectedItemIndex = selectedAlbumIndexes[groupKeys[initialIndex]] ?? 0;
+    // ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[initialIndex]] = selectedItemIndex;
+    AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
+    print("MapUpdateService = $selectedItem");
+    MapUpdateService.updateMapLocation(selectedItem);
   }
 
   @override
