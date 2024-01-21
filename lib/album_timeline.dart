@@ -103,12 +103,15 @@ class AlbumTimeLineView extends StatefulWidget {
   final List<AlbumTimeLine> albumList;
   final String lastSelectedAlbumGroupID;
   final Function(String) updateAlbumGroupIDCallback;
+  // final void Function(AlbumTimeLine)? onTapCallback;
 
   AlbumTimeLineView({
     required this.size,
     required this.albumList,
     required this.lastSelectedAlbumGroupID,
     required this.updateAlbumGroupIDCallback,
+    // this.onTapCallback,
+
   });
 
   @override
@@ -191,18 +194,33 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
             childDelegate: ListWheelChildBuilderDelegate(
               builder: (context, index) {
                 if (index < 0 || index >= groupKeys.length) return null;
-                return HorizontalAlbumGroup(
-                  albumsInGroup: groupedAlbums[groupKeys[index]]!,
-                  size: MediaQuery.of(context).size,
-                  currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
-                  onHorizontalIndexChanged: (newIndex) {
-                    setState(() {
-                      selectedIndexes[groupKeys[index]] = newIndex;
-                      // selectedAlbumIndexes を更新
-                      ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = newIndex;
-                      print("横 = ${ref.read(selectedAlbumIndexesProvider)}");
-                    });
-                  },
+                return GestureDetector(
+                    onTap: () {
+
+                      if (centralRowIndex != index) {
+                        scrollToCenterService.scrollToCenter(_scrollController , index);
+                        // _scrollController.animateToItem(
+                        //   index,
+                        //   duration: Duration(milliseconds: 150),
+                        //   curve: Curves.easeInOut,
+                        // );
+                      } else {
+                        print("Tapped on selectedRow");
+                      }
+                    },
+                    child: HorizontalAlbumGroup(
+                      albumsInGroup: groupedAlbums[groupKeys[index]]!,
+                      size: MediaQuery.of(context).size,
+                      currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
+                      onHorizontalIndexChanged: (newIndex) {
+                        setState(() {
+                          selectedIndexes[groupKeys[index]] = newIndex;
+                          // selectedAlbumIndexes を更新
+                          ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = newIndex;
+                          print("横 = ${ref.read(selectedAlbumIndexesProvider)}");
+                        });
+                      },
+                    )
                 );
               },
               childCount: groupedAlbums.length,
@@ -247,11 +265,13 @@ class HorizontalAlbumGroup extends StatefulWidget {
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
 
+
   const HorizontalAlbumGroup({
     required this.albumsInGroup,
     required this.size,
     required this.currentIndex,
     required this.onHorizontalIndexChanged,
+
   });
 
   @override
@@ -284,8 +304,6 @@ class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     super.dispose();
   }
 
-
-
   @override
   Widget build(BuildContext context) {
 
@@ -304,7 +322,6 @@ class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     // MediaQueryを使用して画面の幅の20%のサイズを計算
     double imageSize = MediaQuery.of(context).size.width * 0.2;
 
-    // サムネイルのコンテナを生成
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 5), // 両サイドに少しマージンを設定
       width: imageSize,

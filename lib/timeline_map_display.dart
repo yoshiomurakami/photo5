@@ -675,7 +675,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 currentIndex: currentIndex,
                                 pickerController: _pickerController,
                                 items: items,
-                                // onTapCallback: (TimelineItem item) => scrollToCenterService.scrollToCenter(_pickerController , index),
+                                onTapCallback: (TimelineItem item) => scrollToCenterService.scrollToCenter(_pickerController , index),
                                 centralRowIndex: centralRowIndex,
                                 chatNotifier: chatNotifier,
                                 onHorizontalIndexChanged: (int newIndex) {
