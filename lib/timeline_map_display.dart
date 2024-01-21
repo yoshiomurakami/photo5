@@ -445,6 +445,19 @@ class MapUpdateService {
   }
 }
 
+class scrollToCenterService {
+  static void scrollToCenter(_pickerController , int index) {
+    final Duration duration = Duration(milliseconds: 150);
+    final Curve curve = Curves.easeInOut;
+
+    _pickerController.animateToItem(
+      index,
+      duration: duration,
+      curve: curve,
+    );
+  }
+}
+
 
 
 class MapDisplay extends ConsumerWidget {
@@ -530,12 +543,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
 
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupKeys;
-
-  // final selectedAlbumIndexesProvider = StateProvider<Map<String, int>>((ref) {
-  //   return {}; // 初期状態
-  // });
-
-
   String _lastSelectedAlbumGroupID = ''; // 初期値は空文字列
 
 
@@ -549,18 +556,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
 
     _initializeCamera();
-    // listenToCameraEventを呼び出す
-    // chatConnection.listenToCameraEvent(context, (String data) {
-    //   if (data == "someone_start_camera") {
-    //     setState(() {
-    //       showCameraBadge = true;
-    //     });
-    //   } else if (data == "someone_leave_camera") {
-    //     setState(() {
-    //       showCameraBadge = false;
-    //     });
-    //   }
-    // });
 
     chatConnection.listenToRoomCount(context);
 
@@ -680,7 +675,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                                 currentIndex: currentIndex,
                                 pickerController: _pickerController,
                                 items: items,
-                                onTapCallback: (TimelineItem item) => onTapCallback(item, index),
+                                // onTapCallback: (TimelineItem item) => scrollToCenterService.scrollToCenter(_pickerController , index),
                                 centralRowIndex: centralRowIndex,
                                 chatNotifier: chatNotifier,
                                 onHorizontalIndexChanged: (int newIndex) {
@@ -716,7 +711,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               top: widget.size.height * 0.3,
               child: ElevatedButton(
                 onPressed:toggleTimelineAndAlbum,
-                child: Text(showNewListWheelScrollView ? '戻る' : 'アルバム'),
+                child: Text(showNewListWheelScrollView ? 'タイムライン' : 'アルバム'),
               ),
             ),
             if (!showNewListWheelScrollView)JumpToTop(
@@ -843,25 +838,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       }
   }
 
-  // void updateMapBasedOnCurrentSelection() {
-  //   dynamic selectedItem;
-  //   if (showNewListWheelScrollView) {
-  //     // final chatNotifier = ref.watch(chatNotifierProvider);
-  //     // final selectedItemsMap = chatNotifier.selectedItemsMap;
-  //     // int index = _pickerController.selectedItem;
-  //     // String groupID = groupedItemsList[index].first.groupID;
-  //     // int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-  //     // selectedItem = groupedItemsList[index][selectedItemIndex];
-  //   }else{
-  //     int index = _scrollController.selectedItem;
-  //     List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
-  //     int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
-  //     ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = selectedItemIndex;
-  //     selectedItem = selectedGroup[selectedItemIndex];
-  //   }
-  //   MapUpdateService.updateMapLocation(selectedItem);
-  // }
-
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
@@ -941,20 +917,20 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return groupedMap.values.toList();
   }
 
-  void onTapCallback(TimelineItem item, int index) {
-    scrollToCenter(index);
-  }
+  // void callbackScrollToCenter(int index) {
+  //   scrollToCenter(index);
+  // }
 
-  void scrollToCenter(int index) {
-    final Duration duration = Duration(milliseconds: 150);
-    final Curve curve = Curves.easeInOut;
-
-    _pickerController.animateToItem(
-      index,
-      duration: duration,
-      curve: curve,
-    );
-  }
+  // void scrollToCenter(int index) {
+  //   final Duration duration = Duration(milliseconds: 150);
+  //   final Curve curve = Curves.easeInOut;
+  //
+  //   _pickerController.animateToItem(
+  //     index,
+  //     duration: duration,
+  //     curve: curve,
+  //   );
+  // }
 
   void _loadAlbumData() async {
 
