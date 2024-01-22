@@ -446,17 +446,29 @@ class MapUpdateService {
 }
 
 class scrollToCenterService {
-  static void scrollToCenter(_pickerController , int index) {
+  static void scrollToCenter(FixedExtentScrollController pickerController, int tappedRowIndex) {
     final Duration duration = Duration(milliseconds: 150);
     final Curve curve = Curves.easeInOut;
 
-    _pickerController.animateToItem(
-      index,
-      duration: duration,
-      curve: curve,
-    );
+    // 現在中央にある行のインデックスを取得
+    int currentCenterIndex = pickerController.selectedItem;
+
+    // タップされた行がすでに中央にあるかどうかをチェック
+    if (tappedRowIndex == currentCenterIndex) {
+      // 中央にある場合はメッセージを出力
+      print("Kick largeImage on Timeline");
+    } else {
+      // 中央にない場合はその行を中央にスクロール
+      pickerController.animateToItem(
+        tappedRowIndex,
+        duration: duration,
+        curve: curve,
+      );
+    }
   }
 }
+
+
 
 
 

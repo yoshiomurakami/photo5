@@ -120,6 +120,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
             onTap: () {
               if (widget.onTapCallback != null) {
                 widget.onTapCallback!(widget.itemsInGroup[0]);
+                print("scrollToCenterService index @timeline LayoutBuilder = ${widget.itemsInGroup[0]}");
               }
             },
             child: Center(
@@ -145,6 +146,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
               onTap: () {
                 if (widget.onTapCallback != null) {
                   widget.onTapCallback!(widget.itemsInGroup[index]);
+                  print("scrollToCenterService index @timeline PageView.builder = ${widget.itemsInGroup[index]}");
                 }
               },
               child: Padding(

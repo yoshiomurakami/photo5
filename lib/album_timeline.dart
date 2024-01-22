@@ -199,13 +199,8 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
 
                       if (centralRowIndex != index) {
                         scrollToCenterService.scrollToCenter(_scrollController , index);
-                        // _scrollController.animateToItem(
-                        //   index,
-                        //   duration: Duration(milliseconds: 150),
-                        //   curve: Curves.easeInOut,
-                        // );
                       } else {
-                        print("Tapped on selectedRow");
+                        print("Kick largeImage on Album");
                       }
                     },
                     child: HorizontalAlbumGroup(
