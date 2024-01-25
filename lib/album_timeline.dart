@@ -210,12 +210,16 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                       onHorizontalIndexChanged: (newIndex) {
                         setState(() {
                           selectedIndexes[groupKeys[index]] = newIndex;
-                          // selectedAlbumIndexes を更新
                           ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = newIndex;
-                          print("横 = ${ref.read(selectedAlbumIndexesProvider)}");
                         });
                       },
+                      onTapCallback: (AlbumTimeLine album, int albumIndex) {
+                        // ここでスクロールセンターサービスを呼び出す
+                        scrollToCenterService.scrollToCenter(_scrollController, albumIndex);
+                        print("Tapped album with id: ${album.id}");
+                      },
                     )
+
                 );
               },
               childCount: groupedAlbums.length,
@@ -259,19 +263,20 @@ class HorizontalAlbumGroup extends StatefulWidget {
   final Size size;
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
-
+  final void Function(AlbumTimeLine, int)? onTapCallback; // 型を変更
 
   const HorizontalAlbumGroup({
     required this.albumsInGroup,
     required this.size,
     required this.currentIndex,
     required this.onHorizontalIndexChanged,
-
+    this.onTapCallback,
   });
 
   @override
   _HorizontalAlbumGroupState createState() => _HorizontalAlbumGroupState();
 }
+
 
 class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
@@ -307,29 +312,37 @@ class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
       controller: _pageController,
       itemCount: widget.albumsInGroup.length,
       itemBuilder: (context, index) {
+
         // サムネイルを生成
-        return _buildAlbumItemWidget(context, widget.albumsInGroup[index]);
+        return _buildAlbumItemWidget(context, widget.albumsInGroup[index], index);
       },
     );
   }
 
-  Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine album) {
-    // MediaQueryを使用して画面の幅の20%のサイズを計算
+  Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine album, int index) {
     double imageSize = MediaQuery.of(context).size.width * 0.2;
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 5), // 両サイドに少しマージンを設定
-      width: imageSize,
-      height: imageSize,
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: FileImage(File(album.thumbnailPath)),
-          fit: BoxFit.cover,
+    return GestureDetector(
+      onTap: () {
+        if (widget.onTapCallback != null) {
+          widget.onTapCallback!(album, index);
+        }
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        width: imageSize,
+        height: imageSize,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: FileImage(File(album.thumbnailPath)),
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(widget.size.width * 0.04),
         ),
-        borderRadius: BorderRadius.circular(widget.size.width * 0.04),
       ),
     );
   }
+
 }
 
 

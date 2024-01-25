@@ -113,30 +113,29 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (widget.itemsInGroup.length == 1) {
-          return GestureDetector(
-            onTap: () {
-              if (widget.onTapCallback != null) {
-                widget.onTapCallback!(widget.itemsInGroup[0]);
-                print("scrollToCenterService index @timeline LayoutBuilder = ${widget.itemsInGroup[0]}");
-              }
-            },
-            child: Center(
-              child: TimelineCard(
-                item: widget.itemsInGroup[0],
-                size: widget.size,
-                controller: widget.controller,
-                currentIndex: widget.currentIndex,
-                pickerController: widget.pickerController,
-                items: widget.items,
-                onTapCallback: widget.onTapCallback,
-                onCameraButtonPressed: widget.onCameraButtonPressed,
-              ),
-            ),
-          );
-        }
+    // return LayoutBuilder(
+    //   builder: (context, constraints) {
+        // if (widget.itemsInGroup.length == 1) {
+        //   return GestureDetector(
+        //     onTap: () {
+        //       if (widget.onTapCallback != null) {
+        //         widget.onTapCallback!(widget.itemsInGroup[0]);
+        //       }
+        //     },
+        //     child: Center(
+        //       child: TimelineCard(
+        //         item: widget.itemsInGroup[0],
+        //         size: widget.size,
+        //         controller: widget.controller,
+        //         currentIndex: widget.currentIndex,
+        //         pickerController: widget.pickerController,
+        //         items: widget.items,
+        //         onTapCallback: widget.onTapCallback,
+        //         onCameraButtonPressed: widget.onCameraButtonPressed,
+        //       ),
+        //     ),
+        //   );
+        // }
 
         return PageView.builder(
           controller: _scrollController,
@@ -146,7 +145,7 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
               onTap: () {
                 if (widget.onTapCallback != null) {
                   widget.onTapCallback!(widget.itemsInGroup[index]);
-                  print("scrollToCenterService index @timeline PageView.builder = ${widget.itemsInGroup[index]}");
+                  print("widget.itemsInGroup[index] = $index");
                 }
               },
               child: Padding(
@@ -165,8 +164,8 @@ class _HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
             );
           },
         );
-      },
-    );
+      // },
+    // );
   }
 
 }

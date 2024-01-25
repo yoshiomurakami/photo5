@@ -43,7 +43,8 @@ class MapController {
   Future<void> updateMapLocation(double lat, double lng) async {
     final controller = _controller!;
     _currentLocation = LatLng(lat, lng);
-    controller.animateCamera(
+    // controller.animateCamera(
+    controller.moveCamera(
       CameraUpdate.newLatLng(_currentLocation),
     );
   }
@@ -455,6 +456,7 @@ class scrollToCenterService {
 
     // タップされた行がすでに中央にあるかどうかをチェック
     if (tappedRowIndex == currentCenterIndex) {
+      print("tappedRowIndex = $tappedRowIndex");
       // 中央にある場合はメッセージを出力
       print("Kick largeImage on Timeline");
     } else {
@@ -532,7 +534,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
   bool isFullScreen = false;
   // late FixedExtentScrollController _pickerController;
   late FixedExtentScrollController _scrollController;
-  bool isScrolling = false;
+  // bool isScrolling = false;
   bool isFullScreenMode = false;
   List<CameraDescription>? _cameras;
   late CameraController _controller;
@@ -617,7 +619,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: 0,
               height: MediaQuery.of(context).size.height / 8,
               child: Container(
-                color: Colors.white.withOpacity(0.5),
+                color: Colors.white.withOpacity(0.8),
               ),
             ),
 
@@ -637,8 +639,11 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                         int index = _pickerController.selectedItem;
                         String groupID = groupedItemsList[index].first.groupID;
                         int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+
                         TimelineItem selectedItem = groupedItemsList[index][selectedItemIndex];
                         MapUpdateService.updateMapLocation(selectedItem);
+                        print("updateMapLocation no imageFilename = ${selectedItem.imageFilename}");
+                        print("updateMapLocation no selectedItemIndex = $selectedItemIndex");
                         // 最後に選択されたgroupIDを更新
                         _lastSelectedGroupID = groupID;
                       }
