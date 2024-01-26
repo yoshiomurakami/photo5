@@ -196,12 +196,15 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                 if (index < 0 || index >= groupKeys.length) return null;
                 return GestureDetector(
                     onTap: () {
-
-                      if (centralRowIndex != index) {
-                        scrollToCenterService.scrollToCenter(_scrollController , index);
-                      } else {
-                        print("Kick largeImage on Album");
-                      }
+                      // // 現在の中央行を取得
+                      // int currentCenterIndex = _scrollController.selectedItem;
+                      //
+                      // // タップされた行が中央行でない場合、スクロールセンターサービスを呼び出す
+                      // if (centralRowIndex != currentCenterIndex) {
+                      //   scrollToCenterService.scrollToCenter(_scrollController, index);
+                      // } else {
+                      //   print("Kick largeImage on Album");
+                      // }
                     },
                     child: HorizontalAlbumGroup(
                       albumsInGroup: groupedAlbums[groupKeys[index]]!,
@@ -214,9 +217,12 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                         });
                       },
                       onTapCallback: (AlbumTimeLine album, int albumIndex) {
-                        // ここでスクロールセンターサービスを呼び出す
-                        scrollToCenterService.scrollToCenter(_scrollController, albumIndex);
-                        print("Tapped album with id: ${album.id}");
+                        int currentCenterIndex = _scrollController.selectedItem;
+                        if (index != currentCenterIndex) {
+                          scrollToCenterService.scrollToCenter(_scrollController, index);
+                        } else {
+                          print("Kick largeImage on Album= ${selectedIndexes[groupKeys[index]]}");
+                        }
                       },
                     )
 

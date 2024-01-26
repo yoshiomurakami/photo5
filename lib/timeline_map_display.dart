@@ -452,21 +452,21 @@ class scrollToCenterService {
     final Curve curve = Curves.easeInOut;
 
     // 現在中央にある行のインデックスを取得
-    int currentCenterIndex = pickerController.selectedItem;
+    // int currentCenterIndex = pickerController.selectedItem;
 
-    // タップされた行がすでに中央にあるかどうかをチェック
-    if (tappedRowIndex == currentCenterIndex) {
-      print("tappedRowIndex = $tappedRowIndex");
-      // 中央にある場合はメッセージを出力
-      print("Kick largeImage on Timeline");
-    } else {
-      // 中央にない場合はその行を中央にスクロール
+    // // タップされた行がすでに中央にあるかどうかをチェック
+    // if (tappedRowIndex == currentCenterIndex) {
+    //   print("tappedRowIndex = $tappedRowIndex");
+    //   // 中央にある場合はメッセージを出力
+    //   print("Kick largeImage on Timeline");
+    // } else {
+    //   // 中央にない場合はその行を中央にスクロール
       pickerController.animateToItem(
         tappedRowIndex,
         duration: duration,
         curve: curve,
       );
-    }
+    // }
   }
 }
 
