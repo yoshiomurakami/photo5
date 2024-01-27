@@ -216,15 +216,28 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                           ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = newIndex;
                         });
                       },
-                      onTapCallback: (AlbumTimeLine album, int albumIndex) {
+                      onTapCallback: (AlbumTimeLine album, int tappedItemIndex) {
                         int currentCenterIndex = _scrollController.selectedItem;
                         if (index != currentCenterIndex) {
                           scrollToCenterService.scrollToCenter(_scrollController, index);
                         } else {
-                          print("Kick largeImage on Album= ${selectedIndexes[groupKeys[index]]}");
+                          // 横位置（行の配列内のindex値）とcurrentIndex値を比較
+                          int selectedIndex = selectedIndexes[groupKeys[index]] ?? 0;
+                          if (tappedItemIndex == selectedIndex) {
+                            print("OpenTappedItemImagePath=${groupedAlbums[groupKeys[index]]![tappedItemIndex].imagePath}");
+                          } else {
+                            //tappedItemIndexとselectedIndexの差分のアイテムの幅を横スクロールする。マイナス値であれば左から右へ。プラス値であれば右から左へ。
+                            int skip = tappedItemIndex - selectedIndex;
+                            if(skip > 0){
+                              print("右から左へ$skip枚分移動");
+                            }else{
+                              print("左から右へ${skip * -1}枚分移動");
+                            }
+                          }
                         }
                       },
                     )
+
 
                 );
               },
