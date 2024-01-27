@@ -3,16 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
-// import 'package:flutter/cupertino.dart';
-// import 'package:sqflite/sqflite.dart';
-// import 'package:path/path.dart' as p;
-// import 'timeline_photoview.dart';
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_camera.dart';
 import 'album_timeline.dart';
-
 
 
 
@@ -54,7 +49,7 @@ class MapController {
       _zoomLevel += 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
-    print("New_zoomLevel_in=$_zoomLevel");
+    debugPrint("New_zoomLevel_in=$_zoomLevel");
   }
 
   void zoomOut(LatLng target) {
@@ -62,7 +57,7 @@ class MapController {
       _zoomLevel -= 1;
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
-    print("New_zoomLevel_out=$_zoomLevel");
+    debugPrint("New_zoomLevel_out=$_zoomLevel");
   }
 
   // 新しいメソッドを追加
@@ -82,10 +77,10 @@ class ZoomControl extends StatefulWidget {
   const ZoomControl({Key? key, required this.size, required this.right, required this.top}) : super(key: key);
 
   @override
-  _ZoomControlState createState() => _ZoomControlState();
+  ZoomControlState createState() => ZoomControlState();
 }
 
-class _ZoomControlState extends State<ZoomControl> {
+class ZoomControlState extends State<ZoomControl> {
   double _startPosition = 0;
   double _endPosition = 0;
 
@@ -101,7 +96,7 @@ class _ZoomControlState extends State<ZoomControl> {
   @override
   Widget build(BuildContext context) {
     const double zoomTouchLength = 300;
-    print("zoomTouchLength=$zoomTouchLength");
+    debugPrint("zoomTouchLength=$zoomTouchLength");
 
     return Positioned(
       right: widget.right,
@@ -144,7 +139,7 @@ class _ZoomControlState extends State<ZoomControl> {
 
           // Update the _zoomLevelNotifier value
           _zoomLevelNotifier.value = currentZoomLevel;
-          print("currentZoomLevel=$currentZoomLevel");
+          debugPrint("currentZoomLevel=$currentZoomLevel");
 
           _startPosition = 0;
           _endPosition = 0;
@@ -222,10 +217,10 @@ class JumpToTop extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _JumpToTopState createState() => _JumpToTopState();
+  JumpToTopState createState() => JumpToTopState();
 }
 
-class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
+class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _positionController;
   Animation<double>? _positionAnimation;
@@ -238,12 +233,10 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_positionAnimation == null) {
-      _positionAnimation = Tween<double>(
+    _positionAnimation ??= Tween<double>(
         begin: MediaQuery.of(context).size.height / 2 - (widget.size.width * 0.18) / 2,
         end: MediaQuery.of(context).size.height * 0.05,
       ).animate(_positionController);
-    }
 
     // フレームの描画が完了した後に実行する処理をスケジュール
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -320,7 +313,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
   // _pickerControllerの現在のアイテムに基づいてisCenteredを更新する
   void _pickerControllerListener() {
     bool isCameraButtonCentered = widget.scrollController.selectedItem == 0; // カメラボタンが中央にあるか
-    print("isCentered = $isCentered");
     if (isCentered != isCameraButtonCentered) {
       setState(() {
         isCentered = isCameraButtonCentered;
@@ -332,7 +324,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
     if (_positionController.isAnimating) {
       double fadeValue = 1 - (_positionController.value - 1).abs() * 2.0;
 
-      _fadeController.value = fadeValue.clamp(0.0, 1.0) as double;
+      _fadeController.value = fadeValue.clamp(0.0, 1.0);
     } else {
       _fadeController.value = 1.0;
     }
@@ -366,8 +358,16 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
           FadeTransition(
             opacity: _fadeController,
             child: ElevatedButton(
+              onPressed: widget.onPressed,
+              style: ElevatedButton.styleFrom(
+                shape: const CircleBorder(),
+                backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
+                side: const BorderSide(color: Colors.transparent, width: 2.0),
+                fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
+                elevation: 0, // これで影をなくします
+              ),
               child: Padding(
-                padding: EdgeInsets.only(bottom: 4.0),
+                padding: const EdgeInsets.only(bottom: 4.0),
                 child: buttonText == 'expand_less'
                     ? Icon(Icons.expand_less, color: Colors.black, size: widget.size.width * 0.07)
                     : Text(
@@ -377,18 +377,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                     fontSize: widget.size.width * 0.07,
                   ),
                 ),
-              ),
-              onPressed: widget.onPressed,
-              style: ElevatedButton.styleFrom(
-                shape: CircleBorder(),
-                // primary: buttonText == 'expand_less' ? Colors.white : Color(0xFFFFCC4D),
-                backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
-
-                // side: BorderSide(color: Colors.black, width: 2.0),
-                side: BorderSide(color: Colors.transparent, width: 2.0),
-
-                fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
-                elevation: 0, // これで影をなくします
               ),
             ),
           ),
@@ -400,7 +388,7 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
               child: Container(
                 width: 12,
                 height: 12,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
@@ -425,7 +413,6 @@ class _JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
 class MapUpdateService {
 
   static void updateMapLocation(dynamic selectedItem) {
-    print("selectedItemAA = $selectedItem");
     double lat, lng;
 
     // selectedItemがTimelineItemかAlbumTimeLineかに基づいてlatとlngを設定
@@ -436,8 +423,6 @@ class MapUpdateService {
       lat = selectedItem.lat;
       lng = selectedItem.lng;
     } else {
-      // 不正な型の場合は何もしない
-      print("Unsupported item type for map update.");
       return;
     }
 
@@ -446,115 +431,87 @@ class MapUpdateService {
   }
 }
 
-class scrollToCenterService {
+class ScrollToCenterService {
   static void scrollToCenter(FixedExtentScrollController pickerController, int tappedRowIndex) {
-    final Duration duration = Duration(milliseconds: 150);
-    final Curve curve = Curves.easeInOut;
-
-    // 現在中央にある行のインデックスを取得
-    // int currentCenterIndex = pickerController.selectedItem;
-
-    // // タップされた行がすでに中央にあるかどうかをチェック
-    // if (tappedRowIndex == currentCenterIndex) {
-    //   print("tappedRowIndex = $tappedRowIndex");
-    //   // 中央にある場合はメッセージを出力
-    //   print("Kick largeImage on Timeline");
-    // } else {
-    //   // 中央にない場合はその行を中央にスクロール
-      pickerController.animateToItem(
-        tappedRowIndex,
-        duration: duration,
-        curve: curve,
-      );
-    // }
-  }
-}
-
-
-
-
-
-class MapDisplay extends ConsumerWidget {
-  final LatLng currentLocation;
-  final List<TimelineItem> timelineItems;
-  final Size size;
-  final PageController pageController;
-  final bool programmaticPageChange;
-  final Function updateTimeline;
-
-
-  MapDisplay({
-    required this.currentLocation,
-    required this.timelineItems,
-    required this.size,
-    required this.pageController,
-    required this.programmaticPageChange,
-    required this.updateTimeline,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return _MapDisplayStateful(
-      currentLocation: currentLocation,
-      timelineItems: timelineItems,
-      size: size,
-      pageController: pageController,
-      programmaticPageChange: programmaticPageChange,
-      updateTimeline: updateTimeline,
+    const Duration duration = Duration(milliseconds: 150);
+    const Curve curve = Curves.easeInOut;
+    pickerController.animateToItem(
+      tappedRowIndex,
+      duration: duration,
+      curve: curve,
     );
   }
 }
 
-class _MapDisplayStateful extends ConsumerStatefulWidget {
+
+
+
+
+
+// class MapDisplay extends ConsumerWidget {
+//   final LatLng currentLocation;
+//   final List<TimelineItem> timelineItems;
+//   final Size size;
+//   final PageController pageController;
+//   // final bool programmaticPageChange;
+//   // final Function updateTimeline;
+//
+//
+//   const MapDisplay({super.key,
+//     required this.currentLocation,
+//     required this.timelineItems,
+//     required this.size,
+//     required this.pageController,
+//     // required this.programmaticPageChange,
+//     // required this.updateTimeline,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context, WidgetRef ref) {
+//     return MapDisplayStateful(
+//       currentLocation: currentLocation,
+//       timelineItems: timelineItems,
+//       size: size,
+//       pageController: pageController,
+//       // programmaticPageChange: programmaticPageChange,
+//       // updateTimeline: updateTimeline,
+//     );
+//   }
+// }
+
+class MapDisplayStateful extends ConsumerStatefulWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
   final Size size;
   final PageController pageController;
-  final bool programmaticPageChange;
-  final Function updateTimeline;
 
 
 
-  _MapDisplayStateful({
+  const MapDisplayStateful({
     required this.currentLocation,
     required this.timelineItems,
     required this.size,
     required this.pageController,
-    required this.programmaticPageChange,
-    required this.updateTimeline,
   });
 
   @override
-  _MapDisplayState createState() => _MapDisplayState();
+  MapDisplayState createState() => MapDisplayState();
 }
 
-class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
-  String? currentCardId;
-  bool programmaticChange = false;
-  bool isFullScreen = false;
-  // late FixedExtentScrollController _pickerController;
+class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   late FixedExtentScrollController _scrollController;
-  // bool isScrolling = false;
   bool isFullScreenMode = false;
   List<CameraDescription>? _cameras;
   late CameraController _controller;
   ChatConnection chatConnection = ChatConnection();
-  final _jumpToTopKey = GlobalKey<_JumpToTopState>();
-  // bool showCameraBadge = false;
-  // int _horizontalIndex = 0;
-  // int _selectedHorizontalIndex = 0;
+  final _jumpToTopKey = GlobalKey<JumpToTopState>();
   List<List<TimelineItem>> groupedItemsList = [];  // このように定義
-  // late Map<String, int> selectedItemsMap = {};
   int centralRowIndex = 0; // 初期値は適宜設定
   bool showNewListWheelScrollView = false;
-  bool isCustomListActive = false; // カスタムリストの表示フラグ
   List<AlbumTimeLine> _albumList = [];  // アルバムデータを保持するためのリスト
   String _lastSelectedGroupID = 'camera';
-  Map<String, int> _lastSelectedIndexes = {};
-  // Map<String, Key> _lastSelectedKeys = {};
-  // Map<Key, int> keyToIndexMap = {};
+  final Map<String, int> _lastSelectedIndexes = {};
   late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
-
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupKeys;
   String _lastSelectedAlbumGroupID = ''; // 初期値は空文字列
@@ -566,8 +523,8 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     _scrollController = FixedExtentScrollController();
     // _pickerController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
-    final ChatNotifier = ref.read(chatNotifierProvider);
-    ChatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, ChatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
+    final chatNotifier = ref.read(chatNotifierProvider);
+    chatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
 
     _initializeCamera();
 
@@ -590,7 +547,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         // ChatNotifier から selectedItemsMap を取得
         final chatNotifier = ref.watch(chatNotifierProvider);
         final selectedItemsMap = chatNotifier.selectedItemsMap;
-        print("?selectedItemsMap = $selectedItemsMap");
 
         // groupedItemsList を生成
         List<List<TimelineItem>> groupedItemsList = groupItemsByGroupId(items);
@@ -610,7 +566,7 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               zoomControlsEnabled: false,
               zoomGesturesEnabled: false,
               scrollGesturesEnabled: false,
-              padding: EdgeInsets.only(bottom: 0),
+              padding: const EdgeInsets.only(bottom: 0),
             ),
 
             Positioned(
@@ -628,83 +584,58 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               bottom: widget.size.height * 0.2,
               left: widget.size.width * -0.18, //0.15
               right: widget.size.width * -0.18, //0.15
-              child: Container(
-                // color: Colors.red,  // 一時的に背景色を設定（コメントアウトされています）
-                child: NotificationListener<ScrollNotification>(
-                  onNotification: (ScrollNotification notification) {
-                    if (notification is ScrollEndNotification) {
-                      // スクロールが完全に停止した場合の処理
-                      if (_pickerController.hasClients) {
-                        // 選択アイテムを取得しマップ移動
-                        int index = _pickerController.selectedItem;
-                        String groupID = groupedItemsList[index].first.groupID;
-                        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-
-                        TimelineItem selectedItem = groupedItemsList[index][selectedItemIndex];
-                        MapUpdateService.updateMapLocation(selectedItem);
-                        print("updateMapLocation no imageFilename = ${selectedItem.imageFilename}");
-                        print("updateMapLocation no selectedItemIndex = $selectedItemIndex");
-                        // 最後に選択されたgroupIDを更新
-                        _lastSelectedGroupID = groupID;
-                      }
+              child: NotificationListener<ScrollNotification>(
+                onNotification: (ScrollNotification notification) {
+                  if (notification is ScrollEndNotification) {
+                    if (_pickerController.hasClients) {
+                      int index = _pickerController.selectedItem;
+                      String groupID = groupedItemsList[index].first.groupID;
+                      int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                      TimelineItem selectedItem = groupedItemsList[index][selectedItemIndex];
+                      MapUpdateService.updateMapLocation(selectedItem);
+                      // 最後に選択されたgroupIDを更新
+                      _lastSelectedGroupID = groupID;
                     }
-                    return true;
+                  }
+                  return true;
+                },
+                  child: ListWheelScrollView(
+                  controller: _pickerController,
+                  itemExtent: MediaQuery.of(context).size.width * 0.2,
+                  diameterRatio: 1.25,
+                  onSelectedItemChanged: (int index) {
+                    if (index > groupedItemsList.length - 5) {
+                      ref.read(timelineAddProvider.notifier).addMoreItems();
+                    }
+                    String lastSelectedGroupID = groupedItemsList[index].first.groupID;
+                    _lastSelectedIndexes[lastSelectedGroupID] = index;  // ここで最新のインデックスを保存
                   },
-                    child: ListWheelScrollView(
-                    controller: _pickerController,
-                    itemExtent: MediaQuery.of(context).size.width * 0.2,
-                    diameterRatio: 1.25,
-                    onSelectedItemChanged: (int index) {
-                      print('_pickerController selected item: ${groupedItemsList.length}');
-                      print("index = $index");
-                      if (index > groupedItemsList.length - 5) {
-                        ref.read(timelineAddProvider.notifier).addMoreItems();
-                      }
-                      String lastSelectedGroupID = groupedItemsList[index].first.groupID;
-                      print("qaqaqa groupID = $lastSelectedGroupID");
-                      _lastSelectedIndexes[lastSelectedGroupID] = index;  // ここで最新のインデックスを保存
-                      print("qaqaqa _lastSelectedGroupID = $lastSelectedGroupID");
-
-                      // Key itemKey = groupedItemsList[index].first.key;  // 選択されたアイテムのkeyを取得
-                      // _lastSelectedKeys[groupID] = itemKey;  // keyを保存
-
-                      // for (int i = 0; i < groupedItemsList.length; i++) {
-                      //   keyToIndexMap[groupedItemsList[i].first.key] = i;
-                      // }
-
-                      // setState(() {
-                      //   print("www");
-                      // });
+                  // magnification: 1.3,
+                  // useMagnifier: false,
+                  physics: const FixedExtentScrollPhysics(),
+                  children: List<Widget>.generate(
+                    groupedItemsList.length, // groupIDごとにグルーピングされたアイテムのリストのリスト
+                        (int index) {
+                          String groupID = groupedItemsList[index].first.groupID;
+                          int currentIndex = selectedItemsMap[groupID] ?? 0;
+                          return Center(
+                            child: HorizontalGroupedItems(
+                              itemsInGroup: groupedItemsList[index],
+                              size: MediaQuery.of(context).size,
+                              controller: _scrollController,
+                              currentIndex: currentIndex,
+                              pickerController: _pickerController,
+                              items: items,
+                              onTapCallback: (TimelineItem item) => ScrollToCenterService.scrollToCenter(_pickerController , index),
+                              centralRowIndex: centralRowIndex,
+                              chatNotifier: chatNotifier,
+                              onHorizontalIndexChanged: (int newIndex) {
+                                String groupID = groupedItemsList[index].first.groupID;
+                                selectedItemsMap[groupID] = newIndex;
+                              },
+                            ),
+                          );
                     },
-                    // magnification: 1.3,
-                    // useMagnifier: false,
-                    physics: FixedExtentScrollPhysics(),
-                    children: List<Widget>.generate(
-                      groupedItemsList.length, // groupIDごとにグルーピングされたアイテムのリストのリスト
-                          (int index) {
-                            String groupID = groupedItemsList[index].first.groupID;
-                            int currentIndex = selectedItemsMap[groupID] ?? 0;
-                            return Center(
-                              child: HorizontalGroupedItems(
-                                itemsInGroup: groupedItemsList[index],
-                                size: MediaQuery.of(context).size,
-                                controller: _scrollController,
-                                currentIndex: currentIndex,
-                                pickerController: _pickerController,
-                                items: items,
-                                onTapCallback: (TimelineItem item) => scrollToCenterService.scrollToCenter(_pickerController , index),
-                                centralRowIndex: centralRowIndex,
-                                chatNotifier: chatNotifier,
-                                onHorizontalIndexChanged: (int newIndex) {
-                                  // ここはそのままでOKです。HorizontalGroupedItems内で処理される
-                                  String groupID = groupedItemsList[index].first.groupID;
-                                  selectedItemsMap[groupID] = newIndex;
-                                  print("selectedItemsMap[groupID] = $selectedItemsMap");
-                                },
-                              ),
-                            );
-                      },
-                    ),
                   ),
                 ),
               ),
@@ -744,20 +675,19 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
                       _waitForGroupId().then((groupID) {
                         if(groupID != null) {
                           _openCamera(_cameras![0], groupID);
-                          print("get groupID = $groupID");
                         } else {
-                          print("Failed to get the group ID.");
+                          debugPrint("Failed to get the group ID.");
                         }
                       });
                     } else {
-                      print("No available cameras found.");
+                      debugPrint("No available cameras found.");
                     }
                   }
                 } else {
                   // リストを最上部にスクロール
                   _pickerController.animateToItem(
                     0,
-                    duration: Duration(milliseconds: 300),
+                    duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
                   );
                 }
@@ -769,25 +699,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: (widget.size.height) - (widget.size.height * 0.3) ,
             ),
-
-            if (isFullScreenMode) // isFullScreenModeがtrueの場合だけFullScreenImageViewerを表示
-              Positioned(
-                top: 0,
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: FullScreenImageViewer(
-                  items: items, // これはあなたのitemsリストを参照するものと仮定しています。
-                  initialIndex: _pickerController.selectedItem, // これはあなたのコントローラの選択されたアイテムのインデックスを参照するものと仮定しています。
-                  controller: _pickerController, // FullScreenImageViewerに必要な他のプロパティや設定も追加できます。
-                  onTap: () {
-                    setState(() {
-                      isFullScreenMode = false;
-                    });
-                  },
-                ),
-              ),
-
           ],
         );
       },
@@ -825,9 +736,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
         // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
         int targetIndex = groupedItemsList.indexWhere((list) =>
             list.any((item) => item.groupID == _lastSelectedGroupID));
-        print("wawawa _lastSelectedGroupID = $_lastSelectedGroupID");
-        print("wawawa targetIndex = $targetIndex");
-
         // 対象のアイテムが見つかった場合
         if (targetIndex != -1) {
           // スクロールビューを更新して指定されたアイテムにスクロールする
@@ -836,7 +744,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
           // マップ移動
           final chatNotifier = ref.watch(chatNotifierProvider);
           final selectedItemsMap = chatNotifier.selectedItemsMap;
-          // int index = _pickerController.selectedItem;
           String groupID = groupedItemsList[targetIndex].first.groupID;
           int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
           TimelineItem selectedItem = groupedItemsList[targetIndex][selectedItemIndex];
@@ -845,9 +752,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
       }
 
       if (showNewListWheelScrollView) {
-        //アルバムに切り替えたときの行指定とマップ移動は、class _AlbumTimeLineViewStateのinitstateに記述してある。
-        //ここではアルバムデータを呼び出す処理のみ記述。
-
         // setState(() {
         //   _albumList = [];
         // });
@@ -878,10 +782,6 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     } else {
       _jumpToTopKey.currentState?.moveButton();
     }
-
-    // // タイムラインの選択状態を保存
-    // _lastSelectedIndexes[_lastSelectedGroupID] = currentIndex;
-    // print("_lastSelectedIndexes[_lastSelectedGroupID] = $currentIndex");
   }
 
 
@@ -934,28 +834,13 @@ class _MapDisplayState extends ConsumerState<_MapDisplayStateful> {
     return groupedMap.values.toList();
   }
 
-  // void callbackScrollToCenter(int index) {
-  //   scrollToCenter(index);
-  // }
-
-  // void scrollToCenter(int index) {
-  //   final Duration duration = Duration(milliseconds: 150);
-  //   final Curve curve = Curves.easeInOut;
-  //
-  //   _pickerController.animateToItem(
-  //     index,
-  //     duration: duration,
-  //     curve: curve,
-  //   );
-  // }
-
   void _loadAlbumData() async {
 
     // アルバムデータを非同期で取得し、状態を更新
     List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
 
     // 100ミリ秒後にアルバムデータでリストを更新
-    Future.delayed(Duration(milliseconds: 100), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       setState(() {
         _albumList = albumData; // ここでalbumDataは新しいアルバムデータのリストです。
       });

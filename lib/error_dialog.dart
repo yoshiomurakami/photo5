@@ -4,7 +4,7 @@ import 'error_dialog_data.dart';
 class ErrorDialog extends StatelessWidget {
   final ErrorDialogData errorDialogData;
 
-  ErrorDialog({required this.errorDialogData});
+  const ErrorDialog({super.key, required this.errorDialogData});
 
   @override
   Widget build(BuildContext context) {

@@ -92,7 +92,7 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
 
   // 取得したデータをコンソールに出力
   for (var album in albumList) {
-    print(album.toString());
+    debugPrint(album.toString());
   }
 
   return albumList;
@@ -105,7 +105,7 @@ class AlbumTimeLineView extends StatefulWidget {
   final Function(String) updateAlbumGroupIDCallback;
   // final void Function(AlbumTimeLine)? onTapCallback;
 
-  AlbumTimeLineView({
+  const AlbumTimeLineView({super.key,
     required this.size,
     required this.albumList,
     required this.lastSelectedAlbumGroupID,
@@ -115,10 +115,10 @@ class AlbumTimeLineView extends StatefulWidget {
   });
 
   @override
-  _AlbumTimeLineViewState createState() => _AlbumTimeLineViewState();
+  AlbumTimeLineViewState createState() => AlbumTimeLineViewState();
 }
 
-class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
+class AlbumTimeLineViewState extends State<AlbumTimeLineView> {
   late FixedExtentScrollController _scrollController;
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupKeys;
@@ -143,7 +143,7 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     int selectedItemIndex = selectedAlbumIndexes[groupKeys[initialIndex]] ?? 0;
     // ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[initialIndex]] = selectedItemIndex;
     AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
-    print("MapUpdateService = $selectedItem");
+    debugPrint("MapUpdateService = $selectedItem");
     MapUpdateService.updateMapLocation(selectedItem);
   }
 
@@ -152,7 +152,7 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     return Consumer(
       builder: (context, ref, _) {
         final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
-        print("selectedAlbumIndexes = $selectedAlbumIndexes");
+        debugPrint("selectedAlbumIndexes = $selectedAlbumIndexes");
 
         // selectedAlbumIndexes に基づいて centralRowIndex を更新
         for (var groupID in groupKeys) {
@@ -167,10 +167,10 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
               // 選択されたアイテムの更新
               int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
               ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[index]] = selectedItemIndex;
-              print("selectedItemIndex!!! = $selectedItemIndex");
+              debugPrint("selectedItemIndex!!! = $selectedItemIndex");
 
               AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
-              print("selectedItemIndexBB = $selectedItemIndex");
+              debugPrint("selectedItemIndexBB = $selectedItemIndex");
               MapUpdateService.updateMapLocation(selectedItem);
               // updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
             }
@@ -186,7 +186,7 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                 centralRowIndex = index;
                 // 現在選択されているグループの選択インデックスを更新
                 selectedIndexes[groupKeys[index]] = selectedAlbumIndexes[groupKeys[index]] ?? 0;
-                print("最後のグループID = ${groupKeys[index]}");
+                debugPrint("最後のグループID = ${groupKeys[index]}");
                 String selectedGroupID = groupKeys[index];
                 widget.updateAlbumGroupIDCallback(selectedGroupID); // コールバックを呼び出す
               });
@@ -219,19 +219,19 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
                       onTapCallback: (AlbumTimeLine album, int tappedItemIndex) {
                         int currentCenterIndex = _scrollController.selectedItem;
                         if (index != currentCenterIndex) {
-                          scrollToCenterService.scrollToCenter(_scrollController, index);
+                          ScrollToCenterService.scrollToCenter(_scrollController, index);
                         } else {
                           // 横位置（行の配列内のindex値）とcurrentIndex値を比較
                           int selectedIndex = selectedIndexes[groupKeys[index]] ?? 0;
                           if (tappedItemIndex == selectedIndex) {
-                            print("OpenTappedItemImagePath=${groupedAlbums[groupKeys[index]]![tappedItemIndex].imagePath}");
+                            debugPrint("OpenTappedItemImagePath=${groupedAlbums[groupKeys[index]]![tappedItemIndex].imagePath}");
                           } else {
                             //tappedItemIndexとselectedIndexの差分のアイテムの幅を横スクロールする。マイナス値であれば左から右へ。プラス値であれば右から左へ。
                             int skip = tappedItemIndex - selectedIndex;
                             if(skip > 0){
-                              print("右から左へ$skip枚分移動");
+                              debugPrint("右から左へ$skip枚分移動");
                             }else{
-                              print("左から右へ${skip * -1}枚分移動");
+                              debugPrint("左から右へ${skip * -1}枚分移動");
                             }
                           }
                         }
@@ -251,18 +251,18 @@ class _AlbumTimeLineViewState extends State<AlbumTimeLineView> {
 
 
   void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
-    print("Updating map location for album index: $albumIndex");
+    debugPrint("Updating map location for album index: $albumIndex");
     if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
       AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
-      print("selectedAlbumItem = $selectedAlbumItem");
+      debugPrint("selectedAlbumItem = $selectedAlbumItem");
       double lat = selectedAlbumItem.lat;
       double lng = selectedAlbumItem.lng;
-      print("lat = $lat / lng = $lng");
+      debugPrint("lat = $lat / lng = $lng");
       // Update the map location
       MapController.instance.updateMapLocation(lat, lng);
 
     } else {
-      print("Selected album item index out of range: $albumIndex");
+      debugPrint("Selected album item index out of range: $albumIndex");
     }
   }
 
@@ -284,7 +284,7 @@ class HorizontalAlbumGroup extends StatefulWidget {
   final ValueChanged<int> onHorizontalIndexChanged;
   final void Function(AlbumTimeLine, int)? onTapCallback; // 型を変更
 
-  const HorizontalAlbumGroup({
+  const HorizontalAlbumGroup({super.key,
     required this.albumsInGroup,
     required this.size,
     required this.currentIndex,
@@ -293,11 +293,11 @@ class HorizontalAlbumGroup extends StatefulWidget {
   });
 
   @override
-  _HorizontalAlbumGroupState createState() => _HorizontalAlbumGroupState();
+  HorizontalAlbumGroupState createState() => HorizontalAlbumGroupState();
 }
 
 
-class _HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
+class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
 
   @override
@@ -375,6 +375,6 @@ Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums
     }
     groupedAlbums[album.groupID]!.add(album);
   }
-  print("groupedAlbums = $groupedAlbums");
+  debugPrint("groupedAlbums = $groupedAlbums");
   return groupedAlbums;
 }

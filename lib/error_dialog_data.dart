@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
 enum ErrorDialogType {
-  DEPEND_DIALOG,
-  RETRY_DIALOG,
-  CLOSE_DIALOG,
-  YES_NO_DIALOG,
+  dependDialog,
+  retryDialog,
+  closeDialog,
+  yesNoDialog,
   // ... その他の種類
 }
 
@@ -23,38 +23,38 @@ class ErrorDialogData {
 
   static List<Widget> _generateActions(ErrorDialogType dialogType, Future<bool> Function(BuildContext context) actionInDialog, BuildContext context) {
     switch(dialogType) {
-      case ErrorDialogType.DEPEND_DIALOG:
+      case ErrorDialogType.dependDialog:
         return [
         ];
-      case ErrorDialogType.RETRY_DIALOG:
+      case ErrorDialogType.retryDialog:
         return [
           TextButton(
-            child: Text('Retry'),
+            child: const Text('Retry'),
             onPressed: () async {
               Navigator.of(context).pop();
               await actionInDialog(context);
             },
           ),
         ];
-      case ErrorDialogType.CLOSE_DIALOG:
+      case ErrorDialogType.closeDialog:
         return [
           TextButton(
-            child: Text('Close'),
+            child: const Text('Close'),
             onPressed: () {
               Navigator.of(context).pop();
             },
           ),
         ];
-      case ErrorDialogType.YES_NO_DIALOG:
+      case ErrorDialogType.yesNoDialog:
         return [
           TextButton(
-            child: Text('No'),
+            child: const Text('No'),
             onPressed: () {
               Navigator.of(context).pop();
             },
           ),
           TextButton(
-            child: Text('Yes'),
+            child: const Text('Yes'),
             onPressed: () async {
               Navigator.of(context).pop();
               await actionInDialog(context);

@@ -12,9 +12,7 @@ import 'package:path/path.dart' as path;
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
-// import 'timeline_providers.dart';
 import 'chat_connection.dart';
-// import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 
@@ -22,10 +20,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
   SharedPreferences.getInstance().then((prefs) {
-    final int? introStatus = prefs.getInt('intro') ?? 0;
+    final int introStatus = prefs.getInt('intro') ?? 0;
     runApp(
       ProviderScope(
-        child: MyApp(home: introStatus == 1 ? Startup() : IntroductionScreen()),
+        child: MyApp(home: introStatus == 1 ? const Startup() : const IntroductionScreen()),
       ),
     );
   });
@@ -34,7 +32,7 @@ void main() {
 class MyApp extends StatelessWidget {
   final Widget home;
 
-  MyApp({required this.home});
+  const MyApp({super.key, required this.home});
 
   @override
   Widget build(BuildContext context) {
@@ -43,20 +41,22 @@ class MyApp extends StatelessWidget {
       // color: Color(0xFFFFCC4D),
         child:MaterialApp(
           theme: ThemeData(
-            canvasColor: Color(0xFFFFCC4D)
+            canvasColor: const Color(0xFFFFCC4D)
           ),
-          home: this.home,
+          home: home,
         ),
     );
   }
 }
 
 class IntroductionScreen extends StatefulWidget {
+  const IntroductionScreen({super.key});
+
   @override
-  _IntroductionScreenState createState() => _IntroductionScreenState();
+  IntroductionScreenState createState() => IntroductionScreenState();
 }
 
-class _IntroductionScreenState extends State<IntroductionScreen> {
+class IntroductionScreenState extends State<IntroductionScreen> {
   @override
   void initState() {
     super.initState();
@@ -67,11 +67,14 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     int introStatus = prefs.getInt('intro') ?? 0;
     if (introStatus == 1) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => Startup()),
-      );
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const Startup()),
+        );
+      }
     }
   }
+
 
   Widget _introduction(BuildContext context) {
     return Scaffold(
@@ -86,9 +89,11 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
         finishCallback: () async {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           await prefs.setInt('intro', 1);
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (context) => Startup()),
-          );
+          if (mounted) {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => const Startup()),
+            );
+          }
         },
       ),
     );
@@ -120,13 +125,15 @@ class _IntroductionScreenState extends State<IntroductionScreen> {
         body: 'Connect with the people from different places',
         doAnimateImage: true),
     PageModel.withChild(
-        child: TermsAndPrivacyPolicyPage(),
+        child: const TermsAndPrivacyPolicyPage(),
         color: const Color(0xFF5886d6),
         doAnimateChild: true)
 
   ];
 
 class TermsAndPrivacyPolicyPage extends StatelessWidget {
+  const TermsAndPrivacyPolicyPage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -134,10 +141,10 @@ class TermsAndPrivacyPolicyPage extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.6,
         color: Colors.white,
-        child: Scrollbar(
+        child: const Scrollbar(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(8.0),
+              padding: EdgeInsets.all(8.0),
               child: Text(
                 "利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー", // Replace this with your actual terms and privacy policy
                 style: TextStyle(fontSize: 18.0),
@@ -153,11 +160,13 @@ class TermsAndPrivacyPolicyPage extends StatelessWidget {
 
 
 class Startup extends StatefulWidget {
+  const Startup({super.key});
+
   @override
-  _StartupState createState() => _StartupState();
+  StartupState createState() => StartupState();
 }
 
-class _StartupState extends State<Startup> {
+class StartupState extends State<Startup> {
   late PageController pageController;
   late StreamController<bool> _startupController;
   String loadingText = 'Now Loading';
@@ -202,7 +211,7 @@ class _StartupState extends State<Startup> {
         if (snapshot.hasData && snapshot.data == true) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (context) => MainScreen()),
+              MaterialPageRoute(builder: (context) => const MainScreen()),
             );
           });
         }
@@ -219,7 +228,7 @@ class _StartupState extends State<Startup> {
       body: Stack(
         children: [
           Container(
-            color: Color(0xFFFFCC4D),
+            color: const Color(0xFFFFCC4D),
             // color: Colors.transparent,
 
             child: Center(
@@ -246,18 +255,18 @@ class _StartupState extends State<Startup> {
                       ),
                     ),
                   ),
-                  SizedBox(height: 16.0),
+                  const SizedBox(height: 16.0),
                   Text(
                     "Latest version from server: $latestVersion", // Display the latest version here
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16.0,
                     ),
                   ),
-                  SizedBox(height: 16.0),  // Add spacing between the two text widgets
+                  const SizedBox(height: 16.0),  // Add spacing between the two text widgets
                   Text(
                     loadingText,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16.0,
                       fontWeight: FontWeight.bold,
@@ -327,7 +336,15 @@ class _StartupState extends State<Startup> {
           _startupProcedures(context);
         }
       });
-      throw createErrorDialogData('No internet connection', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      if (mounted) {
+        throw createErrorDialogData(
+            'No internet connection',
+                (ctx) => _startupProcedures(ctx),
+            ErrorDialogType.dependDialog,
+            context
+        );
+      }
+
     } else {
       debugPrint("Connectivity OK");
     }
@@ -337,7 +354,7 @@ class _StartupState extends State<Startup> {
   Future<void> _checkVersion() async {
     debugPrint("Version check starting");
 
-    String currentVersion;
+    String? currentVersion; // nullable に変更
 
     // Fetch package info
     try {
@@ -345,8 +362,11 @@ class _StartupState extends State<Startup> {
       currentVersion = packageInfo.version;
       debugPrint("Current app version: $currentVersion");
     } catch (e) {
-      // Handle error from package info fetching
-      throw createErrorDialogData('Could not fetch the app version. Please check if the application is properly installed.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      debugPrint('Error fetching package info: $e');
+      if (mounted) {
+        throw createErrorDialogData('Could not fetch the app version. Please check if the application is properly installed.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
 
     // Fetch latest version from server
@@ -359,16 +379,22 @@ class _StartupState extends State<Startup> {
           debugPrint("Need to update to the latest version");
         }
       } else {
-        throw createErrorDialogData('Failed to load version info from the server', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+        if (mounted) {
+          throw createErrorDialogData('Failed to load version info from the server', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        }
+        return;
       }
     } catch (e) {
-      // Handle error from server response
-      throw createErrorDialogData('No internet connection or server unreachable. Please check your internet connection.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      debugPrint('Error fetching server version: $e');
+      if (mounted) {
+        throw createErrorDialogData('No internet connection or server unreachable. Please check your internet connection.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
 
     debugPrint("Version check completed");
-    return;
   }
+
 
   Future<void> _checkUserId() async {
     debugPrint("UserId check starting");
@@ -381,11 +407,13 @@ class _StartupState extends State<Startup> {
       // globalUserId = userId; // Assume that globalUserId is a global variable.
       return;
     } else if (userId.isNotEmpty) {
-      throw createErrorDialogData('The UserID is corrupted. Please initialize the application.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      if (mounted) {
+        throw createErrorDialogData('The UserID is corrupted. Please initialize the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
 
     try {
-      // Assuming that http package is imported and API_URI is defined.
       var response = await http.post(
         Uri.parse('https://photo5.world/api/express/regist'),
         headers: <String, String>{
@@ -398,17 +426,26 @@ class _StartupState extends State<Startup> {
         if (newUserId.length == 8) {
           prefs.setString('userID', newUserId);
         } else {
-          throw createErrorDialogData('Could not fetch valid UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+          if (mounted) {
+            throw createErrorDialogData('Could not fetch valid UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          }
+          return;
         }
       } else {
-        throw createErrorDialogData('Could not fetch UserID from server. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+        if (mounted) {
+          throw createErrorDialogData('Could not fetch UserID from server. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        }
+        return;
       }
     } catch (e) {
-      throw createErrorDialogData('Unexpected error occurred while fetching UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      if (mounted) {
+        throw createErrorDialogData('Unexpected error occurred while fetching UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
     debugPrint("UserId check completed");
-    return;
   }
+
 
   Future<void> _checkStatus() async {
     debugPrint("Status check starting");
@@ -419,59 +456,64 @@ class _StartupState extends State<Startup> {
     try {
       prefs = await SharedPreferences.getInstance();
     } catch (e) {
-      throw createErrorDialogData('Could not access app data. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      if (mounted) {
+        throw createErrorDialogData('Could not access app data. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
 
     try {
       status = prefs.getString('status') ?? "";
       debugPrint('Current status value: $status');
     } catch (e) {
-      throw createErrorDialogData('Could not read app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+      if (mounted) {
+        throw createErrorDialogData('Could not read app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+      }
+      return;
     }
 
     if (status == '0') {
       try {
         await _getPermission();
-        //便宜上0に上書き。本当は1にする。
-        prefs.setString('status', '1');
+        prefs.setString('status', '1'); // 本当は1にする。
       } catch (e) {
-        throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+        if (mounted) {
+          throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        }
+        return;
       }
     } else if (status.isEmpty) {
       try {
         await _getPermission();
-        //便宜上0に上書き。本当は1にする。
-        prefs.setString('status', '1');
+        prefs.setString('status', '1'); // 本当は1にする。
       } catch (e) {
-        throw createErrorDialogData('Could not initialize app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+        if (mounted) {
+          throw createErrorDialogData('Could not initialize app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        }
+        return;
       }
     } else {
-      // status is not '0', so check permissions
       PermissionStatus cameraPermission = await Permission.camera.status;
       PermissionStatus locationPermission = await Permission.location.status;
 
       if (!cameraPermission.isGranted || !locationPermission.isGranted) {
-        // One or both permissions are not granted, so show tutorial
         try {
           await _getPermission();
-          // Set status to '1' after tutorial
-          prefs.setString('status', '1');
+          prefs.setString('status', '1'); // Set status to '1' after tutorial
         } catch (e) {
-          // Handle error during tutorial as before
-          throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.DEPEND_DIALOG, context);
+          if (mounted) {
+            throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          }
+          return;
         }
       } else {
-        // Both permissions are granted, so just set status to '1'
-        prefs.setString('status', '1');
+        prefs.setString('status', '1'); // Both permissions are granted
       }
-      debugPrint("Status check completed");
-      return;
     }
 
-
     debugPrint("Status check completed");
-    return;
   }
+
 
   Future<void> _checkPermission() async {
     debugPrint("Permission check starting");
@@ -495,7 +537,9 @@ class _StartupState extends State<Startup> {
     var cameraStatus = await Permission.camera.status;
 
     // Only show the tutorial if at least one permission is not granted.
-    // if (locationStatus.isDenied || cameraStatus.isDenied) {
+    if (!mounted) return;
+
+    if (locationStatus.isDenied || cameraStatus.isDenied) {
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -515,15 +559,16 @@ class _StartupState extends State<Startup> {
           );
         },
       );
-    // } else {
+    } // else {
     //   _navigateToMainScreen();
     // }
   }
 
+
   Widget _tutorialPage(String imagePath, String text, Permission permission, {bool showButton = false}) {
     return Column(
       children: <Widget>[
-        Container(
+        SizedBox(
           width: double.infinity,
           height: MediaQuery.of(context).size.width * 0.8, // or another value to match the width of your SizedBox
           child: Image.asset(imagePath, fit: BoxFit.contain),
@@ -536,12 +581,12 @@ class _StartupState extends State<Startup> {
               final granted = await _requestPermission(permission);
               if (granted) {
                 pageController.nextPage(
-                  duration: Duration(milliseconds: 500),
+                  duration: const Duration(milliseconds: 500),
                   curve: Curves.ease,
                 );
               }
             },
-            child: Text('Request Permission'),
+            child: const Text('Request Permission'),
           ),
       ],
     );
@@ -549,16 +594,19 @@ class _StartupState extends State<Startup> {
 
   Future<bool> _requestPermission(Permission permission) async {
     final status = await permission.request();
+
+    if (!mounted) return false;
+
     if (status.isDenied) {
       await showDialog(
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Permission error'),
-            content: Text('Permission is needed.'),
+            title: const Text('Permission error'),
+            content: const Text('Permission is needed.'),
             actions: <Widget>[
               TextButton(
-                child: Text('Retry'),
+                child: const Text('Retry'),
                 onPressed: () {
                   Navigator.of(context).pop();
                   _requestPermission(permission);
@@ -574,15 +622,18 @@ class _StartupState extends State<Startup> {
     // After getting a permission, check if we have all needed permissions. If so, navigate to the main screen.
     var locationStatus = await Permission.location.status;
     var cameraStatus = await Permission.camera.status;
+
+    if (!mounted) return true;
+
     if (locationStatus.isGranted && cameraStatus.isGranted) {
       Navigator.of(context).pop(); // This will close the tutorial dialog.
       // _navigateToMainScreen();
       return true;
     }
 
-
     return true;
   }
+
 
 
 
@@ -605,9 +656,9 @@ class _StartupState extends State<Startup> {
     }
   }
 
-  void _navigateToMainScreen() {
-    _startupController.add(true);
-  }
+  // void _navigateToMainScreen() {
+  //   _startupController.add(true);
+  // }
 
   void _showErrorDialog(ErrorDialogData errorDialogData) {
     showDialog<void>(

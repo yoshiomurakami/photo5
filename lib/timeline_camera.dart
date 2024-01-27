@@ -19,6 +19,8 @@ import 'package:intl/intl.dart';
 import 'chat_connection.dart';
 import 'dart:convert';
 
+final cameraButtonKey = GlobalKey();
+
 class CameraScreen extends StatefulWidget {
 
   final CameraDescription camera;
@@ -31,10 +33,10 @@ class CameraScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _CameraScreenState createState() => _CameraScreenState();
+  CameraScreenState createState() => CameraScreenState();
 }
 
-class _CameraScreenState extends State<CameraScreen> {
+class CameraScreenState extends State<CameraScreen> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   late bool _showImage;
@@ -75,12 +77,12 @@ class _CameraScreenState extends State<CameraScreen> {
 
   // Generate a random string
   String _getRandomString(int length) {
-    const _randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    const _randStringLength = _randomChars.length;
-    final _random = math.Random();
+    const randomChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const randStringLength = randomChars.length;
+    final random = math.Random();
 
     return String.fromCharCodes(Iterable.generate(
-        length, (_) => _randomChars.codeUnitAt(_random.nextInt(_randStringLength))));
+        length, (_) => randomChars.codeUnitAt(random.nextInt(randStringLength))));
   }
 
   void _navigateBack(BuildContext context) async {
@@ -89,8 +91,11 @@ class _CameraScreenState extends State<CameraScreen> {
       _imagePath = null;
       _showImage = false;
     }
-    Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
+
 
 
 
@@ -141,7 +146,7 @@ class _CameraScreenState extends State<CameraScreen> {
       // Call _convertImage() to convert image and thumbnail to webp format in the background
       _convertImage(imgPath, thumbPath, int.parse(_timestamp), randomStr);
     } catch (e) {
-      print(e);
+      debugPrint("$e");
     }
   }
 
@@ -149,14 +154,14 @@ class _CameraScreenState extends State<CameraScreen> {
 
     // Fetch the user's current location.
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    print('Current position: $position');
+    debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
 
     // Fetch the user's current country.
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     _imageCountry = placemarks.first.isoCountryCode ?? 'Unknown';
-    print('Placemarks: $placemarks');
+    debugPrint('Placemarks: $placemarks');
 
     // Update _locationAvailable state
     setState(() {
@@ -175,7 +180,7 @@ class _CameraScreenState extends State<CameraScreen> {
       quality: 90,
     );
 
-    print('Image saved at: $webpImgPath');
+    debugPrint('Image saved at: $webpImgPath');
 
     // Create a thumbnail from the image
     img.Image? image = img.decodeImage(File(imgPath).readAsBytesSync());
@@ -190,7 +195,7 @@ class _CameraScreenState extends State<CameraScreen> {
     img.Image thumbnail = img.copyResize(square, width: image.width ~/ 4, height: image.width ~/ 4, interpolation: img.Interpolation.average);
 
 
-    File(thumbPath)..writeAsBytesSync(img.encodeJpg(thumbnail, quality: 90));
+    File(thumbPath).writeAsBytesSync(img.encodeJpg(thumbnail, quality: 90));
 
     // Convert the thumbnail to webp
     final webpThumbFileName = '${_timestamp}_${randomStr}_thumb.webp';
@@ -202,7 +207,7 @@ class _CameraScreenState extends State<CameraScreen> {
       quality: 90,
     );
 
-    print('Thumbnail saved at: $webpThumbPath');
+    debugPrint('Thumbnail saved at: $webpThumbPath');
 
     // Set the path for the image and thumbnail
     _uploadImagePath = webpImgPath;
@@ -217,7 +222,7 @@ class _CameraScreenState extends State<CameraScreen> {
   Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
     await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, widget.groupID);
     await _uploadImage(imagePath, thumbnailPath, widget.groupID);
-    print("groupID = $groupID");
+    debugPrint("groupID = $groupID");
   }
 
   Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
@@ -284,9 +289,9 @@ class _CameraScreenState extends State<CameraScreen> {
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-      print('Inserted row id: $id');
+      debugPrint('Inserted row id: $id');
     } catch (e) {
-      print('Error occurred while inserting into the database: $e');
+      debugPrint('Error occurred while inserting into the database: $e');
     }
   }
 
@@ -305,7 +310,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
     // Check again if the permission is granted, if not, return from the function.
     if (await Permission.location.isDenied) {
-      print('User denied location permission.');
+      debugPrint('User denied location permission.');
       setState(() {
         _uploading = false; // アップロード中フラグを解除
       });
@@ -340,29 +345,36 @@ class _CameraScreenState extends State<CameraScreen> {
     request.fields['groupID'] = widget.groupID;
 
 
-    print('Timestamp: $_timestamp');
-    print('Local timestamp: $_localTimestamp');
-    print('Add the extra data to the request_groupID: $groupID');
+    debugPrint('Timestamp: $_timestamp');
+    debugPrint('Local timestamp: $_localTimestamp');
+    debugPrint('Add the extra data to the request_groupID: $groupID');
 
     // Check the connectivity status.
-    if (!await _checkConnectivity(context)) {
+    bool isConnected = false;
+    if (mounted) {
+      isConnected = await _checkConnectivity(context);
+    }
+
+    if (!isConnected) {
       // If not connected, save the image and extra information to cache.
       // _saveDataLocally(imagePath, photoCountry, photoLat, photoLng, userId);
-      setState(() {
-        _uploading = false; // アップロード中フラグを解除
-      });
+      if (mounted) {
+        setState(() {
+          _uploading = false; // アップロード中フラグを解除
+        });
+      }
       return;
     }
 
     // If connected, send the request.
     try {
       var response = await http.Response.fromStream(await request.send());
-      print('Status code: ${response.statusCode}');
-      print('Status reason: ${response.reasonPhrase}');  // 追加
-      print('Response body: ${response.body}');
+      debugPrint('Status code: ${response.statusCode}');
+      debugPrint('Status reason: ${response.reasonPhrase}');  // 追加
+      debugPrint('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
-        print('Uploaded successfully.');
+        debugPrint('Uploaded successfully.');
         // APIの応答から新しい写真情報を取得
         Map<String, dynamic> responseBody = jsonDecode(response.body);
         Map<String, dynamic> newPhotoInfo = {
@@ -381,10 +393,10 @@ class _CameraScreenState extends State<CameraScreen> {
         // print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
         // print("Type of lng: ${responseBody['photo']['lng'].runtimeType}");
       } else {
-        print('Upload failed.');
+        debugPrint('Upload failed.');
       }
     } catch (e) {
-      print('Upload failed: $e');
+      debugPrint('Upload failed: $e');
     } finally {
       setState(() {
         _uploading = false; // アップロード中フラグを解除
@@ -457,7 +469,7 @@ class _CameraScreenState extends State<CameraScreen> {
 
                               _navigateBack(context);
                             },
-                            child: Text('Back'),
+                            child: const Text('Back'),
                           ),
 
                         ],
@@ -477,7 +489,6 @@ class _CameraScreenState extends State<CameraScreen> {
                           bottom: 20,
                           left: 20,
                           child: ElevatedButton(
-                            child: Text('Send'),
                             onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
                                 ? () async {
                               if (_uploadImagePath != null && _uploadThumbnailPath != null) {
@@ -497,10 +508,13 @@ class _CameraScreenState extends State<CameraScreen> {
 
                                 // 送信後、カメラを終了する
                                 // _controller.dispose();
-                                Navigator.pop(context);
+                                if (mounted) {
+                                  Navigator.pop(context);
+                                }
                               }
                             }
-                                : null,  // Enable the button only if the conversion is completed
+                                : null,
+                            child: const Text('Send'),  // Enable the button only if the conversion is completed
                           ),
                         ),
 
@@ -529,21 +543,21 @@ class _CameraScreenState extends State<CameraScreen> {
                                 _showImage = false;  // Reset the flag when the button is pressed
                               });
                             },
-                            child: Text('Back'),
+                            child: const Text('Back'),
                           ),
                         )
                       ],
                     ),
                   )
-                      : SizedBox(),
+                      : const SizedBox(),
                 ],
               );
 
             } else {
-              return SizedBox.shrink();
+              return const SizedBox.shrink();
             }
           } else {
-            return Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator());
           }
         },
       ),

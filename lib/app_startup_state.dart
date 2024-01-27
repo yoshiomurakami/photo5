@@ -73,7 +73,7 @@ class AppStartupState extends ChangeNotifier {
 
       try {
         final response = await http.post(
-          Uri.parse(dotenv.get('API_URI') + 'express/regist'),
+          Uri.parse('${dotenv.get('API_URI')}express/regist'),
           headers: {'Content-Type': 'application/json'},
           body: json.encode({'checkID': checkID}),
         );
@@ -115,12 +115,12 @@ class AppStartupState extends ChangeNotifier {
   }
 
   String _generateCheckId() {
-    const _allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    final _random = Random();
+    const allowedChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
 
     return List.generate(5, (index) {
-      int randomIndex = _random.nextInt(_allowedChars.length);
-      return _allowedChars[randomIndex];
+      int randomIndex = random.nextInt(allowedChars.length);
+      return allowedChars[randomIndex];
     }).join();
   }
 }
