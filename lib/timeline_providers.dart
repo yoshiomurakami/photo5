@@ -98,6 +98,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
       // 既存のリストに新しいアイテムを追加
       state = [...state, ...uniqueNewItems];
     }
+
     print("addMoreItems!");
   }
 }
@@ -142,6 +143,8 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       body: jsonEncode({'userId': userId, 'page': page}), // ここでページ情報も送信
     );
 
+    debugPrint("userId = $userId / page = $page");
+
     // APIからのレスポンスをチェック
     if (response.statusCode == 200) {
       // 成功した場合、JSONをパースしてリストに変換
@@ -174,6 +177,8 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
 
       // ジオコーディング処理の追加
       await updateGeocodedLocation(timelineItems);
+
+      debugPrint("timelineItemsAAA = $timelineItems");
 
       return timelineItems;
     } else {
@@ -241,20 +246,7 @@ final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) as
 
   // await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
   //
-  // // print('Timeline Items: $timelineItems');
   return timelineItems;
 });
 
 final timelineAddProvider = StateNotifierProvider<TimelineNotifier, List<TimelineItem>>((ref) => TimelineNotifier());
-
-// final newTimelineAddProvider = StateNotifierProvider<NewTimelineNotifier, List<List<TimelineItem>>>((ref) {
-//   return NewTimelineNotifier();
-// });
-//
-// class NewTimelineNotifier extends StateNotifier<List<List<TimelineItem>>> {
-//   NewTimelineNotifier() : super([]);
-//
-//   void setNewGroupedItemsList(List<List<TimelineItem>> newGroupedItemsList) {
-//     state = newGroupedItemsList;
-//   }
-// }

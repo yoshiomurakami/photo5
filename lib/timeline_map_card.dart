@@ -257,12 +257,10 @@ class TimelineCardState extends State<TimelineCard> {
               ],
             )
                 : Row(
-              mainAxisAlignment: MainAxisAlignment.center, // 写真を中央寄せにする
-              children: <Widget>[
-                _buildImageWidget(context, widget.item.thumbnailFilename),
-                // SizedBox(width: 10), // 10ピクセルのスペースを追加
-                // _buildImageWidget(context, widget.item.thumbnailFilename),
-              ],
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: <Widget>[
+                    _buildImageWidget(context, widget.item.thumbnailFilename),
+                  ],
             ),
           ),
         ),

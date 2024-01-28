@@ -487,7 +487,7 @@ class MapDisplayStateful extends ConsumerStatefulWidget {
 
 
 
-  const MapDisplayStateful({
+  const MapDisplayStateful({super.key,
     required this.currentLocation,
     required this.timelineItems,
     required this.size,
@@ -603,9 +603,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   controller: _pickerController,
                   itemExtent: MediaQuery.of(context).size.width * 0.2,
                   diameterRatio: 1.25,
-                  onSelectedItemChanged: (int index) {
-                    if (index > groupedItemsList.length - 5) {
-                      ref.read(timelineAddProvider.notifier).addMoreItems();
+                  onSelectedItemChanged: (int index)  async {
+                    if (index + 1 == groupedItemsList.length) {
+                      await ref.read(timelineAddProvider.notifier).addMoreItems();
                     }
                     String lastSelectedGroupID = groupedItemsList[index].first.groupID;
                     _lastSelectedIndexes[lastSelectedGroupID] = index;  // ここで最新のインデックスを保存
@@ -766,7 +766,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       String groupID = group.first.groupID;
       if (!chatNotifier.selectedItemsMap.containsKey(groupID)) {
         chatNotifier.selectedItemsMap[groupID] = 0;
-        // print("selectedItemsMap?? = ${chatNotifier.selectedItemsMap}");
       }
     }
   }
@@ -831,6 +830,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       }
     }
     // マップの値をリストとして返す
+    debugPrint("groupedMapAAA = $groupedMap");
     return groupedMap.values.toList();
   }
 
