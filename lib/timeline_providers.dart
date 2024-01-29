@@ -7,6 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
+// import 'package:sqflite/sqflite.dart';
 
 int currentPage = 0; // これで現在のページを追跡します
 
@@ -99,7 +100,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
       state = [...state, ...uniqueNewItems];
     }
 
-    print("addMoreItems!");
+    debugPrint("addMoreItems!");
   }
 }
 
@@ -122,7 +123,7 @@ Future<LatLng> determinePosition() async {
 
 Future<List<TimelineItem>> getMoreTimelineItems() async {
   currentPage++; // ページ番号を増やす
-  print('currentPage is $currentPage');
+  debugPrint('currentPage is $currentPage');
   List<TimelineItem> newItems = await getTimelinePage(currentPage);
   return newItems;
 }
@@ -167,7 +168,7 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       }
 
       // デバッグ情報として、取得したデータを出力
-      print('Received data: ${data.length} items. Details: $data');
+      debugPrint('Received data: ${data.length} items. Details: $data');
 
       var filteredData = data.where((item) => item['groupID'] != null).toList();
 
@@ -187,8 +188,8 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     }
   } catch (e, s) {
     // print both the exception and the stacktrace
-    print('Exception details:\n $e');
-    print('Stacktrace:\n $s');
+    debugPrint('Exception details:\n $e');
+    debugPrint('Stacktrace:\n $s');
     rethrow;  // throw the error again so it can be handled in the usual way
   }
 }

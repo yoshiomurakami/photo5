@@ -638,23 +638,29 @@ class StartupState extends State<Startup> {
 
 
   Future<void> _checkDatabaseTable() async {
-    final database = openDatabase(
-      path.join(await getDatabasesPath(), 'images_database.db'),
-      version: 1,
-    );
-
-    final db = await database;
-
     try {
-      // Perform a query to check if the table exists
-      await db.rawQuery('SELECT 1 FROM images LIMIT 1');
-    } catch (e) {
-      // If the table doesn't exist, create it
-      await db.execute(
-        "CREATE TABLE images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
+      final databasePath = await getDatabasesPath();
+      final dbPath = path.join(databasePath, 'images_database.db');
+
+      await openDatabase(
+        dbPath,
+        version: 1,
+        onCreate: (db, version) async {
+          await db.execute(
+            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
+          );
+          await db.execute(
+            "CREATE TABLE IF NOT EXISTS timelineItems(id TEXT PRIMARY KEY, userId TEXT, country TEXT, lat REAL, lng REAL, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedCity TEXT)",
+          );
+        },
       );
+
+      print('Database initialized successfully.');
+    } catch (e) {
+      print('Error initializing database: $e');
     }
   }
+
 
   // void _navigateToMainScreen() {
   //   _startupController.add(true);

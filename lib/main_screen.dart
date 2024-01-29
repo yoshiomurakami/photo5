@@ -62,7 +62,7 @@ class _MainScreenState extends State<_MainScreenContent> {
         body: Stack(
           children: <Widget>[
             timelineMapWidget,
-            ConnectionNumber(),
+            const ConnectionNumber(),
           ],
         ),
       );
