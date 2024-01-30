@@ -150,7 +150,7 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     if (response.statusCode == 200) {
       // 成功した場合、JSONをパースしてリストに変換
       List data = jsonDecode(response.body);
-      // print('取得したばかりのReceived data: ${data.length} items. Details: $data');
+      debugPrint('取得したばかりのReceived data: ${data.length} items. Details: $data');
 
       if (page == 0) { // 最初のページの場合のみ、現在地を取得
         // 現在の位置を取得します。
