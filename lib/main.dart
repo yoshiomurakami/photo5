@@ -647,7 +647,7 @@ class StartupState extends State<Startup> {
         version: 1,
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT)",
+            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT, sequenceNumber INTEGER)",
           );
           await db.execute(
             "CREATE TABLE IF NOT EXISTS timelineItems(id TEXT PRIMARY KEY, userId TEXT, country TEXT, lat REAL, lng REAL, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedCity TEXT)",

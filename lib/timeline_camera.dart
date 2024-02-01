@@ -219,15 +219,24 @@ class CameraScreenState extends State<CameraScreen> {
     });
   }
 
+// _progressUpload メソッドを修正
   Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
-    await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, widget.groupID);
-    await _uploadImage(imagePath, thumbnailPath, widget.groupID);
+    int sequenceNumber = await _uploadImage(imagePath, thumbnailPath, groupID);
+
+    if (sequenceNumber != -1) {  // 正しい sequenceNumber が取得できた場合
+      await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber);
+    } else {
+      // エラーハンドリング
+      debugPrint("Error: Unable to get sequence number from upload response.");
+    }
+
     debugPrint("groupID = $groupID");
   }
 
-  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
+// _saveImage メソッド
+  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber) async {
     final paths = await _saveFiles(imagePath, thumbnailPath);
-    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID);
+    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber);
   }
 
   Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
@@ -259,45 +268,32 @@ class CameraScreenState extends State<CameraScreen> {
   }
 
 
-  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
-    // Open the database or create it if it doesn't exist
-    final database = openDatabase(
+// _saveToDatabase メソッドで images テーブルに sequenceNumber を保存
+  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber) async {
+    final db = await openDatabase(
       p.join(await getDatabasesPath(), 'images_database.db'),
-      onCreate: (db, version) {
-        // Create images table if it doesn't exist
-        return db.execute(
-          "CREATE TABLE images(_id INTEGER PRIMARY KEY, imageFilename TEXT, thumbnailFilename TEXT, userID TEXT, country TEXT, lat TEXT, lng TEXT, groupID TEXT)",
-        );
-      },
       version: 1,
     );
 
-    final db = await database;
-
-    // Insert the data into the table
-    try {
-      int id = await db.insert(
-        'images',
-        {
-          'imagePath': paths[0], // new image path
-          'thumbnailPath': paths[1], // new thumbnail path
-          'userId': userId,
-          'imageCountry': imageCountry,
-          'imageLat': imageLat,
-          'imageLng': imageLng,
-          'groupID': groupID
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-      debugPrint('Inserted row id: $id');
-    } catch (e) {
-      debugPrint('Error occurred while inserting into the database: $e');
-    }
+    await db.insert(
+      'images',
+      {
+        'imagePath': paths[0],
+        'thumbnailPath': paths[1],
+        'userId': userId,
+        'imageCountry': imageCountry,
+        'imageLat': imageLat,
+        'imageLng': imageLng,
+        'groupID': groupID,
+        'sequenceNumber': sequenceNumber  // シーケンス番号を保存
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
 
-  Future<void> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
-    if (_uploading) return; // アップロード中の場合は処理しない
+  Future<int> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
+    if (_uploading) return -1; // アップロード中の場合は、無効な値を返す
 
     setState(() {
       _uploading = true; // アップロード中フラグを立てる
@@ -308,13 +304,13 @@ class CameraScreenState extends State<CameraScreen> {
       await Permission.location.request();
     }
 
-    // Check again if the permission is granted, if not, return from the function.
+    // Check again if the permission is granted, if not, return an invalid value.
     if (await Permission.location.isDenied) {
       debugPrint('User denied location permission.');
       setState(() {
         _uploading = false; // アップロード中フラグを解除
       });
-      return;
+      return -1;
     }
 
     var request = http.MultipartRequest('POST', Uri.parse('https://photo5.world/api/photo/upload'));
@@ -363,20 +359,19 @@ class CameraScreenState extends State<CameraScreen> {
           _uploading = false; // アップロード中フラグを解除
         });
       }
-      return;
+      return -1;
     }
 
     // If connected, send the request.
     try {
       var response = await http.Response.fromStream(await request.send());
-      debugPrint('Status code: ${response.statusCode}');
-      debugPrint('Status reason: ${response.reasonPhrase}');  // 追加
-      debugPrint('Response body: ${response.body}');
-
+      // ... 応答の処理 ...
       if (response.statusCode == 200) {
         debugPrint('Uploaded successfully.');
-        // APIの応答から新しい写真情報を取得
         Map<String, dynamic> responseBody = jsonDecode(response.body);
+        int sequenceNumber = responseBody['photo']['sequenceNumber'];
+
+        // ここで新しい写真情報を取得し、chatConnectionを使用して送信
         Map<String, dynamic> newPhotoInfo = {
           '_id': responseBody['photo']['_id'],
           'createdAt': responseBody['photo']['createdAt'],
@@ -390,16 +385,18 @@ class CameraScreenState extends State<CameraScreen> {
           'groupID': responseBody['photo']['groupID'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
-        // print("Type of lat: ${responseBody['photo']['lat'].runtimeType}");
-        // print("Type of lng: ${responseBody['photo']['lng'].runtimeType}");
+
+        return sequenceNumber;
       } else {
         debugPrint('Upload failed.');
+        return -1;
       }
     } catch (e) {
       debugPrint('Upload failed: $e');
+      return -1;
     } finally {
       setState(() {
-        _uploading = false; // アップロード中フラグを解除
+        _uploading = false;
       });
     }
   }
