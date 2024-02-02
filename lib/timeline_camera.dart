@@ -52,6 +52,9 @@ class CameraScreenState extends State<CameraScreen> {
   String? _uploadThumbnailPath; // Add this for the upload thumbnail
   String _timestamp ='';
   String _localTimestamp='';
+  String _geocodedCountry='';
+  String _geocodedCity='';
+
 
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
@@ -158,9 +161,12 @@ class CameraScreenState extends State<CameraScreen> {
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
 
+
     // Fetch the user's current country.
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     _imageCountry = placemarks.first.isoCountryCode ?? 'Unknown';
+    _geocodedCountry = placemarks.first.country ?? 'Unknown'; // 国名
+    _geocodedCity = placemarks.first.administrativeArea ?? 'Unknown'; // 都市名
     debugPrint('Placemarks: $placemarks');
 
     // Update _locationAvailable state
@@ -220,11 +226,11 @@ class CameraScreenState extends State<CameraScreen> {
   }
 
 // _progressUpload メソッドを修正
-  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID) async {
+  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, String geocodedCountry, String geocodedCity) async {
     int sequenceNumber = await _uploadImage(imagePath, thumbnailPath, groupID);
 
     if (sequenceNumber != -1) {  // 正しい sequenceNumber が取得できた場合
-      await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber);
+      await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber, geocodedCountry, geocodedCity);
     } else {
       // エラーハンドリング
       debugPrint("Error: Unable to get sequence number from upload response.");
@@ -234,9 +240,9 @@ class CameraScreenState extends State<CameraScreen> {
   }
 
 // _saveImage メソッド
-  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber) async {
+  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber, String geocodedCountry, String geocodedCity) async {
     final paths = await _saveFiles(imagePath, thumbnailPath);
-    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber);
+    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber, geocodedCountry, geocodedCity);
   }
 
   Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
@@ -269,7 +275,7 @@ class CameraScreenState extends State<CameraScreen> {
 
 
 // _saveToDatabase メソッドで images テーブルに sequenceNumber を保存
-  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber) async {
+  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber, String geocodedCountry, String geocodedCity) async {
     final db = await openDatabase(
       p.join(await getDatabasesPath(), 'images_database.db'),
       version: 1,
@@ -285,12 +291,13 @@ class CameraScreenState extends State<CameraScreen> {
         'imageLat': imageLat,
         'imageLng': imageLng,
         'groupID': groupID,
-        'sequenceNumber': sequenceNumber  // シーケンス番号を保存
+        'sequenceNumber': sequenceNumber,  // シーケンス番号を保存
+        'geocodedCountry': geocodedCountry,
+        'geocodedCity': geocodedCity,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
-
 
   Future<int> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
     if (_uploading) return -1; // アップロード中の場合は、無効な値を返す
@@ -339,6 +346,8 @@ class CameraScreenState extends State<CameraScreen> {
     request.fields['localtime'] = _localTimestamp;
     request.fields['localtime'] = _localTimestamp;
     request.fields['groupID'] = widget.groupID;
+    request.fields['geocodedCountry'] = _geocodedCountry;
+    request.fields['geocodedCity'] = _geocodedCity;
 
 
     debugPrint('Timestamp: $_timestamp');
@@ -383,6 +392,8 @@ class CameraScreenState extends State<CameraScreen> {
           'imageFilename': responseBody['photo']['imageFilename'],
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
           'groupID': responseBody['photo']['groupID'],
+          'geocodedCountry': responseBody['photo']['geocodedCountry'],
+          'geocodedCity': responseBody['photo']['geocodedCity'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
 
@@ -497,10 +508,12 @@ class CameraScreenState extends State<CameraScreen> {
                                     _uploadImagePath!,
                                     _uploadThumbnailPath!,
                                     userId,
-                                    _imageCountry ?? 'Unknown',
+                                    _imageCountry ?? '',
                                     _imageLat ?? '',
                                     _imageLng ?? '',
-                                    widget.groupID
+                                    widget.groupID,
+                                    _geocodedCountry,
+                                    _geocodedCity,
                                 );
 
                                 // 送信後、カメラを終了する
