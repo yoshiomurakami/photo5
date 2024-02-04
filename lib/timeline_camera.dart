@@ -226,11 +226,11 @@ class CameraScreenState extends State<CameraScreen> {
   }
 
 // _progressUpload メソッドを修正
-  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, String geocodedCountry, String geocodedCity) async {
-    int sequenceNumber = await _uploadImage(imagePath, thumbnailPath, groupID);
+  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userID, String localtimestamp, String imageCountry, String imageLat, String imageLng, String groupID, String geocodedCountry, String geocodedCity) async {
+    Map<String, dynamic> newPhotoInfo = await _uploadImage(imagePath, thumbnailPath, groupID);
 
-    if (sequenceNumber != -1) {  // 正しい sequenceNumber が取得できた場合
-      await _saveImage(imagePath, thumbnailPath, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber, geocodedCountry, geocodedCity);
+    if (newPhotoInfo!= {}) {  // 正しい sequenceNumber が取得できた場合
+      await _saveImage(imagePath, thumbnailPath, newPhotoInfo);
     } else {
       // エラーハンドリング
       debugPrint("Error: Unable to get sequence number from upload response.");
@@ -240,9 +240,9 @@ class CameraScreenState extends State<CameraScreen> {
   }
 
 // _saveImage メソッド
-  Future<void> _saveImage(String imagePath, String thumbnailPath, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber, String geocodedCountry, String geocodedCity) async {
+  Future<void> _saveImage(String imagePath, String thumbnailPath, Map<String, dynamic> newPhotoInfo) async {
     final paths = await _saveFiles(imagePath, thumbnailPath);
-    await _saveToDatabase(paths, userId, imageCountry, imageLat, imageLng, groupID, sequenceNumber, geocodedCountry, geocodedCity);
+    await _saveToDatabase(paths, newPhotoInfo);
   }
 
   Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
@@ -275,7 +275,7 @@ class CameraScreenState extends State<CameraScreen> {
 
 
 // _saveToDatabase メソッドで images テーブルに sequenceNumber を保存
-  Future<void> _saveToDatabase(List<String> paths, String userId, String imageCountry, String imageLat, String imageLng, String groupID, int sequenceNumber, String geocodedCountry, String geocodedCity) async {
+  Future<void> _saveToDatabase(List<String> paths, Map<String, dynamic> newPhotoInfo) async {
     final db = await openDatabase(
       p.join(await getDatabasesPath(), 'images_database.db'),
       version: 1,
@@ -284,23 +284,27 @@ class CameraScreenState extends State<CameraScreen> {
     await db.insert(
       'images',
       {
-        'imagePath': paths[0],
-        'thumbnailPath': paths[1],
-        'userId': userId,
-        'imageCountry': imageCountry,
-        'imageLat': imageLat,
-        'imageLng': imageLng,
-        'groupID': groupID,
-        'sequenceNumber': sequenceNumber,  // シーケンス番号を保存
-        'geocodedCountry': geocodedCountry,
-        'geocodedCity': geocodedCity,
+        '_id':newPhotoInfo['_id'],
+        'sequenceNumber': newPhotoInfo['sequenceNumber'],
+        'createdAt': newPhotoInfo['createdAt'],
+        'userID': newPhotoInfo['userID'],
+        'country': newPhotoInfo['country'],
+        'lat': newPhotoInfo['lat'],
+        'lng': newPhotoInfo['lng'],
+        'imageFilename': paths[0],
+        'thumbnailFilename': paths[1],
+        'localtime': newPhotoInfo['localtime'],
+        'groupID': newPhotoInfo['groupID'],
+        'geocodedCountry': newPhotoInfo['geocodedCountry'],
+        'geocodedCity': newPhotoInfo['geocodedCity'],
+        'statement': newPhotoInfo['statement'],
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
 
-  Future<int> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
-    if (_uploading) return -1; // アップロード中の場合は、無効な値を返す
+  Future<Map<String, dynamic>> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
+    if (_uploading) return {}; // アップロード中の場合は、無効な値を返す
 
     setState(() {
       _uploading = true; // アップロード中フラグを立てる
@@ -317,7 +321,7 @@ class CameraScreenState extends State<CameraScreen> {
       setState(() {
         _uploading = false; // アップロード中フラグを解除
       });
-      return -1;
+      return {};
     }
 
     var request = http.MultipartRequest('POST', Uri.parse('https://photo5.world/api/photo/upload'));
@@ -335,11 +339,11 @@ class CameraScreenState extends State<CameraScreen> {
 
     // Fetch user ID from SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String userId = prefs.getString('userID') ?? "";
+    String userID = prefs.getString('userID') ?? "";
 
     // Add the extra data to the request.
     request.fields['createdAt'] = _timestamp;
-    request.fields['photo_u_id'] = userId;
+    request.fields['photo_u_id'] = userID;
     request.fields['photo_country'] = _imageCountry ?? 'Unknown';
     request.fields['photo_lat'] = _imageLat ?? '';
     request.fields['photo_lng'] = _imageLng ?? '';
@@ -362,13 +366,13 @@ class CameraScreenState extends State<CameraScreen> {
 
     if (!isConnected) {
       // If not connected, save the image and extra information to cache.
-      // _saveDataLocally(imagePath, photoCountry, photoLat, photoLng, userId);
+      // _saveDataLocally(imagePath, photoCountry, photoLat, photoLng, userID);
       if (mounted) {
         setState(() {
           _uploading = false; // アップロード中フラグを解除
         });
       }
-      return -1;
+      return {};
     }
 
     // If connected, send the request.
@@ -378,33 +382,35 @@ class CameraScreenState extends State<CameraScreen> {
       if (response.statusCode == 200) {
         debugPrint('Uploaded successfully.');
         Map<String, dynamic> responseBody = jsonDecode(response.body);
-        int sequenceNumber = responseBody['photo']['sequenceNumber'];
+        // int sequenceNumber = responseBody['photo']['sequenceNumber'];
 
         // ここで新しい写真情報を取得し、chatConnectionを使用して送信
         Map<String, dynamic> newPhotoInfo = {
           '_id': responseBody['photo']['_id'],
+          'sequenceNumber': responseBody['photo']['sequenceNumber'],
           'createdAt': responseBody['photo']['createdAt'],
           'userID': responseBody['photo']['userID'],
           'country': responseBody['photo']['country'],
           'lat': double.parse(responseBody['photo']['lat']),
           'lng': double.parse(responseBody['photo']['lng']),
-          'localtime': responseBody['photo']['localtime'],
           'imageFilename': responseBody['photo']['imageFilename'],
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
+          'localtime': responseBody['photo']['localtime'],
           'groupID': responseBody['photo']['groupID'],
           'geocodedCountry': responseBody['photo']['geocodedCountry'],
           'geocodedCity': responseBody['photo']['geocodedCity'],
+          'statement': responseBody['photo']['statement'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
 
-        return sequenceNumber;
+        return newPhotoInfo;
       } else {
         debugPrint('Upload failed.');
-        return -1;
+        return {};
       }
     } catch (e) {
       debugPrint('Upload failed: $e');
-      return -1;
+      return {};
     } finally {
       setState(() {
         _uploading = false;
@@ -501,13 +507,14 @@ class CameraScreenState extends State<CameraScreen> {
                                 ? () async {
                               if (_uploadImagePath != null && _uploadThumbnailPath != null) {
                                 SharedPreferences prefs = await SharedPreferences.getInstance();
-                                String userId = prefs.getString('userID') ?? "";
+                                String userID = prefs.getString('userID') ?? "";
 
                                 // call _progressUpload with necessary arguments
                                 await _progressUpload(
                                     _uploadImagePath!,
                                     _uploadThumbnailPath!,
-                                    userId,
+                                    userID,
+                                    _localTimestamp,
                                     _imageCountry ?? '',
                                     _imageLat ?? '',
                                     _imageLng ?? '',

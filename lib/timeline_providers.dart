@@ -14,7 +14,7 @@ int currentPage = 0; // これで現在のページを追跡します
 class TimelineItem {
   final Key key;
   final String id;
-  final String userId;
+  final String userID;
   final String country;  // This is from DB
   final double lat;
   final double lng;
@@ -28,7 +28,7 @@ class TimelineItem {
   TimelineItem({
     required this.key,
     required this.id,
-    required this.userId,
+    required this.userID,
     required this.country,
     required this.lat,
     required this.lng,
@@ -45,8 +45,8 @@ class TimelineItem {
     required double lng,
   }) {
     return {
-      '_id': '343hg5q0858jwir',
-      'userId': 'dummy',
+      'systemId': '343hg5q0858jwir',
+      'userID': 'dummy',
       'country': 'dummy',
       'lat': lat.toString(),
       'lng': lng.toString(),
@@ -61,7 +61,7 @@ class TimelineItem {
     return TimelineItem(
       key: ValueKey(json['_key'] ?? '0'), // この行を追加
       id: json['_id'] ?? '343hg5q0858jwir',
-      userId: json['userID'] ?? 'dummy',
+      userID: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
       lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),
       lng: (json['lng'] is String) ? double.parse(json['lng']) : (json['lng'] as double? ?? 0.0),
@@ -76,7 +76,7 @@ class TimelineItem {
 
   @override
   String toString() {
-    return 'TimelineItem(id: $id, userId: $userId, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
+    return 'TimelineItem(id: $id, userID: $userID, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
   }
 }
 
@@ -132,19 +132,19 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
   try {
     // SharedPreferencesからユーザーIDを取得
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String userId = prefs.getString('userID') ?? "";
+    String userID = prefs.getString('userID') ?? "";
 
     // リクエストボディの作成
-    // final requestBody = jsonEncode({'userId': userId});
+    // final requestBody = jsonEncode({'userID': userID});
 
     // APIにPOSTリクエストを送信
     final response = await http.post(
       Uri.parse('https://photo5.world/api/timeline/getTimeline'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'userId': userId, 'page': page}), // ここでページ情報も送信
+      body: jsonEncode({'userID': userID, 'page': page}), // ここでページ情報も送信
     );
 
-    debugPrint("userId = $userId / page = $page");
+    debugPrint("userID = $userID / page = $page");
 
     // APIからのレスポンスをチェック
     if (response.statusCode == 200) {

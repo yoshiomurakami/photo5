@@ -399,14 +399,14 @@ class StartupState extends State<Startup> {
   Future<void> _checkUserId() async {
     debugPrint("UserId check starting");
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    String userId = prefs.getString('userID') ?? "";
-    debugPrint("userId in SharedPreferences = $userId");
+    String userID = prefs.getString('userID') ?? "";
+    debugPrint("userID in SharedPreferences = $userID");
 
-    if (userId.length == 8) {
+    if (userID.length == 8) {
       // save value to a variable accessible globally
-      // globalUserId = userId; // Assume that globalUserId is a global variable.
+      // globalUserId = userID; // Assume that globalUserId is a global variable.
       return;
-    } else if (userId.isNotEmpty) {
+    } else if (userID.isNotEmpty) {
       if (mounted) {
         throw createErrorDialogData('The UserID is corrupted. Please initialize the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
@@ -647,10 +647,10 @@ class StartupState extends State<Startup> {
         version: 1,
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userId TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT, sequenceNumber INTEGER, geocodedCountry TEXT,geocodedCity TEXT)",
+            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, _id TEXT, sequenceNumber INTEGER, createdAt TEXT, userID TEXT, country TEXT, lat TEXT, lng TEXT, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedCity TEXT, statement INTEGER)",
           );
           await db.execute(
-            "CREATE TABLE IF NOT EXISTS timelineItems(id TEXT PRIMARY KEY, userId TEXT, country TEXT, lat REAL, lng REAL, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedCity TEXT)",
+            "CREATE TABLE IF NOT EXISTS timelineItems(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userID TEXT, localtimestamp TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT, sequenceNumber INTEGER, geocodedCountry TEXT, geocodedCity TEXT, statement INTEGER, systemId INTEGER)",
           );
         },
       );

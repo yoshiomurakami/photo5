@@ -15,9 +15,12 @@ Map<String, int> selectedAlbumIndexes = {};
 class AlbumTimeLine {
   final Key key;
   final String id;
+  final String systemId; // 追加
+  final int sequenceNumber; // 追加
+  final String createdAt; // 追加
   final String imagePath;
   final String thumbnailPath;
-  final String userId;
+  final String userID;
   final String country;
   final double lat;
   final double lng;
@@ -25,13 +28,17 @@ class AlbumTimeLine {
   final String localtime;
   final String? geocodedCountry;
   final String? geocodedCity;
+  final int statement; // 追加
 
   AlbumTimeLine({
     required this.key,
     required this.id,
+    required this.systemId, // 追加
+    required this.sequenceNumber, // 追加
+    required this.createdAt, // 追加
     required this.imagePath,
     required this.thumbnailPath,
-    required this.userId,
+    required this.userID,
     required this.country,
     required this.lat,
     required this.lng,
@@ -39,44 +46,31 @@ class AlbumTimeLine {
     required this.localtime,
     this.geocodedCountry,
     this.geocodedCity,
+    required this.statement, // 追加
   });
-
 
   factory AlbumTimeLine.fromJson(Map<String, dynamic> json) {
     return AlbumTimeLine(
       key: ValueKey(json['id']),
       id: json['id'].toString(),
-      imagePath: json['imagePath'],
-      thumbnailPath: json['thumbnailPath'],
-      userId: json['userId'],
-      country: json['imageCountry'],
-      lat: double.tryParse(json['imageLat']) ?? 0.0,
-      lng: double.tryParse(json['imageLng']) ?? 0.0,
+      systemId: json['systemId'] ?? '', // デフォルト値設定
+      sequenceNumber: json['sequenceNumber'] ?? 0, // デフォルト値設定
+      createdAt: json['createdAt'] ?? '', // デフォルト値設定
+      imagePath: json['imageFilename'],
+      thumbnailPath: json['thumbnailFilename'],
+      userID: json['userID'],
+      country: json['country'],
+      lat: double.tryParse(json['lat']) ?? 0.0,
+      lng: double.tryParse(json['lng']) ?? 0.0,
       groupID: json['groupID'],
-      localtime: DateTime.now().toString(), // DBにlocaltimeがない場合は現在時刻を使用
-      geocodedCountry: null, // 仮のデフォルト値
-      geocodedCity: null, // 仮のデフォルト値
+      localtime: json['localtime'] ?? DateTime.now().toString(), // デフォルト値設定
+      geocodedCountry: json['geocodedCountry'], // null許容
+      geocodedCity: json['geocodedCity'], // null許容
+      statement: json['statement'] ?? 0, // デフォルト値設定
     );
   }
-
-  @override
-  String toString() {
-    return 'AlbumTimeLine('
-        'key: $key, '
-        'id: $id, '
-        'imagePath: $imagePath, '
-        'thumbnailPath: $thumbnailPath, '
-        'userId: $userId, '
-        'country: $country, '
-        'lat: $lat, '
-        'lng: $lng, '
-        'groupID: $groupID, '
-        'localtime: $localtime, '
-        'geocodedCountry: $geocodedCountry, '
-        'geocodedCity: $geocodedCity'
-        ')';
-  }
 }
+
 
 Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
   final dbPath = await getDatabasesPath();

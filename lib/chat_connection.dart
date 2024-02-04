@@ -43,9 +43,9 @@ class ChatConnection {
   }
 
   // 新しい写真の情報をサーバーに送信するメソッド
-  void sendNewPhotoInfo(Map<String, dynamic> photoInfo) {
-    debugPrint('Sending photo info: ${jsonEncode(photoInfo)}');
-    socket?.emit('new_photo', jsonEncode(photoInfo));
+  void sendNewPhotoInfo(Map<String, dynamic> newPhotoInfo) {
+    debugPrint('Sending photo info: ${jsonEncode(newPhotoInfo)}');
+    socket?.emit('new_photo', jsonEncode(newPhotoInfo));
     debugPrint('Photo info sent.');
   }
 
