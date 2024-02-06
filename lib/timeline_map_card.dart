@@ -227,7 +227,7 @@ class TimelineCardState extends State<TimelineCard> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-            child: widget.item.id == "343hg5q0858jwir"
+            child: widget.item.systemId == "shootbutton"
                 ? Stack(
               children: <Widget>[
                 Align(

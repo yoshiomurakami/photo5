@@ -284,7 +284,7 @@ class CameraScreenState extends State<CameraScreen> {
     await db.insert(
       'images',
       {
-        '_id':newPhotoInfo['_id'],
+        'systemId':newPhotoInfo['_id'],
         'sequenceNumber': newPhotoInfo['sequenceNumber'],
         'createdAt': newPhotoInfo['createdAt'],
         'userID': newPhotoInfo['userID'],

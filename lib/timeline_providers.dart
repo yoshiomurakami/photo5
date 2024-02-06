@@ -13,7 +13,8 @@ int currentPage = 0; // これで現在のページを追跡します
 
 class TimelineItem {
   final Key key;
-  final String id;
+  final String systemId;
+  final int sequenceNumber;
   final String userID;
   final String country;  // This is from DB
   final double lat;
@@ -24,10 +25,12 @@ class TimelineItem {
   final String groupID;
   String? geocodedCountry;  // This is from geocoding
   String? geocodedCity;  // This is from geocoding
+  final int statement;
 
   TimelineItem({
     required this.key,
-    required this.id,
+    required this.systemId,
+    required this.sequenceNumber,
     required this.userID,
     required this.country,
     required this.lat,
@@ -38,6 +41,7 @@ class TimelineItem {
     required this.groupID,
     this.geocodedCountry,
     this.geocodedCity,
+    required this.statement,
   });
 
   static Map<String, dynamic> empty({
@@ -45,7 +49,8 @@ class TimelineItem {
     required double lng,
   }) {
     return {
-      'systemId': '343hg5q0858jwir',
+      'systemId': 'shootbutton',
+      'sequenceNumber': 0,
       'userID': 'dummy',
       'country': 'dummy',
       'lat': lat.toString(),
@@ -60,7 +65,8 @@ class TimelineItem {
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
       key: ValueKey(json['_key'] ?? '0'), // この行を追加
-      id: json['_id'] ?? '343hg5q0858jwir',
+      systemId: json['_id'] ?? 'shootbutton',
+      sequenceNumber: int.tryParse(json['sequenceNumber'].toString()) ?? 0,
       userID: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
       lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),
@@ -71,12 +77,13 @@ class TimelineItem {
       groupID: json['groupID'] ?? 'dummy',
       geocodedCountry: json['geocodedCountry'] as String?,  // デフォルト値としてnullを返す
       geocodedCity: json['geocodedCity'] as String?,  // デフォルト値としてnullを返す
+      statement: int.tryParse(json['statement'].toString()) ?? 0,
     );
   }
 
   @override
   String toString() {
-    return 'TimelineItem(id: $id, userID: $userID, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity)';
+    return 'TimelineItem(systemId: $systemId, sequenceNumber: $sequenceNumber, userID: $userID, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity, statement: $statement)';
   }
 }
 
@@ -93,7 +100,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
   Future<void> addMoreItems() async {
     List<TimelineItem> newItems = await getMoreTimelineItems();
     // 重複を避けるために、既にリストに存在するアイテムを除外
-    var uniqueNewItems = newItems.where((newItem) => !state.any((existingItem) => existingItem.id == newItem.id)).toList();
+    var uniqueNewItems = newItems.where((newItem) => !state.any((existingItem) => existingItem.systemId == newItem.systemId)).toList();
 
     if (uniqueNewItems.isNotEmpty) {
       // 既存のリストに新しいアイテムを追加
