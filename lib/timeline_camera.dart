@@ -348,7 +348,6 @@ class CameraScreenState extends State<CameraScreen> {
     request.fields['photo_lat'] = _imageLat ?? '';
     request.fields['photo_lng'] = _imageLng ?? '';
     request.fields['localtime'] = _localTimestamp;
-    request.fields['localtime'] = _localTimestamp;
     request.fields['groupID'] = widget.groupID;
     request.fields['geocodedCountry'] = _geocodedCountry;
     request.fields['geocodedCity'] = _geocodedCity;
