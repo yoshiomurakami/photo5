@@ -111,6 +111,19 @@ class ChatConnection {
     });
   }
 
+  void newConnetction(BuildContext context) {
+    socket?.on('connections', (data) {
+      debugPrint('newConnections: $data');
+
+      // ここで context を使用してSnackBarを表示します。
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("newConnections: $data"),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    });
+  }
 
   void emitEvent(String eventName) {
     socket?.emit(eventName);
