@@ -529,7 +529,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _initializeCamera();
 
     chatConnection.listenToRoomCount(context);
-    chatConnection.newConnetction(context);
+    // chatConnection.newConnetction(context);
 
     // _albumList は、アルバムデータのリストを保持する変数です
     groupedAlbums = groupAlbumsByGroupId(_albumList);

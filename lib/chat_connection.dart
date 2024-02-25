@@ -111,19 +111,19 @@ class ChatConnection {
     });
   }
 
-  void newConnetction(BuildContext context) {
-    socket?.on('connections', (data) {
-      debugPrint('newConnections: $data');
-
-      // ここで context を使用してSnackBarを表示します。
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("newConnections: $data"),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    });
-  }
+  // void newConnetction(BuildContext context) {
+  //   socket?.on('connections', (data) {
+  //     debugPrint('newConnections: $data');
+  //
+  //     // ここで context を使用してSnackBarを表示します。
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text("newConnections: $data"),
+  //         duration: const Duration(seconds: 3),
+  //       ),
+  //     );
+  //   });
+  // }
 
   void emitEvent(String eventName) {
     socket?.emit(eventName);
@@ -214,16 +214,37 @@ class ConnectionNumberState extends State<ConnectionNumber> {
 
 
 class ChatNotifier extends ChangeNotifier {
+  final ChatConnection chatConnection;
+  List<String> _messages = [];
+  final ChangeNotifierProviderRef ref;
 
-  final ChangeNotifierProviderRef<Object?> ref;
+  // コンストラクタで ChatConnection と ref を受け取る
+  ChatNotifier({required this.chatConnection, required this.ref}) {
+    _setupConnectionsListener();
+  }
 
-  final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
+  void _setupConnectionsListener() {
+    chatConnection.on('connections', (data) {
+      addMessage("New Connection: $data");
+    });
+  }
+
+  List<String> get messages => _messages;
+
+  void addMessage(String message) {
+    _messages.add(message);
+    notifyListeners();
+  }
+
+  // final ChangeNotifierProviderRef<Object?> ref;
+
+  // final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
   PageController? fullScreenImageViewerController;
 
   List<List<TimelineItem>> groupedItemsList = [];
 
-  ChatNotifier(this.ref);
+  // ChatNotifier(this.ref);
 
   Map<String, int> selectedItemsMap = {};
 
@@ -343,9 +364,34 @@ class ChatNotifier extends ChangeNotifier {
     });
     selectedItemsMap = newMap;
   }
+
+
+  void newConnection() {
+    socket?.on('connections', (data) {
+      addMessage("New Connection: $data");
+    });
+  }
+
+  // メッセージリスト
+  // List<String> _messages = [];
+
+  // メッセージリストへの読み取り専用アクセスを提供
+  // List<String> get messages => _messages;
+
+  // 新しいメッセージをリストに追加するメソッド
+  // void addMessage(String message) {
+  //   _messages.add(message);
+  //   notifyListeners();
+  // }
+
 }
 
-final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) => ChatNotifier(ref));
+final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) {
+  // 外部から ChatConnection のインスタンスを渡す場合（例えば、グローバル変数や他のプロバイダーから取得）
+  // この例では、新しい ChatConnection インスタンスを直接作成しています
+  final chatConnection = ChatConnection();
+  return ChatNotifier(chatConnection: chatConnection,ref: ref);
+});
 
 
 

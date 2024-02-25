@@ -39,6 +39,11 @@ class _MainScreenState extends State<_MainScreenContent> {
   @override
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
+
+      // ChatNotifierからメッセージリストを取得
+      final chatNotifier = ref.watch(chatNotifierProvider);
+      final chatMessages = chatNotifier.messages;
+
       final Size size = MediaQuery.of(context).size;
       Widget timelineMapWidget = const Center(child: CircularProgressIndicator()); // 初期値を設定
 
@@ -63,11 +68,35 @@ class _MainScreenState extends State<_MainScreenContent> {
           children: <Widget>[
             timelineMapWidget,
             const ConnectionNumber(),
+            // メッセージを表示するためのウィジェットを追加
+            Positioned(
+              bottom: 10, // 適切な位置に配置
+              left: 10,
+              child: Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      blurRadius: 3,
+                      color: Colors.grey.withOpacity(0.5),
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                child: Text(
+                  chatMessages.isNotEmpty ? chatMessages.last : "No new connections",
+                  style: TextStyle(color: Colors.black),
+                ),
+              ),
+            ),
           ],
         ),
       );
     });
   }
+
 
 
 }
