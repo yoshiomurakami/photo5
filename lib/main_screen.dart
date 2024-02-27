@@ -42,7 +42,8 @@ class _MainScreenState extends State<_MainScreenContent> {
 
       // ChatNotifierからメッセージリストを取得
       final chatNotifier = ref.watch(chatNotifierProvider);
-      final chatMessages = chatNotifier.messages;
+      // ここでウィジェットのリストを取得
+      final connectionWidgets = chatNotifier.connectionWidgets;
 
       final Size size = MediaQuery.of(context).size;
       Widget timelineMapWidget = const Center(child: CircularProgressIndicator()); // 初期値を設定
@@ -69,28 +70,38 @@ class _MainScreenState extends State<_MainScreenContent> {
             timelineMapWidget,
             const ConnectionNumber(),
             // メッセージを表示するためのウィジェットを追加
-            Positioned(
-              bottom: 10, // 適切な位置に配置
-              left: 10,
-              child: Container(
-                padding: EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      blurRadius: 3,
-                      color: Colors.grey.withOpacity(0.5),
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                child: Text(
-                  chatMessages.isNotEmpty ? chatMessages.last : "No new connections",
-                  style: TextStyle(color: Colors.black),
-                ),
-              ),
-            ),
+            // Positioned(
+            //   bottom: 10, // 適切な位置に配置
+            //   left: 10,
+            //   child: Container(
+            //     padding: EdgeInsets.all(8),
+            //     decoration: BoxDecoration(
+            //       color: Colors.white,
+            //       borderRadius: BorderRadius.circular(10),
+            //       boxShadow: [
+            //         BoxShadow(
+            //           blurRadius: 3,
+            //           color: Colors.grey.withOpacity(0.5),
+            //           spreadRadius: 2,
+            //         ),
+            //       ],
+            //     ),
+            //     child: Text(
+            //       chatMessages.isNotEmpty ? chatMessages.last : "No new connections",
+            //       style: TextStyle(color: Colors.black),
+            //     ),
+            //   ),
+            // ),
+            // ウィジェットを動的に配置
+            ...connectionWidgets.asMap().entries.map((entry) {
+              int idx = entry.key; // ウィジェットのインデックス
+              Widget widget = entry.value; // インデックスに対応するウィジェット
+              return Positioned(
+                bottom: 10.0 + (50.0 * idx), // ウィジェットごとに bottom の値を変更
+                left: 10,
+                child: widget,
+              );
+            }).toList(),
           ],
         ),
       );

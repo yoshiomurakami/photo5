@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 
@@ -24,15 +25,28 @@ class ChatConnection {
   }
 
   // void connect({Function? onNewPhoto}){
-  void connect(){
-      socket = io.io('https://photo5.world', <String, dynamic>{
+  Future<void> connect() async {
+    // SharedPreferencesからuserIDを取得
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String userID = prefs.getString('userID') ?? "";
+
+    // userIDが空でないことを確認
+    if (userID.isEmpty) {
+      // userIDが空の場合、エラーハンドリングやデフォルト動作を実施
+      print('UserID is empty. Please ensure it is set before connecting.');
+      return;
+    }
+
+    socket = io.io('https://photo5.world', <String, dynamic>{
       'transports': ['websocket'],
       'path': '/api/socketio/',
       'autoConnect': true,
     });
 
+    // ソケット接続が完了したら、サーバーにuserIDを送信する
     socket?.on('connect', (_) {
-      debugPrint('Connected!');
+      print('Connected to server. Sending userID.');
+      socket?.emit('register_user', {'userID': userID});
     });
 
     socket?.on('connect_error', (error) {
@@ -218,6 +232,9 @@ class ChatNotifier extends ChangeNotifier {
   List<String> _messages = [];
   final ChangeNotifierProviderRef ref;
 
+  // 新しいウィジェット情報を格納するリスト
+  List<Widget> connectionWidgets = [];
+
   // コンストラクタで ChatConnection と ref を受け取る
   ChatNotifier({required this.chatConnection, required this.ref}) {
     _setupConnectionsListener();
@@ -225,8 +242,15 @@ class ChatNotifier extends ChangeNotifier {
 
   void _setupConnectionsListener() {
     chatConnection.on('connections', (data) {
-      addMessage("New Connection: $data");
+      var newWidget = _createConnectionWidget(data);
+      connectionWidgets.add(newWidget);
+      notifyListeners();
     });
+  }
+
+  Widget _createConnectionWidget(dynamic data) {
+    // 新しい接続のデータを基にウィジェットを作成
+    return Text("New Connection: $data");
   }
 
   List<String> get messages => _messages;
@@ -366,11 +390,11 @@ class ChatNotifier extends ChangeNotifier {
   }
 
 
-  void newConnection() {
-    socket?.on('connections', (data) {
-      addMessage("New Connection: $data");
-    });
-  }
+  // void newConnection() {
+  //   socket?.on('connections', (data) {
+  //     addMessage("New Connection: $data");
+  //   });
+  // }
 
   // メッセージリスト
   // List<String> _messages = [];
