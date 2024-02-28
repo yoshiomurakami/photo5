@@ -41,12 +41,14 @@ class ChatConnection {
       'transports': ['websocket'],
       'path': '/api/socketio/',
       'autoConnect': true,
+      'query': {
+        'userID': userID, // ここでuserIDをサーバーに送信
+      },
     });
 
-    // ソケット接続が完了したら、サーバーにuserIDを送信する
+    // 接続成功時のイベントリスナー
     socket?.on('connect', (_) {
-      print('Connected to server. Sending userID.');
-      socket?.emit('register_user', {'userID': userID});
+      print('Connected to server with userID: $userID');
     });
 
     socket?.on('connect_error', (error) {
@@ -173,15 +175,20 @@ class ConnectionNumberState extends State<ConnectionNumber> {
   @override
   void initState() {
     super.initState();
-    socket?.on('connections', (connections) {
-      setState(() {
-        totalConnections = connections;
-      });
-    });
+
   }
 
   @override
   Widget build(BuildContext context) {
+
+    socket?.on('connections', (data) {
+      int connections = data['count'];
+      setState(() {
+        totalConnections = connections;
+      });
+    });
+
+
     double screenWidth = MediaQuery.of(context).size.width;
     double leftMargin = screenWidth * 0.05;  // 画面の横幅の5%
     double screenHeight = MediaQuery.of(context).size.height;
@@ -229,7 +236,7 @@ class ConnectionNumberState extends State<ConnectionNumber> {
 
 class ChatNotifier extends ChangeNotifier {
   final ChatConnection chatConnection;
-  List<String> _messages = [];
+  final List<String> _messages = [];
   final ChangeNotifierProviderRef ref;
 
   // 新しいウィジェット情報を格納するリスト
@@ -242,15 +249,18 @@ class ChatNotifier extends ChangeNotifier {
 
   void _setupConnectionsListener() {
     chatConnection.on('connections', (data) {
-      var newWidget = _createConnectionWidget(data);
+      // データからuserIDを取り出す
+      String userID = data['userID'];
+      print('New connection from userID: $userID');
+      var newWidget = _createConnectionWidget(userID);
       connectionWidgets.add(newWidget);
       notifyListeners();
     });
   }
 
-  Widget _createConnectionWidget(dynamic data) {
-    // 新しい接続のデータを基にウィジェットを作成
-    return Text("New Connection: $data");
+  Widget _createConnectionWidget(String userID) {
+    // userIDを基にウィジェットを作成
+    return Text("New Connection: $userID");
   }
 
   List<String> get messages => _messages;
