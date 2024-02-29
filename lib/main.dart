@@ -166,19 +166,22 @@ class Startup extends StatefulWidget {
   StartupState createState() => StartupState();
 }
 
-class StartupState extends State<Startup> {
+class StartupState extends State<Startup> with WidgetsBindingObserver {
   late PageController pageController;
   late StreamController<bool> _startupController;
   String loadingText = 'Now Loading';
   String latestVersion = "";
   // LatLng? _currentLocation;
   // List<TimelineItem>? _timelineItems;
+  late ChatConnection chatConnection;
 
   @override
   void initState() {
     super.initState();
     pageController = PageController(viewportFraction: 1.0);
     _startupController = StreamController<bool>();
+    WidgetsBinding.instance.addObserver(this); // ウィジェットバインディングオブザーバーを追加
+    chatConnection = ChatConnection();
     _startupProcedures(context);
   }
 
@@ -187,6 +190,8 @@ class StartupState extends State<Startup> {
   void dispose() {
     pageController.dispose();
     _startupController.close();
+    // chatConnection.disconnect(); // チャットの接続を閉じる
+    WidgetsBinding.instance.removeObserver(this); // オブザーバーを削除
     super.dispose();
   }
 
@@ -303,8 +308,10 @@ class StartupState extends State<Startup> {
       // final timelineItems = await container.read(timelineProvider.future);
       // container.dispose();
 
-      ChatConnection chatConnection = ChatConnection();
-      chatConnection.connect(); // チャットサーバーへの接続を開始
+      // ChatConnection chatConnection = ChatConnection();
+      // chatConnection.connect(); // チャットサーバーへの接続を開始
+
+      await chatConnection.connect();
 
 
       debugPrint("Startup procedures completed");
@@ -655,9 +662,9 @@ class StartupState extends State<Startup> {
         },
       );
 
-      print('Database initialized successfully.');
+      debugPrint('Database initialized successfully.');
     } catch (e) {
-      print('Error initializing database: $e');
+      debugPrint('Error initializing database: $e');
     }
   }
 

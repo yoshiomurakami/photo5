@@ -69,29 +69,6 @@ class _MainScreenState extends State<_MainScreenContent> {
           children: <Widget>[
             timelineMapWidget,
             const ConnectionNumber(),
-            // メッセージを表示するためのウィジェットを追加
-            // Positioned(
-            //   bottom: 10, // 適切な位置に配置
-            //   left: 10,
-            //   child: Container(
-            //     padding: EdgeInsets.all(8),
-            //     decoration: BoxDecoration(
-            //       color: Colors.white,
-            //       borderRadius: BorderRadius.circular(10),
-            //       boxShadow: [
-            //         BoxShadow(
-            //           blurRadius: 3,
-            //           color: Colors.grey.withOpacity(0.5),
-            //           spreadRadius: 2,
-            //         ),
-            //       ],
-            //     ),
-            //     child: Text(
-            //       chatMessages.isNotEmpty ? chatMessages.last : "No new connections",
-            //       style: TextStyle(color: Colors.black),
-            //     ),
-            //   ),
-            // ),
             // ウィジェットを動的に配置
             ...connectionWidgets.asMap().entries.map((entry) {
               int idx = entry.key; // ウィジェットのインデックス

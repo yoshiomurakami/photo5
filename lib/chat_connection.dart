@@ -10,7 +10,7 @@ import 'timeline_providers.dart';
 io.Socket?socket;
 
 // このProviderを使用して、アプリのどこからでもshootingGroupIdを参照・更新できます。
-final shootingGroupIdProvider = StateProvider<String?>((ref) => null);
+// final shootingGroupIdProvider = StateProvider<String?>((ref) => null);
 
 class ChatConnection {
 
@@ -33,7 +33,7 @@ class ChatConnection {
     // userIDが空でないことを確認
     if (userID.isEmpty) {
       // userIDが空の場合、エラーハンドリングやデフォルト動作を実施
-      print('UserID is empty. Please ensure it is set before connecting.');
+      debugPrint('UserID is empty. Please ensure it is set before connecting.');
       return;
     }
 
@@ -48,7 +48,7 @@ class ChatConnection {
 
     // 接続成功時のイベントリスナー
     socket?.on('connect', (_) {
-      print('Connected to server with userID: $userID');
+      debugPrint('Connected to server with userID: $userID');
     });
 
     socket?.on('connect_error', (error) {
@@ -238,9 +238,11 @@ class ChatNotifier extends ChangeNotifier {
   final ChatConnection chatConnection;
   final List<String> _messages = [];
   final ChangeNotifierProviderRef ref;
+  Map<String, Widget> connectionWidgetsMap = {}; // ユーザーIDとウィジェットのマップ
+
 
   // 新しいウィジェット情報を格納するリスト
-  List<Widget> connectionWidgets = [];
+  // List<Widget> connectionWidgets = [];
 
   // コンストラクタで ChatConnection と ref を受け取る
   ChatNotifier({required this.chatConnection, required this.ref}) {
@@ -250,17 +252,41 @@ class ChatNotifier extends ChangeNotifier {
   void _setupConnectionsListener() {
     chatConnection.on('connections', (data) {
       // データからuserIDを取り出す
+      String action = data['action'];
       String userID = data['userID'];
-      print('New connection from userID: $userID');
-      var newWidget = _createConnectionWidget(userID);
-      connectionWidgets.add(newWidget);
+
+      if (action == 'connected') {
+        var newWidget = _createConnectionWidget("Connected: $userID");
+        // connectionWidgets.add(newWidget);
+        connectionWidgetsMap[userID] = newWidget;
+      } else if (action == 'disconnected') {
+        // print('User disconnected with userID: $userID');
+        // var newWidget = _createConnectionWidget("Disconnected: $userID");
+        // connectionWidgets.add(newWidget);
+        // マップからウィジェットを削除
+        connectionWidgetsMap.remove(userID);
+      }
       notifyListeners();
     });
   }
 
-  Widget _createConnectionWidget(String userID) {
-    // userIDを基にウィジェットを作成
-    return Text("New Connection: $userID");
+  Widget _createConnectionWidget(String message) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Adjust padding to your preference
+      decoration: BoxDecoration(
+        color: Colors.white, // Background color of the box
+        border: Border.all(color: Colors.black), // Border color and width
+        borderRadius: BorderRadius.circular(5), // Adjust border radius to your preference
+      ),
+      child: Text(
+        message, // Replace with your dynamic message
+        style: const TextStyle(
+          color: Colors.black, // Text color
+          fontSize: 16, // Adjust font size to your preference
+        ),
+        textAlign: TextAlign.center, // Center the text inside the box
+      ),
+    );
   }
 
   List<String> get messages => _messages;
@@ -399,6 +425,8 @@ class ChatNotifier extends ChangeNotifier {
     selectedItemsMap = newMap;
   }
 
+  // ウィジェットリストを取得するメソッド
+  List<Widget> get connectionWidgets => connectionWidgetsMap.values.toList();
 
   // void newConnection() {
   //   socket?.on('connections', (data) {
