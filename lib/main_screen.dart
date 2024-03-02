@@ -74,7 +74,7 @@ class _MainScreenState extends State<_MainScreenContent> {
               int idx = entry.key; // ウィジェットのインデックス
               Widget widget = entry.value; // インデックスに対応するウィジェット
               return Positioned(
-                bottom: 10.0 + (50.0 * idx), // ウィジェットごとに bottom の値を変更
+                bottom: 80 + (50.0 * idx), // ウィジェットごとに bottom の値を変更
                 left: 10,
                 child: widget,
               );

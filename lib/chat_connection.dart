@@ -24,16 +24,23 @@ class ChatConnection {
     socket?.off(eventName);
   }
 
-  // void connect({Function? onNewPhoto}){
   Future<void> connect() async {
-    // SharedPreferencesからuserIDを取得
+    // SharedPreferencesからuserID、国コード、緯度、経度を取得
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userID = prefs.getString('userID') ?? "";
+    String countryCode = prefs.getString('countryCode') ?? ""; // 国コードの取得
+    double lat = prefs.getDouble('latitude') ?? 0.0; // 緯度の取得
+    double lng = prefs.getDouble('longitude') ?? 0.0; // 経度の取得
 
     // userIDが空でないことを確認
-    if (userID.isEmpty) {
-      // userIDが空の場合、エラーハンドリングやデフォルト動作を実施
-      debugPrint('UserID is empty. Please ensure it is set before connecting.');
+    if (userID.isEmpty || countryCode.isEmpty) {
+      debugPrint('UserID or Country Code is empty. Please ensure they are set before connecting.');
+      return;
+    }
+
+    // 緯度経度が正しく取得できていることを確認
+    if (lat == 0.0 || lng == 0.0) {
+      debugPrint('Latitude or Longitude is not set correctly.');
       return;
     }
 
@@ -43,12 +50,15 @@ class ChatConnection {
       'autoConnect': true,
       'query': {
         'userID': userID, // ここでuserIDをサーバーに送信
+        'countryCode': countryCode, // 国コードをサーバーに送信
+        'lat': lat.toString(), // 緯度をサーバーに送信
+        'lng': lng.toString(), // 経度をサーバーに送信
       },
     });
 
     // 接続成功時のイベントリスナー
     socket?.on('connect', (_) {
-      debugPrint('Connected to server with userID: $userID');
+      debugPrint('Connected to server with userID: $userID, countryCode: $countryCode, lat: $lat, lng: $lng');
     });
 
     socket?.on('connect_error', (error) {
@@ -57,6 +67,7 @@ class ChatConnection {
 
     socket?.on('disconnect', (_) => debugPrint('Disconnected from server'));
   }
+
 
   // 新しい写真の情報をサーバーに送信するメソッド
   void sendNewPhotoInfo(Map<String, dynamic> newPhotoInfo) {
@@ -251,19 +262,17 @@ class ChatNotifier extends ChangeNotifier {
 
   void _setupConnectionsListener() {
     chatConnection.on('connections', (data) {
-      // データからuserIDを取り出す
       String action = data['action'];
       String userID = data['userID'];
+      String countryCode = data['countryCode'];
+      String lat = data['lat'];
+      String lng = data['lng'];
 
       if (action == 'connected') {
-        var newWidget = _createConnectionWidget("Connected: $userID");
-        // connectionWidgets.add(newWidget);
+        var message = "Connected: UserID=$userID, Country=$countryCode, Lat=$lat, Lng=$lng";
+        var newWidget = _createConnectionWidget(message);
         connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
-        // print('User disconnected with userID: $userID');
-        // var newWidget = _createConnectionWidget("Disconnected: $userID");
-        // connectionWidgets.add(newWidget);
-        // マップからウィジェットを削除
         connectionWidgetsMap.remove(userID);
       }
       notifyListeners();
@@ -272,19 +281,19 @@ class ChatNotifier extends ChangeNotifier {
 
   Widget _createConnectionWidget(String message) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Adjust padding to your preference
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white, // Background color of the box
-        border: Border.all(color: Colors.black), // Border color and width
-        borderRadius: BorderRadius.circular(5), // Adjust border radius to your preference
+        color: Colors.white,
+        border: Border.all(color: Colors.black),
+        borderRadius: BorderRadius.circular(5),
       ),
       child: Text(
-        message, // Replace with your dynamic message
+        message,
         style: const TextStyle(
-          color: Colors.black, // Text color
-          fontSize: 16, // Adjust font size to your preference
+          color: Colors.black,
+          fontSize: 16,
         ),
-        textAlign: TextAlign.center, // Center the text inside the box
+        textAlign: TextAlign.center,
       ),
     );
   }
