@@ -4,6 +4,8 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:geocoding/geocoding.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 
@@ -244,19 +246,32 @@ class ConnectionNumberState extends State<ConnectionNumber> {
 
 }
 
+class ConnectionWidgetsDisplay extends HookConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final connectionWidgetsManager = ref.watch(connectionWidgetsManagerProvider);
+    final connectionWidgets = connectionWidgetsManager.connectionWidgets;
 
-class ChatNotifier extends ChangeNotifier {
+    return Stack(
+      children: connectionWidgets.asMap().entries.map((entry) {
+        int idx = entry.key;
+        Widget widget = entry.value;
+        // 各ウィジェットのbottom値を動的に設定して、ウィジェットが積み重なるようにする
+        return Positioned(
+          bottom: 80 + 50.0 * idx, // 各ウィジェットの縦位置を調整
+          left: 10,
+          child: widget,
+        );
+      }).toList(),
+    );
+  }
+}
+
+class ConnectionWidgetsManager extends ChangeNotifier {
   final ChatConnection chatConnection;
-  final List<String> _messages = [];
-  final ChangeNotifierProviderRef ref;
-  Map<String, Widget> connectionWidgetsMap = {}; // ユーザーIDとウィジェットのマップ
+  final Map<String, Widget> _connectionWidgetsMap = {};
 
-
-  // 新しいウィジェット情報を格納するリスト
-  // List<Widget> connectionWidgets = [];
-
-  // コンストラクタで ChatConnection と ref を受け取る
-  ChatNotifier({required this.chatConnection, required this.ref}) {
+  ConnectionWidgetsManager({required this.chatConnection}) {
     _setupConnectionsListener();
   }
 
@@ -264,16 +279,13 @@ class ChatNotifier extends ChangeNotifier {
     chatConnection.on('connections', (data) {
       String action = data['action'];
       String userID = data['userID'];
-      String countryCode = data['countryCode'];
-      String lat = data['lat'];
-      String lng = data['lng'];
 
       if (action == 'connected') {
-        var message = "Connected: UserID=$userID, Country=$countryCode, Lat=$lat, Lng=$lng";
+        var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
         var newWidget = _createConnectionWidget(message);
-        connectionWidgetsMap[userID] = newWidget;
+        _connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
-        connectionWidgetsMap.remove(userID);
+        _connectionWidgetsMap.remove(userID);
       }
       notifyListeners();
     });
@@ -298,12 +310,77 @@ class ChatNotifier extends ChangeNotifier {
     );
   }
 
-  List<String> get messages => _messages;
+  List<Widget> get connectionWidgets => _connectionWidgetsMap.values.toList();
+}
 
-  void addMessage(String message) {
-    _messages.add(message);
-    notifyListeners();
-  }
+final connectionWidgetsManagerProvider = ChangeNotifierProvider<ConnectionWidgetsManager>((ref) {
+  // ChatConnectionインスタンスを取得または生成
+  final chatConnection = ChatConnection();
+  return ConnectionWidgetsManager(chatConnection: chatConnection);
+});
+
+
+class ChatNotifier extends ChangeNotifier {
+  final ChatConnection chatConnection;
+  // final List<String> _messages = [];
+  final ChangeNotifierProviderRef ref;
+  // Map<String, Widget> connectionWidgetsMap = {}; // ユーザーIDとウィジェットのマップ
+
+
+  // 新しいウィジェット情報を格納するリスト
+  // List<Widget> connectionWidgets = [];
+
+  // コンストラクタで ChatConnection と ref を受け取る
+  // ChatNotifier({required this.chatConnection, required this.ref}) {
+  //   _setupConnectionsListener();
+  // }
+
+  ChatNotifier({required this.chatConnection, required this.ref});
+
+  // void _setupConnectionsListener() {
+  //   chatConnection.on('connections', (data) {
+  //     String action = data['action'];
+  //     String userID = data['userID'];
+  //     String countryCode = data['countryCode'];
+  //     String lat = data['lat'];
+  //     String lng = data['lng'];
+  //
+  //     if (action == 'connected') {
+  //       var message = "Connected: UserID=$userID, Country=$countryCode, Lat=$lat, Lng=$lng";
+  //       var newWidget = _createConnectionWidget(message);
+  //       connectionWidgetsMap[userID] = newWidget;
+  //     } else if (action == 'disconnected') {
+  //       connectionWidgetsMap.remove(userID);
+  //     }
+  //     notifyListeners();
+  //   });
+  // }
+
+  // Widget _createConnectionWidget(String message) {
+  //   return Container(
+  //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       border: Border.all(color: Colors.black),
+  //       borderRadius: BorderRadius.circular(5),
+  //     ),
+  //     child: Text(
+  //       message,
+  //       style: const TextStyle(
+  //         color: Colors.black,
+  //         fontSize: 16,
+  //       ),
+  //       textAlign: TextAlign.center,
+  //     ),
+  //   );
+  // }
+
+  // List<String> get messages => _messages;
+
+  // void addMessage(String message) {
+  //   _messages.add(message);
+  //   notifyListeners();
+  // }
 
   // final ChangeNotifierProviderRef<Object?> ref;
 
@@ -435,7 +512,7 @@ class ChatNotifier extends ChangeNotifier {
   }
 
   // ウィジェットリストを取得するメソッド
-  List<Widget> get connectionWidgets => connectionWidgetsMap.values.toList();
+  // List<Widget> get connectionWidgets => connectionWidgetsMap.values.toList();
 
   // void newConnection() {
   //   socket?.on('connections', (data) {

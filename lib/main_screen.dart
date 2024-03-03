@@ -39,12 +39,6 @@ class _MainScreenState extends State<_MainScreenContent> {
   @override
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
-
-      // ChatNotifierからメッセージリストを取得
-      final chatNotifier = ref.watch(chatNotifierProvider);
-      // ここでウィジェットのリストを取得
-      final connectionWidgets = chatNotifier.connectionWidgets;
-
       final Size size = MediaQuery.of(context).size;
       Widget timelineMapWidget = const Center(child: CircularProgressIndicator()); // 初期値を設定
 
@@ -64,26 +58,31 @@ class _MainScreenState extends State<_MainScreenContent> {
         error: (error, stack) => timelineMapWidget = Center(child: Text('Error: $error')),
       );
 
+      // connectionWidgetsの更新にのみ反応するConsumerを別途設定
+      // final connectionWidgets = ref.watch(connectionWidgetsManagerProvider).connectionWidgets;
+
       return Scaffold(
         body: Stack(
           children: <Widget>[
             timelineMapWidget,
             const ConnectionNumber(),
-            // ウィジェットを動的に配置
-            ...connectionWidgets.asMap().entries.map((entry) {
-              int idx = entry.key; // ウィジェットのインデックス
-              Widget widget = entry.value; // インデックスに対応するウィジェット
-              return Positioned(
-                bottom: 80 + (50.0 * idx), // ウィジェットごとに bottom の値を変更
-                left: 10,
-                child: widget,
-              );
-            }).toList(),
+            ConnectionWidgetsDisplay(),
+            // // ウィジェットを動的に配置
+            // ...connectionWidgets.asMap().entries.map((entry) {
+            //   int idx = entry.key; // ウィジェットのインデックス
+            //   Widget widget = entry.value; // インデックスに対応するウィジェット
+            //   return Positioned(
+            //     bottom: 80 + (50.0 * idx), // ウィジェットごとに bottom の値を変更
+            //     left: 10,
+            //     child: widget,
+            //   );
+            // }).toList(),
           ],
         ),
       );
     });
   }
+
 
 
 

@@ -55,6 +55,8 @@ dependencies:
   flag: ^7.0.0
   socket_io_client: ^2.0.3+1
   transparent_image: ^2.0.1
+  flutter_hooks: ^0.20.5
+  hooks_riverpod: ^2.4.10
 
 
   # The following adds the Cupertino Icons font to your application.
