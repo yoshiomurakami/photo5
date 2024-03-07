@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:geocoding/geocoding.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+// import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
@@ -247,6 +247,8 @@ class ConnectionNumberState extends State<ConnectionNumber> {
 }
 
 class ConnectionWidgetsDisplay extends HookConsumerWidget {
+  const ConnectionWidgetsDisplay({super.key});
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final connectionWidgetsManager = ref.watch(connectionWidgetsManagerProvider);

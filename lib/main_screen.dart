@@ -66,7 +66,7 @@ class _MainScreenState extends State<_MainScreenContent> {
           children: <Widget>[
             timelineMapWidget,
             const ConnectionNumber(),
-            ConnectionWidgetsDisplay(),
+            const ConnectionWidgetsDisplay(),
             // // ウィジェットを動的に配置
             // ...connectionWidgets.asMap().entries.map((entry) {
             //   int idx = entry.key; // ウィジェットのインデックス

@@ -89,12 +89,13 @@ class TimelineItem {
 
 class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
   TimelineNotifier() : super([]) {
-    _loadInitialData();
+    loadInitialData();
   }
 
-  Future<void> _loadInitialData() async {
+  Future<void> loadInitialData() async {
     List<TimelineItem> initialData = await getTimeline();
     state = initialData;
+    debugPrint("_loadInitialData is here");
   }
 
   Future<void> addMoreItems() async {
@@ -141,9 +142,6 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userID = prefs.getString('userID') ?? "";
 
-    // リクエストボディの作成
-    // final requestBody = jsonEncode({'userID': userID});
-
     // APIにPOSTリクエストを送信
     final response = await http.post(
       Uri.parse('https://photo5.world/api/timeline/getTimeline'),
@@ -160,14 +158,17 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       debugPrint('取得したばかりのReceived data: ${data.length} items. Details: $data');
 
       if (page == 0) { // 最初のページの場合のみ、現在地を取得
-        // 現在の位置を取得します。
-        Position devicePosition = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high);
+        // // 現在の位置を取得します。
+        // Position devicePosition = await Geolocator.getCurrentPosition(
+        //     desiredAccuracy: LocationAccuracy.high);
+
+        double latitude = prefs.getDouble('latitude') ?? 0.0;
+        double longitude = prefs.getDouble('longitude') ?? 0.0;
 
         // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
         Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
-          lat: devicePosition.latitude,
-          lng: devicePosition.longitude,
+          lat: latitude,
+          lng: longitude,
         );
 
         // 空の TimelineItem をリストの先頭に追加します。
@@ -251,9 +252,8 @@ class TimelineState {
 final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
   List<TimelineItem> timelineItems = await getTimeline();
   // timelineItems = await getTimelineWithGeocoding();
-
   // await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
-  //
+  debugPrint("timelineProvider is here");
   return timelineItems;
 });
 
