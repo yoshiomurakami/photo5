@@ -331,10 +331,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               fontSize: 16,
             ),
           ),
+          Icon( // 返信アイコンを追加
+            Icons.reply,
+            color: Colors.black,
+            size: 20,
+          ),
         ],
       ),
     );
   }
+
 
   List<Widget> get connectionWidgets => _connectionWidgetsMap.values.toList();
 }
