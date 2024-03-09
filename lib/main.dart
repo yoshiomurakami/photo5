@@ -301,7 +301,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
       await _checkUserId();
       await _checkStatus();
       await _checkPermission();
-      await _checkCountryCode();
+      // await _checkCountryCode();
 
         // _currentLocation = await determinePosition();
         // _timelineItems = await getTimelineWithGeocoding();
