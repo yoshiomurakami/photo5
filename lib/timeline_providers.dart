@@ -95,7 +95,7 @@ class TimelineNotifier extends StateNotifier<List<TimelineItem>> {
   Future<void> loadInitialData() async {
     List<TimelineItem> initialData = await getTimeline();
     state = initialData;
-    debugPrint("_loadInitialData is here");
+    debugPrint("_loadInitialData is herehere");
   }
 
   Future<void> addMoreItems() async {
