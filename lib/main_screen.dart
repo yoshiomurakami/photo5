@@ -82,10 +82,6 @@ class _MainScreenState extends State<_MainScreenContent> {
       );
     });
   }
-
-
-
-
 }
 
 
