@@ -14,8 +14,8 @@ import 'error_dialog_data.dart';
 import 'main_screen.dart';
 import 'chat_connection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+// import 'package:geolocator/geolocator.dart';
+// import 'package:geocoding/geocoding.dart';
 
 
 
@@ -574,29 +574,29 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
     // }
   }
 
-  Future<void> _checkCountryCode() async {
-    debugPrint("Country code and location check starting");
-    try {
-      // 位置情報の取得
-      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      debugPrint("Location: Lat ${position.latitude}, Lng ${position.longitude}");
-
-      // 国コードの取得
-      List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-      String? countryCode = placemarks.first.isoCountryCode;
-      debugPrint("Country Code: $countryCode");
-
-      // SharedPreferencesに国コードと緯度経度を保存
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString('countryCode', countryCode ?? 'Unknown');
-      await prefs.setDouble('latitude', position.latitude);
-      await prefs.setDouble('longitude', position.longitude);
-      debugPrint('Country Code and location saved to SharedPreferences');
-
-    } catch (e) {
-      debugPrint("Failed to get location, country code or save to SharedPreferences: $e");
-    }
-  }
+  // Future<void> _checkCountryCode() async {
+  //   debugPrint("Country code and location check starting");
+  //   try {
+  //     // 位置情報の取得
+  //     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  //     debugPrint("Location: Lat ${position.latitude}, Lng ${position.longitude}");
+  //
+  //     // 国コードの取得
+  //     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  //     String? countryCode = placemarks.first.isoCountryCode;
+  //     debugPrint("Country Code: $countryCode");
+  //
+  //     // SharedPreferencesに国コードと緯度経度を保存
+  //     final SharedPreferences prefs = await SharedPreferences.getInstance();
+  //     await prefs.setString('countryCode', countryCode ?? 'Unknown');
+  //     await prefs.setDouble('latitude', position.latitude);
+  //     await prefs.setDouble('longitude', position.longitude);
+  //     debugPrint('Country Code and location saved to SharedPreferences');
+  //
+  //   } catch (e) {
+  //     debugPrint("Failed to get location, country code or save to SharedPreferences: $e");
+  //   }
+  // }
 
 
 

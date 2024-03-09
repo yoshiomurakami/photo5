@@ -162,8 +162,8 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
         Position devicePosition = await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.high);
 
-        double latitude = prefs.getDouble('latitude') ?? 0.0;
-        double longitude = prefs.getDouble('longitude') ?? 0.0;
+        // double latitude = prefs.getDouble('latitude') ?? 0.0;
+        // double longitude = prefs.getDouble('longitude') ?? 0.0;
 
         // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
         Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
