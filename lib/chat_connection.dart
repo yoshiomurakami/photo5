@@ -6,6 +6,7 @@ import 'package:geocoding/geocoding.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flag/flag.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 
@@ -271,10 +272,17 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
 
 class ConnectionWidgetsManager extends ChangeNotifier {
   final ChatConnection chatConnection;
+  String currentUserID = ''; // 現在のユーザーIDを格納
   final Map<String, Widget> _connectionWidgetsMap = {};
 
   ConnectionWidgetsManager({required this.chatConnection}) {
+    _loadCurrentUserID();
     _setupConnectionsListener();
+  }
+
+  Future<void> _loadCurrentUserID() async {
+    final prefs = await SharedPreferences.getInstance();
+    currentUserID = prefs.getString('userID') ?? '';
   }
 
   void _setupConnectionsListener() {
@@ -282,9 +290,14 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String action = data['action'];
       String userID = data['userID'];
 
+      // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
+      if (currentUserID.isEmpty || userID == currentUserID) {
+        return;
+      }
+
       if (action == 'connected') {
-        var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
-        var newWidget = _createConnectionWidget(message);
+        // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
+        var newWidget = _createConnectionWidget(data['countryCode']); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
         _connectionWidgetsMap.remove(userID);
@@ -293,21 +306,32 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     });
   }
 
-  Widget _createConnectionWidget(String message) {
+  Widget _createConnectionWidget(String countryCode) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.black),
-        borderRadius: BorderRadius.circular(5),
+        color: Colors.white, // 背景色を白に設定
+        borderRadius: BorderRadius.circular(10), // 境界の角を丸くする
+        border: Border.all(color: Colors.black), // 黒色の境界線
       ),
-      child: Text(
-        message,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 16,
-        ),
-        textAlign: TextAlign.center,
+      child: Row(
+        mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
+        children: <Widget>[
+          Flag.fromString(
+            countryCode, // 国コード
+            height: 20,
+            width: 30,
+            fit: BoxFit.fill,
+          ),
+          SizedBox(width: 8), // 国旗とテキストの間隔
+          Text(
+            "こんにちは！", // 表示したいテキスト
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -321,87 +345,26 @@ final connectionWidgetsManagerProvider = ChangeNotifierProvider<ConnectionWidget
   return ConnectionWidgetsManager(chatConnection: chatConnection);
 });
 
+Future<String?> getCurrentUserId() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('userID');
+}
+
 
 class ChatNotifier extends ChangeNotifier {
   final ChatConnection chatConnection;
   // final List<String> _messages = [];
   final ChangeNotifierProviderRef ref;
-  // Map<String, Widget> connectionWidgetsMap = {}; // ユーザーIDとウィジェットのマップ
-
-
-  // 新しいウィジェット情報を格納するリスト
-  // List<Widget> connectionWidgets = [];
-
-  // コンストラクタで ChatConnection と ref を受け取る
-  // ChatNotifier({required this.chatConnection, required this.ref}) {
-  //   _setupConnectionsListener();
-  // }
 
   ChatNotifier({required this.chatConnection, required this.ref});
-
-  // void _setupConnectionsListener() {
-  //   chatConnection.on('connections', (data) {
-  //     String action = data['action'];
-  //     String userID = data['userID'];
-  //     String countryCode = data['countryCode'];
-  //     String lat = data['lat'];
-  //     String lng = data['lng'];
-  //
-  //     if (action == 'connected') {
-  //       var message = "Connected: UserID=$userID, Country=$countryCode, Lat=$lat, Lng=$lng";
-  //       var newWidget = _createConnectionWidget(message);
-  //       connectionWidgetsMap[userID] = newWidget;
-  //     } else if (action == 'disconnected') {
-  //       connectionWidgetsMap.remove(userID);
-  //     }
-  //     notifyListeners();
-  //   });
-  // }
-
-  // Widget _createConnectionWidget(String message) {
-  //   return Container(
-  //     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-  //     decoration: BoxDecoration(
-  //       color: Colors.white,
-  //       border: Border.all(color: Colors.black),
-  //       borderRadius: BorderRadius.circular(5),
-  //     ),
-  //     child: Text(
-  //       message,
-  //       style: const TextStyle(
-  //         color: Colors.black,
-  //         fontSize: 16,
-  //       ),
-  //       textAlign: TextAlign.center,
-  //     ),
-  //   );
-  // }
-
-  // List<String> get messages => _messages;
-
-  // void addMessage(String message) {
-  //   _messages.add(message);
-  //   notifyListeners();
-  // }
-
-  // final ChangeNotifierProviderRef<Object?> ref;
-
-  // final ChatConnection chatConnection = ChatConnection(); // ChatConnectionのインスタンスを作成
 
   PageController? fullScreenImageViewerController;
 
   List<List<TimelineItem>> groupedItemsList = [];
 
-  // ChatNotifier(this.ref);
-
   Map<String, int> selectedItemsMap = {};
 
   bool isUpdating = false;
-
-  // Getter for timelineItems
-  // List<TimelineItem> get timelineItems => _timelineItems;
-
-
 
   // selectedItemsMap に新しい groupID を挿入する補助関数
   Map<String, int> insertIntoSelectedItemsMap(Map<String, int> originalMap, String newGroupId) {
@@ -426,7 +389,6 @@ class ChatNotifier extends ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum) {
 
@@ -512,27 +474,6 @@ class ChatNotifier extends ChangeNotifier {
     });
     selectedItemsMap = newMap;
   }
-
-  // ウィジェットリストを取得するメソッド
-  // List<Widget> get connectionWidgets => connectionWidgetsMap.values.toList();
-
-  // void newConnection() {
-  //   socket?.on('connections', (data) {
-  //     addMessage("New Connection: $data");
-  //   });
-  // }
-
-  // メッセージリスト
-  // List<String> _messages = [];
-
-  // メッセージリストへの読み取り専用アクセスを提供
-  // List<String> get messages => _messages;
-
-  // 新しいメッセージをリストに追加するメソッド
-  // void addMessage(String message) {
-  //   _messages.add(message);
-  //   notifyListeners();
-  // }
 
 }
 
