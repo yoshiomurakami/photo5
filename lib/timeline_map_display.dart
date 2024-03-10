@@ -27,9 +27,17 @@ class MapController {
   // シングルトンインスタンスへのアクセス
   static MapController get instance => _instance;
 
-  void setCurrentLocation(LatLng location) {
-    _currentLocation = location;
-  }
+  // void setCurrentLocation(LatLng location) {
+  //   _currentLocation = location;
+  // }
+
+  // // コンストラクターまたは別の適切な場所で、groupedItemsList の先頭アイテムに基づいて _currentLocation を設定するメソッド
+  // void setInitialLocation(List<List<TimelineItem>> groupedItemsList) {
+  //   if (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty) {
+  //     TimelineItem firstItem = groupedItemsList[0][0];
+  //     _currentLocation = LatLng(firstItem.lat, firstItem.lng);
+  //   }
+  // }
 
   void onMapCreated(GoogleMapController controller) {
     _controller = controller;
@@ -67,6 +75,7 @@ class MapController {
       _controller?.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, _zoomLevel));
     }
   }
+
 }
 
 class ZoomControl extends StatefulWidget {
@@ -444,40 +453,6 @@ class ScrollToCenterService {
 }
 
 
-
-
-
-
-// class MapDisplay extends ConsumerWidget {
-//   final LatLng currentLocation;
-//   final List<TimelineItem> timelineItems;
-//   final Size size;
-//   final PageController pageController;
-//   // final bool programmaticPageChange;
-//   // final Function updateTimeline;
-//
-//
-//   const MapDisplay({super.key,
-//     required this.currentLocation,
-//     required this.timelineItems,
-//     required this.size,
-//     required this.pageController,
-//     // required this.programmaticPageChange,
-//     // required this.updateTimeline,
-//   });
-//
-//   @override
-//   Widget build(BuildContext context, WidgetRef ref) {
-//     return MapDisplayStateful(
-//       currentLocation: currentLocation,
-//       timelineItems: timelineItems,
-//       size: size,
-//       pageController: pageController,
-//       // programmaticPageChange: programmaticPageChange,
-//       // updateTimeline: updateTimeline,
-//     );
-//   }
-// }
 
 class MapDisplayStateful extends ConsumerStatefulWidget {
   final LatLng currentLocation;

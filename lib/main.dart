@@ -9,13 +9,14 @@ import 'package:flutter_overboard/flutter_overboard.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as path;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
 import 'chat_connection.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
-import 'package:geocoding/geocoding.dart';
+
 
 
 
@@ -406,6 +407,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   }
 
 
+
   Future<void> _checkUserId() async {
     debugPrint("UserId check starting");
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -435,6 +437,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         debugPrint("New userID: $newUserId");
         if (newUserId.length == 8) {
           prefs.setString('userID', newUserId);
+          userID = prefs.getString('userID') ?? "";
         } else {
           if (mounted) {
             throw createErrorDialogData('Could not fetch valid UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
@@ -455,7 +458,6 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
     }
     debugPrint("UserId check completed");
   }
-
 
   Future<void> _checkStatus() async {
     debugPrint("Status check starting");
@@ -523,7 +525,6 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
     debugPrint("Status check completed");
   }
-
 
   Future<void> _checkPermission() async {
     debugPrint("Permission check starting");
