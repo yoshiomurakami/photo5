@@ -297,7 +297,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       if (action == 'connected') {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
-        var newWidget = _createConnectionWidget(data['countryCode']); // countryCode を _createConnectionWidget に渡す
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID']); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
         _connectionWidgetsMap.remove(userID);
@@ -306,7 +306,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     });
   }
 
-  Widget _createConnectionWidget(String countryCode) {
+  Widget _createConnectionWidget(String countryCode, String userID) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
@@ -323,27 +323,45 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             width: 30,
             fit: BoxFit.fill,
           ),
-          SizedBox(width: 8), // 国旗とテキストの間隔
-          Text(
+          const SizedBox(width: 8), // 国旗とテキストの間隔
+          const Text(
             "こんにちは！", // 表示したいテキスト
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.black,
               fontSize: 16,
             ),
           ),
-          Icon( // 返信アイコンを追加
-            Icons.reply,
-            color: Colors.black,
-            size: 20,
+          GestureDetector(
+            onTap: () {
+              _sendHelloMessage(userID);
+            },
+            child: const Icon(
+              Icons.reply,
+              color: Colors.black,
+              size: 20,
+            ),
           ),
         ],
       ),
     );
   }
 
+  void _sendHelloMessage(String userID) {
+    // Socketを使用してメッセージを送信
+    socket?.emit('res_hellow', {'userID': userID});
+    debugPrint("_sendHelloMessage");
+    socket?.on('message', (_) {
+      debugPrint('Connected to server with userID: $userID');
+    });
+  }
+
 
   List<Widget> get connectionWidgets => _connectionWidgetsMap.values.toList();
+
+
 }
+
+
 
 final connectionWidgetsManagerProvider = ChangeNotifierProvider<ConnectionWidgetsManager>((ref) {
   // ChatConnectionインスタンスを取得または生成
