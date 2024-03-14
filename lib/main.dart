@@ -437,7 +437,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         debugPrint("New userID: $newUserId");
         if (newUserId.length == 8) {
           prefs.setString('userID', newUserId);
-          userID = prefs.getString('userID') ?? "";
+          String SPuserID = prefs.getString('userID') ?? "";
+          debugPrint("SPuserID in SharedPreferences = $SPuserID");
         } else {
           if (mounted) {
             throw createErrorDialogData('Could not fetch valid UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);

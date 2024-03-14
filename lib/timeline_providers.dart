@@ -141,6 +141,7 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
     // SharedPreferencesからユーザーIDを取得
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userID = prefs.getString('userID') ?? "";
+    debugPrint("userID = $userID / page = $page");
 
     // APIにPOSTリクエストを送信
     final response = await http.post(
@@ -148,8 +149,6 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'userID': userID, 'page': page}), // ここでページ情報も送信
     );
-
-    debugPrint("userID = $userID / page = $page");
 
     // APIからのレスポンスをチェック
     if (response.statusCode == 200) {
@@ -185,14 +184,14 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
           .toList();
 
       // ジオコーディング処理の追加
-      await updateGeocodedLocation(timelineItems);
+      // await updateGeocodedLocation(timelineItems);
 
       debugPrint("timelineItemsAAA = $timelineItems");
 
       return timelineItems;
     } else {
       // エラーが発生した場合、エラーをスロー
-      throw Exception('Failed to load timeline');
+      throw Exception('Failed to load timeline = ${response.statusCode}');
     }
   } catch (e, s) {
     // print both the exception and the stacktrace
@@ -251,9 +250,6 @@ class TimelineState {
 
 final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
   List<TimelineItem> timelineItems = await getTimeline();
-  // timelineItems = await getTimelineWithGeocoding();
-  // await updateGeocodedLocation(timelineItems); // 全レコード分のジオコーディングを更新
-  debugPrint("timelineProvider is here");
   return timelineItems;
 });
 

@@ -46,8 +46,8 @@ class MapController {
   Future<void> updateMapLocation(double lat, double lng) async {
     final controller = _controller!;
     _currentLocation = LatLng(lat, lng);
-    // controller.animateCamera(
-    controller.moveCamera(
+    controller.animateCamera(
+    // controller.moveCamera(
       CameraUpdate.newLatLng(_currentLocation),
     );
   }
@@ -806,7 +806,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       }
     }
     // マップの値をリストとして返す
-    debugPrint("groupedMapAAA = $groupedMap");
+    // debugPrint("groupedMapAAA = $groupedMap");
     return groupedMap.values.toList();
   }
 
