@@ -40,23 +40,22 @@ class _MainScreenState extends State<_MainScreenContent> {
   Widget build(BuildContext context) {
     return Consumer(builder: (context, ref, child) {
       final Size size = MediaQuery.of(context).size;
-      Widget timelineMapWidget = const Center(child: CircularProgressIndicator()); // 初期値を設定
+      // ここでは直接 List<TimelineItem> を取得
+      final timelineItems = ref.watch(timelineAddProvider);
 
-      final timelineItemsAsyncValue = ref.watch(timelineProvider);
-      timelineItemsAsyncValue.when(
-        data: (items) {
-          final timelineItems = items;
-          final currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
-          timelineMapWidget = MapDisplayStateful(
-            size: size,
-            currentLocation: currentLocation,
-            timelineItems: timelineItems,
-            pageController: _pageController,
-          );
-        },
-        loading: () => timelineMapWidget = const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => timelineMapWidget = Center(child: Text('Error: $error')),
-      );
+      Widget timelineMapWidget;
+      if (timelineItems.isNotEmpty) {
+        final currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
+        timelineMapWidget = MapDisplayStateful(
+          size: size,
+          currentLocation: currentLocation,
+          timelineItems: timelineItems,
+          pageController: _pageController,
+        );
+      } else {
+        // リストが空の場合、ローディングインジケーターを表示
+        timelineMapWidget = const Center(child: CircularProgressIndicator());
+      }
 
       return Scaffold(
         body: Stack(

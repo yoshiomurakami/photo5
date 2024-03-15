@@ -158,16 +158,16 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
 
       if (page == 0) { // 最初のページの場合のみ、現在地を取得
         // // 現在の位置を取得します。
-        Position devicePosition = await Geolocator.getCurrentPosition(
-            desiredAccuracy: LocationAccuracy.high);
+        // Position devicePosition = await Geolocator.getCurrentPosition(
+        //     desiredAccuracy: LocationAccuracy.high);
 
-        // double latitude = prefs.getDouble('latitude') ?? 0.0;
-        // double longitude = prefs.getDouble('longitude') ?? 0.0;
+        double latitude = prefs.getDouble('latitude') ?? 0.0;
+        double longitude = prefs.getDouble('longitude') ?? 0.0;
 
         // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
         Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
-          lat: devicePosition.latitude,
-          lng: devicePosition.longitude,
+          lat: latitude,
+          lng: longitude,
         );
 
         // 空の TimelineItem をリストの先頭に追加します。
@@ -248,10 +248,10 @@ class TimelineState {
 //   }
 // }
 
-final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
-  List<TimelineItem> timelineItems = await getTimeline();
-  return timelineItems;
-});
+// final timelineProvider = FutureProvider.autoDispose<List<TimelineItem>>((ref) async {
+//   List<TimelineItem> timelineItems = await getTimeline();
+//   return timelineItems;
+// });
 
 final timelineAddProvider = StateNotifierProvider<TimelineNotifier, List<TimelineItem>>((ref) => TimelineNotifier());
 
