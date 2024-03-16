@@ -31,13 +31,13 @@ class MapController {
   //   _currentLocation = location;
   // }
 
-  // // コンストラクターまたは別の適切な場所で、groupedItemsList の先頭アイテムに基づいて _currentLocation を設定するメソッド
-  // void setInitialLocation(List<List<TimelineItem>> groupedItemsList) {
-  //   if (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty) {
-  //     TimelineItem firstItem = groupedItemsList[0][0];
-  //     _currentLocation = LatLng(firstItem.lat, firstItem.lng);
-  //   }
-  // }
+  // コンストラクターまたは別の適切な場所で、groupedItemsList の先頭アイテムに基づいて _currentLocation を設定するメソッド
+  void setInitialLocation(List<List<TimelineItem>> groupedItemsList) {
+    if (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty) {
+      TimelineItem firstItem = groupedItemsList[0][0];
+      _currentLocation = LatLng(firstItem.lat, firstItem.lng);
+    }
+  }
 
   void onMapCreated(GoogleMapController controller) {
     _controller = controller;
@@ -526,6 +526,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
         // groupedItemsList を生成
         List<List<TimelineItem>> groupedItemsList = groupItemsByGroupId(items);
+
+        MapController.instance.setInitialLocation(groupedItemsList);
 
         // groupedItemsList が更新された際に selectedItemsMap も更新
         updateGroupedItemsList(items, chatNotifier);  // 修正
