@@ -297,16 +297,25 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       if (action == 'connected') {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID']); // countryCode を _createConnectionWidget に渡す
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちはん！'); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
         _connectionWidgetsMap.remove(userID);
       }
       notifyListeners();
     });
+
+    chatConnection.on('receive_res_hellow',(data) {
+      debugPrint("Received data: $data");
+      var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'よろしく！'); // countryCode を _createConnectionWidget に渡す
+      _connectionWidgetsMap[data['userID']] = newWidget;
+      notifyListeners();
+    });
   }
 
-  Widget _createConnectionWidget(String countryCode, String userID) {
+
+
+  Widget _createConnectionWidget(String countryCode, String userID, String msg) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
@@ -324,16 +333,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             fit: BoxFit.fill,
           ),
           const SizedBox(width: 8), // 国旗とテキストの間隔
-          const Text(
-            "こんにちは！", // 表示したいテキスト
-            style: TextStyle(
+          Text(
+            msg, // 表示したいテキスト
+            style: const TextStyle(
               color: Colors.black,
               fontSize: 16,
             ),
           ),
           GestureDetector(
             onTap: () {
-              _sendHelloMessage(userID);
+              _resHellow(userID,countryCode);
             },
             child: const Icon(
               Icons.reply,
@@ -346,13 +355,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     );
   }
 
-  void _sendHelloMessage(String userID) {
+  void _resHellow(String userID, String countryCode) {
     // Socketを使用してメッセージを送信
-    socket?.emit('res_hellow', {'userID': userID});
-    debugPrint("_sendHelloMessage");
-    socket?.on('message', (_) {
-      debugPrint('Connected to server with userID: $userID');
-    });
+    socket?.emit('res_hellow', {'userID': userID,'countryCode': countryCode});
+    debugPrint("_resHellow");
   }
 
 
