@@ -585,7 +585,9 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
       // 国コードの取得
       List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-      String? countryCode = placemarks.first.isoCountryCode;
+      // String? countryCode = placemarks.first.isoCountryCode;
+      String? countryCode = "IT";
+
       debugPrint("Country Code: $countryCode");
 
       // SharedPreferencesに国コードと緯度経度を保存

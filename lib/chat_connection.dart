@@ -307,10 +307,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     chatConnection.on('receive_res_hellow',(data) {
       debugPrint("Received data: $data");
-      var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'よろしく！'); // countryCode を _createConnectionWidget に渡す
-      _connectionWidgetsMap[data['userID']] = newWidget;
-      notifyListeners();
+      // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
+      updateWidgetWithCountryCode(data['userID']);
     });
+  }
+
+  Future<void> updateWidgetWithCountryCode(String userID) async {
+    final prefs = await SharedPreferences.getInstance();
+    final countryCode = prefs.getString('countryCode') ?? 'Unknown'; // デフォルト値を設定
+
+    debugPrint("Received countryCode: $countryCode for userID: $userID");
+
+    var newWidget = _createConnectionWidget(countryCode, userID, 'よろしく！');
+    _connectionWidgetsMap[userID] = newWidget;
+    notifyListeners();
   }
 
 
