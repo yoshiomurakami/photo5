@@ -308,13 +308,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     chatConnection.on('receive_res_hellow',(data) {
       debugPrint("Received data: $data");
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
-      updateWidgetWithCountryCode(data['userID']);
+      updateWidgetWithCountryCode(data['userID'], data['countryCode']);
     });
   }
 
-  Future<void> updateWidgetWithCountryCode(String userID) async {
-    final prefs = await SharedPreferences.getInstance();
-    final countryCode = prefs.getString('countryCode') ?? 'Unknown'; // デフォルト値を設定
+  Future<void> updateWidgetWithCountryCode(String userID, String countryCode) async {
+    // final prefs = await SharedPreferences.getInstance();
+    // final countryCode = prefs.getString('countryCode') ?? 'Unknown'; // デフォルト値を設定
 
     debugPrint("Received countryCode: $countryCode for userID: $userID");
 
@@ -352,7 +352,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           ),
           GestureDetector(
             onTap: () {
-              _resHellow(userID,countryCode);
+              _resHellow(userID);
             },
             child: const Icon(
               Icons.reply,
@@ -365,10 +365,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     );
   }
 
-  void _resHellow(String userID, String countryCode) {
-    // Socketを使用してメッセージを送信
-    socket?.emit('res_hellow', {'userID': userID,'countryCode': countryCode});
-    debugPrint("_resHellow");
+  // void _resHellow(String userID) {
+  //   // Socketを使用してメッセージを送信
+  //   socket?.emit('res_hellow', {'userID': userID,'countryCode': countryCode});
+  //   debugPrint("_resHellow");
+  // }
+
+  void _resHellow(String userID) async {
+    final countryCode = await getCurrentCountryCode() ?? 'デフォルトのcountryCode'; // countryCodeがnullの場合のデフォルト値
+    socket?.emit('res_hellow', {'userID': userID, 'countryCode': countryCode});
+    debugPrint("_resHellow with countryCode: $countryCode");
   }
 
 
@@ -390,6 +396,10 @@ Future<String?> getCurrentUserId() async {
   return prefs.getString('userID');
 }
 
+Future<String?> getCurrentCountryCode() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('countryCode');
+}
 
 class ChatNotifier extends ChangeNotifier {
   final ChatConnection chatConnection;
