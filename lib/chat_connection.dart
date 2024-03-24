@@ -278,7 +278,31 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
     _setupConnectionsListener();
+    _setupCameraEventListener(); // ここでカメライベントリスナーを設定
   }
+
+  void _setupCameraEventListener() {
+    chatConnection.on('camera_event', (data) {
+      String message;
+      if (data == "someone_start_camera") {
+        // "someone_start_camera"イベントが来た場合のメッセージ
+        // この例では、"someone_start_camera"イベントに対しては人数を表示しないため、
+        // メッセージから人数に関する部分を削除
+        message = "カメラ起動 - 他のユーザーがカメラを起動しました";
+      } else {
+        // その他のアクションに対するメッセージを定義
+        message = "その他のイベント発生";
+      }
+
+      // メッセージウィジェットを動的に生成して_mapに追加
+      String uniqueKey = "camera_event_${DateTime.now().millisecondsSinceEpoch}";
+      var newWidget = _createConnectionWidget("Info", uniqueKey, message); // countryCodeはInfoで固定
+      _connectionWidgetsMap[uniqueKey] = newWidget;
+      notifyListeners();
+    });
+  }
+
+
 
   Future<void> _loadCurrentUserID() async {
     final prefs = await SharedPreferences.getInstance();
@@ -310,11 +334,23 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
       updateWidgetWithCountryCode(data['userID'], data['countryCode']);
     });
+
+    chatConnection.on('room_count', (data) {
+      String actionMessage = data['action'] == "entered" ? "入室" : "退出";
+      String message = "$actionMessage - Number of users in \"shooting\" room: ${data['count']}";
+
+      // ユニークなキーを生成する（例: 現在時刻を利用）
+      String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+
+      // メッセージウィジェットを生成して_mapに追加
+      var newWidget = _createConnectionWidget("Info", uniqueKey, message); // countryCodeはInfoで固定
+      _connectionWidgetsMap[uniqueKey] = newWidget;
+
+      notifyListeners(); // 変更をリスナーに通知
+    });
   }
 
   Future<void> updateWidgetWithCountryCode(String userID, String countryCode) async {
-    // final prefs = await SharedPreferences.getInstance();
-    // final countryCode = prefs.getString('countryCode') ?? 'Unknown'; // デフォルト値を設定
 
     debugPrint("Received countryCode: $countryCode for userID: $userID");
 

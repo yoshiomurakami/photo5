@@ -362,53 +362,74 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         return Positioned(
           bottom: _positionAnimation!.value,
           left: widget.size.width * 0.5 - (widget.size.width * 0.18) / 2,
-        child: Stack(
-        children: [
-          FadeTransition(
-            opacity: _fadeController,
-            child: ElevatedButton(
-              onPressed: widget.onPressed,
-              style: ElevatedButton.styleFrom(
-                shape: const CircleBorder(),
-                backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
-                side: const BorderSide(color: Colors.transparent, width: 2.0),
-                fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
-                elevation: 0, // これで影をなくします
-              ),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: buttonText == 'expand_less'
-                    ? Icon(Icons.expand_less, color: Colors.black, size: widget.size.width * 0.07)
-                    : Text(
-                  buttonText,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: widget.size.width * 0.07,
+          child: Stack(
+            children: [
+              FadeTransition(
+                opacity: _fadeController,
+                child: ElevatedButton(
+                  onPressed: widget.onPressed,
+                  style: ElevatedButton.styleFrom(
+                    shape: const CircleBorder(),
+                    backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
+                    side: const BorderSide(color: Colors.transparent, width: 2.0),
+                    fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
+                    elevation: 0, // これで影をなくします
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: buttonText == 'expand_less'
+                        ? Icon(Icons.expand_less, color: Colors.black, size: widget.size.width * 0.07)
+                        : Text(
+                      buttonText,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: widget.size.width * 0.07,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
 
-          if (showCameraBadge)
-            Positioned(
-              top: 0,
-              right: 10,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: const BoxDecoration(
-                  color: Colors.red,
-                  shape: BoxShape.circle,
+              if (showCameraBadge)
+                Positioned(
+                  top: 0,
+                  right: 10,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
-        ),
+
+              // メッセージボックスを表示
+              if (showCameraBadge)
+                Positioned(
+                  bottom: 0, // ボタンの下部に表示
+                  left: widget.size.width * 0.25, // 中央に配置
+                  child: Container(
+                    width: widget.size.width * 0.5, // 横幅はディスプレイの50％
+                    height: widget.size.height * 0.1, // 縦幅は10％
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey, // 背景色
+                      borderRadius: BorderRadius.circular(10), // 角を丸くする
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      "メッセージ", // 表示するメッセージ
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         );
       },
     );
   }
+
 
   @override
   void dispose() {
@@ -503,7 +524,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     _initializeCamera();
 
-    chatConnection.listenToRoomCount(context);
+    // chatConnection.listenToRoomCount(context);
     // chatConnection.newConnetction(context);
 
     // _albumList は、アルバムデータのリストを保持する変数です

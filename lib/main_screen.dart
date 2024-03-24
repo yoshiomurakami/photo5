@@ -32,7 +32,7 @@ class _MainScreenState extends State<_MainScreenContent> {
 
   @override
   void dispose() {
-    chatConnection?.disconnect(); // ここで disconnect メソッドを使用
+    // chatConnection?.disconnect(); // ここで disconnect メソッドを使用
     super.dispose();
   }
 
