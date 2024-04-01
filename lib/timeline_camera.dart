@@ -475,10 +475,10 @@ class CameraScreenState extends State<CameraScreen> {
                           // ),
                           ElevatedButton(
                             onPressed: () {
-                              chatConnection.emitEvent("leave_shooting_room");
+                              // chatConnection.emitEvent("leave_shooting_room");
 
                               // カメラのリソースを解放
-                              // _controller.dispose();
+                              _controller.dispose();
 
                               _navigateBack(context);
                             },

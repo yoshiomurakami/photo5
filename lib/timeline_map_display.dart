@@ -307,10 +307,12 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
 
     chatConnection.listenToCameraEvent(context, (String data) {
       if (data == "someone_start_camera") {
+        debugPrint("check_start_camera");
         setState(() {
           showCameraBadge = true;
         });
       } else if (data == "someone_leave_camera") {
+        debugPrint("check_leave_camera");
         setState(() {
           showCameraBadge = false;
         });

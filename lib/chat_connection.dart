@@ -103,20 +103,20 @@ class ChatConnection {
     });
   }
 
-  void listenToLeaveShootingRoomEvent(BuildContext context, void Function() callback) {
-    socket?.on('leave_shooting_room', (data) {
-      debugPrint('Received leave_shooting_room event with data: $data');
-
-      // ここで context を使用してSnackBarを表示します。
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Received message: $data"),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-      callback();
-    });
-  }
+  // void listenToLeaveShootingRoomEvent(BuildContext context, void Function() callback) {
+  //   socket?.on('leave_shooting_room', (data) {
+  //     debugPrint('Received leave_shooting_room event with data: $data');
+  //
+  //     // ここで context を使用してSnackBarを表示します。
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text("Received message: $data"),
+  //         duration: const Duration(seconds: 3),
+  //       ),
+  //     );
+  //     callback();
+  //   });
+  // }
 
   void listenToShootingRoomMessages(BuildContext context) {
     socket?.on('shooting', (data) {
@@ -286,9 +286,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String message;
       if (data == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
-        // この例では、"someone_start_camera"イベントに対しては人数を表示しないため、
-        // メッセージから人数に関する部分を削除
         message = "カメラ起動 - 他のユーザーがカメラを起動しました";
+      } else if (data == "someone_leave_camera") {
+        // "someone_leave_camera"イベントが来た場合のメッセージ
+        message = "カメラ停止 - 他のユーザーがカメラを停止しました";
       } else {
         // その他のアクションに対するメッセージを定義
         message = "その他のイベント発生";
@@ -383,7 +384,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             msg, // 表示したいテキスト
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 16,
+              fontSize: 8,
             ),
           ),
           GestureDetector(
