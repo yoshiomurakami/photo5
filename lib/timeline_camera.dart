@@ -73,7 +73,7 @@ class CameraScreenState extends State<CameraScreen> {
 
   @override
   void dispose() {
-    socket?.emit('leave_shooting_room');
+    // socket?.emit('leave_shooting_room');
     _controller.dispose();
     super.dispose();
   }
@@ -475,7 +475,7 @@ class CameraScreenState extends State<CameraScreen> {
                           // ),
                           ElevatedButton(
                             onPressed: () {
-                              // chatConnection.emitEvent("leave_shooting_room");
+                              chatConnection.emitEvent("leave_shooting_room");
 
                               // カメラのリソースを解放
                               _controller.dispose();

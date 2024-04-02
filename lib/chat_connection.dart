@@ -96,7 +96,7 @@ class ChatConnection {
   //   });
   // }
 
-  void listenToCameraEvent(BuildContext context, void Function(String) callback) {
+  void listenToCameraEvent(BuildContext context, void Function(Map<String, dynamic>) callback) {
     socket?.on('camera_event', (data) {
       debugPrint('Received camera_event with data: $data');
       callback(data);
@@ -283,11 +283,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
   void _setupCameraEventListener() {
     chatConnection.on('camera_event', (data) {
+      String userID = data['userID'];
       String message;
-      if (data == "someone_start_camera") {
+      if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
         message = "カメラ起動 - 他のユーザーがカメラを起動しました";
-      } else if (data == "someone_leave_camera") {
+      } else if (data['event']  == "someone_leave_camera") {
         // "someone_leave_camera"イベントが来た場合のメッセージ
         message = "カメラ停止 - 他のユーザーがカメラを停止しました";
       } else {
@@ -296,9 +297,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       }
 
       // メッセージウィジェットを動的に生成して_mapに追加
-      String uniqueKey = "camera_event_${DateTime.now().millisecondsSinceEpoch}";
-      var newWidget = _createConnectionWidget("Info", uniqueKey, message); // countryCodeはInfoで固定
-      _connectionWidgetsMap[uniqueKey] = newWidget;
+      // String uniqueKey = "camera_event_${DateTime.now().millisecondsSinceEpoch}";
+      // var newWidget = _createConnectionWidget("Info", uniqueKey, message);
+      var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
+      debugPrint("data['countryCode'] =${data['countryCode']}");
+      _connectionWidgetsMap[userID] = newWidget;
+
       notifyListeners();
     });
   }
