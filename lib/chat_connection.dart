@@ -288,9 +288,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
         message = "カメラ起動 - 他のユーザーがカメラを起動しました";
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
+        debugPrint("data['countryCode'] =${data['countryCode']}");
+        _connectionWidgetsMap[userID] = newWidget;
       } else if (data['event']  == "someone_leave_camera") {
         // "someone_leave_camera"イベントが来た場合のメッセージ
-        message = "カメラ停止 - 他のユーザーがカメラを停止しました";
+        // message = "カメラ停止 - 他のユーザーがカメラを停止しました";
+        // "someone_leave_camera"イベントが来た場合、対応するメッセージウィジェットを削除
+        if (_connectionWidgetsMap.containsKey(userID)) {
+          _connectionWidgetsMap.remove(userID); // 特定の userID に対応するメッセージウィジェットを削除
+        }
       } else {
         // その他のアクションに対するメッセージを定義
         message = "その他のイベント発生";
@@ -299,9 +306,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // メッセージウィジェットを動的に生成して_mapに追加
       // String uniqueKey = "camera_event_${DateTime.now().millisecondsSinceEpoch}";
       // var newWidget = _createConnectionWidget("Info", uniqueKey, message);
-      var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
-      debugPrint("data['countryCode'] =${data['countryCode']}");
-      _connectionWidgetsMap[userID] = newWidget;
+      // var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
+      // debugPrint("data['countryCode'] =${data['countryCode']}");
+      // _connectionWidgetsMap[userID] = newWidget;
 
       notifyListeners();
     });
@@ -340,28 +347,37 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       updateWidgetWithCountryCode(data['userID'], data['countryCode']);
     });
 
-    chatConnection.on('room_count', (data) {
-      String actionMessage = data['action'] == "entered" ? "入室" : "退出";
-      String message = "$actionMessage - Number of users in \"shooting\" room: ${data['count']}";
-
-      // ユニークなキーを生成する（例: 現在時刻を利用）
-      String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-
-      // メッセージウィジェットを生成して_mapに追加
-      var newWidget = _createConnectionWidget("Info", uniqueKey, message); // countryCodeはInfoで固定
-      _connectionWidgetsMap[uniqueKey] = newWidget;
-
-      notifyListeners(); // 変更をリスナーに通知
-    });
+    // chatConnection.on('room_count', (data) {
+    //   String actionMessage = data['action'] == "entered" ? "入室" : "退出";
+    //   String message = "$actionMessage - Number of users in \"shooting\" room: ${data['count']}";
+    //
+    //   // ユニークなキーを生成する（例: 現在時刻を利用）
+    //   String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+    //
+    //   // メッセージウィジェットを生成して_mapに追加
+    //   var newWidget = _createConnectionWidget("Info", uniqueKey, message); // countryCodeはInfoで固定
+    //   _connectionWidgetsMap[uniqueKey] = newWidget;
+    //
+    //   notifyListeners(); // 変更をリスナーに通知
+    // });
   }
 
   Future<void> updateWidgetWithCountryCode(String userID, String countryCode) async {
 
     debugPrint("Received countryCode: $countryCode for userID: $userID");
 
-    var newWidget = _createConnectionWidget(countryCode, userID, 'よろしく！');
+    var newWidget = _createConnectionWidget(countryCode, userID, '一緒に撮ろう！');
     _connectionWidgetsMap[userID] = newWidget;
     notifyListeners();
+
+    // 3秒待機後にメッセージを削除
+    Future.delayed(Duration(seconds: 3), () {
+      // メッセージがまだ存在する場合のみ削除
+      if (_connectionWidgetsMap.containsKey(userID)) {
+        _connectionWidgetsMap.remove(userID);
+        notifyListeners();
+      }
+    });
   }
 
 
