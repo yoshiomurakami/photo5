@@ -12,6 +12,8 @@ import 'timeline_providers.dart';
 
 io.Socket?socket;
 
+typedef CameraActionCallback = void Function();
+
 // このProviderを使用して、アプリのどこからでもshootingGroupIdを参照・更新できます。
 // final shootingGroupIdProvider = StateProvider<String?>((ref) => null);
 
@@ -261,7 +263,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
         Widget widget = entry.value;
         // 各ウィジェットのbottom値を動的に設定して、ウィジェットが積み重なるようにする
         return Positioned(
-          bottom: 80 + 50.0 * idx, // 各ウィジェットの縦位置を調整
+          bottom: 100 + 50.0 * idx, // 各ウィジェットの縦位置を調整
           left: 10,
           child: widget,
         );
@@ -287,7 +289,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String message;
       if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
-        message = "カメラ起動 - 他のユーザーがカメラを起動しました";
+        message = "待ってるよ！";
         var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
         debugPrint("data['countryCode'] =${data['countryCode']}");
         _connectionWidgetsMap[userID] = newWidget;
@@ -333,7 +335,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       if (action == 'connected') {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちはん！'); // countryCode を _createConnectionWidget に渡す
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！'); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = newWidget;
       } else if (action == 'disconnected') {
         _connectionWidgetsMap.remove(userID);
@@ -342,9 +344,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     });
 
     chatConnection.on('receive_res_hellow',(data) {
+      String userID = data['userID'];
       debugPrint("Received data: $data");
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
-      updateWidgetWithCountryCode(data['userID'], data['countryCode']);
+      // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
+      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '一緒に撮ろう！'); // countryCode を _createConnectionWidget に渡す
+      _connectionWidgetsMap[userID] = newWidget;
+      notifyListeners();
     });
 
     // chatConnection.on('room_count', (data) {
@@ -362,31 +368,34 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     // });
   }
 
-  Future<void> updateWidgetWithCountryCode(String userID, String countryCode) async {
-
-    debugPrint("Received countryCode: $countryCode for userID: $userID");
-
-    var newWidget = _createConnectionWidget(countryCode, userID, '一緒に撮ろう！');
-    _connectionWidgetsMap[userID] = newWidget;
-    notifyListeners();
-
-    // 3秒待機後にメッセージを削除
-    Future.delayed(Duration(seconds: 3), () {
-      // メッセージがまだ存在する場合のみ削除
-      if (_connectionWidgetsMap.containsKey(userID)) {
-        _connectionWidgetsMap.remove(userID);
-        notifyListeners();
-      }
-    });
-  }
+  // Future<void> updateWidgetWithCountryCode(String userID, String countryCode) async {
+  //
+  //   debugPrint("Received countryCode: $countryCode for userID: $userID");
+  //
+  //   var newWidget = _createConnectionWidget(countryCode, userID, '一緒に撮ろう！');
+  //   _connectionWidgetsMap[userID] = newWidget;
+  //   notifyListeners();
+  //
+  //   // 3秒待機後にメッセージを削除
+  //   Future.delayed(Duration(seconds: 3), () {
+  //     // メッセージがまだ存在する場合のみ削除
+  //     if (_connectionWidgetsMap.containsKey(userID)) {
+  //       _connectionWidgetsMap.remove(userID);
+  //       notifyListeners();
+  //     }
+  //   });
+  // }
 
 
 
   Widget _createConnectionWidget(String countryCode, String userID, String msg) {
+    // メッセージ内容に応じて背景色を決定
+    Color backgroundColor = msg == '待ってるよ！' ? Color(0xFFFFCC4D) : Colors.white;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
-        color: Colors.white, // 背景色を白に設定
+        color: backgroundColor, // 条件によって背景色を設定
         borderRadius: BorderRadius.circular(10), // 境界の角を丸くする
         border: Border.all(color: Colors.black), // 黒色の境界線
       ),
@@ -404,23 +413,24 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             msg, // 表示したいテキスト
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 8,
+              fontSize: 10,
             ),
           ),
+          const SizedBox(width: 8), // テキストとアイコンの間隔
           GestureDetector(
             onTap: () {
-              _resHellow(userID);
+              _resHellow(userID, currentUserID);
             },
-            child: const Icon(
-              Icons.reply,
-              color: Colors.black,
-              size: 20,
-            ),
+            child: msg == '待ってるよ！' ?
+            Text('\u{1F4F8}', style: TextStyle(fontSize: 16)) : // 絵文字を表示
+            Icon(Icons.reply, color: Colors.black, size: 20), // 通常のアイコンを表示
           ),
         ],
       ),
     );
   }
+
+
 
   // void _resHellow(String userID) {
   //   // Socketを使用してメッセージを送信
@@ -428,9 +438,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   //   debugPrint("_resHellow");
   // }
 
-  void _resHellow(String userID) async {
+  void _resHellow(String userID, String fromUserID) async {
     final countryCode = await getCurrentCountryCode() ?? 'デフォルトのcountryCode'; // countryCodeがnullの場合のデフォルト値
-    socket?.emit('res_hellow', {'userID': userID, 'countryCode': countryCode});
+    socket?.emit('res_hellow', {'userID': userID, 'countryCode': countryCode, 'fromUserID':fromUserID});
     debugPrint("_resHellow with countryCode: $countryCode");
   }
 

@@ -409,24 +409,24 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                 ),
 
               // メッセージボックスを表示
-              if (showCameraBadge)
-                Positioned(
-                  bottom: 0, // ボタンの下部に表示
-                  left: widget.size.width * 0.25, // 中央に配置
-                  child: Container(
-                    width: widget.size.width * 0.5, // 横幅はディスプレイの50％
-                    height: widget.size.height * 0.1, // 縦幅は10％
-                    decoration: BoxDecoration(
-                      color: Colors.blueGrey, // 背景色
-                      borderRadius: BorderRadius.circular(10), // 角を丸くする
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      "メッセージ", // 表示するメッセージ
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ),
+              // if (showCameraBadge)
+              //   Positioned(
+              //     bottom: 0, // ボタンの下部に表示
+              //     left: widget.size.width * 0.25, // 中央に配置
+              //     child: Container(
+              //       width: widget.size.width * 0.5, // 横幅はディスプレイの50％
+              //       height: widget.size.height * 0.1, // 縦幅は10％
+              //       decoration: BoxDecoration(
+              //         color: Colors.blueGrey, // 背景色
+              //         borderRadius: BorderRadius.circular(10), // 角を丸くする
+              //       ),
+              //       alignment: Alignment.center,
+              //       child: Text(
+              //         "メッセージ", // 表示するメッセージ
+              //         style: TextStyle(color: Colors.white),
+              //       ),
+              //     ),
+              //   ),
             ],
           ),
         );
@@ -849,6 +849,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       });
     });
   }
+
+
 
 }
 
