@@ -261,10 +261,9 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
 
     return Positioned(
       left: 0,
-      right: 0, // これにより、Positioned ウィジェットは横方向に有界の制約を持ちます
+      right: 0,
       bottom: 60,
       child: Container(
-        // width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height / 4,
         decoration: BoxDecoration(
           color: Colors.grey[200]!.withOpacity(0.5),
@@ -274,25 +273,31 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
         child: Stack(
           children: connectionWidgets.asMap().entries.toList().reversed.map((entry) {
             int idx = entry.key;
-            Widget widget = entry.value;
-            // リストの逆順でbottom値を計算
+            ConnectionWidgetData data = entry.value; // ConnectionWidgetDataを取り出す
             return Positioned(
               bottom: 35.0 * (connectionWidgets.length - 1 - idx),
-              left: 10,
-              child: widget,
+              left: data.isRightAligned ? null : 10,
+              right: data.isRightAligned ? 10 : null,
+              child: data.widget,
             );
           }).toList(),
         ),
       ),
     );
   }
+}
 
+class ConnectionWidgetData {
+  final Widget widget;
+  final bool isRightAligned;
+
+  ConnectionWidgetData({required this.widget, required this.isRightAligned});
 }
 
 class ConnectionWidgetsManager extends ChangeNotifier {
   final ChatConnection chatConnection;
   String currentUserID = ''; // 現在のユーザーIDを格納
-  final Map<String, Widget> _connectionWidgetsMap = {};
+  Map<String, ConnectionWidgetData> _connectionWidgetsMap = {};
 
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
@@ -306,10 +311,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String message;
       if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
+        bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         message = "待ってるよ！";
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message, isRightAligned);
         debugPrint("data['countryCode'] =${data['countryCode']}");
-        _connectionWidgetsMap[userID] = newWidget;
+        _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+
       } else if (data['event']  == "someone_leave_camera") {
         // "someone_leave_camera"イベントが来た場合のメッセージ
         // message = "カメラ停止 - 他のユーザーがカメラを停止しました";
@@ -348,16 +355,19 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
       if (currentUserID.isEmpty || userID == currentUserID) {
         debugPrint("sendこんにちは！");
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'sendこんにちは！'); // countryCode を _createConnectionWidget に渡す
-        _connectionWidgetsMap[userID] = newWidget;
+        bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'sendこんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
         notifyListeners();
         return;
       }
 
       if (action == 'connected') {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！'); // countryCode を _createConnectionWidget に渡す
-        _connectionWidgetsMap[userID] = newWidget;
+        bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+
       } else if (action == 'disconnected') {
         _connectionWidgetsMap.remove(userID);
       }
@@ -369,8 +379,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       debugPrint("Received data: $data");
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
       // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
-      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '一緒に撮ろう！'); // countryCode を _createConnectionWidget に渡す
-      _connectionWidgetsMap[userID] = newWidget;
+      bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '一緒に撮ろう！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+      _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+
       notifyListeners();
     });
 
@@ -409,51 +421,46 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
 
-  Widget _createConnectionWidget(String countryCode, String userID, String msg) {
+  Widget _createConnectionWidget(String countryCode, String userID, String msg, bool isRightAligned) {
+    // ここでウィジェットを作成し、isRightAligned パラメーターに基づいて位置を調整するロジックを組み込む
+
+    // メッセージ内容に応じて背景色を決定
     Color backgroundColor = msg == '待ってるよ！' ? Color(0xFFFFCC4D) : Colors.white;
 
-    // メッセージが"sendこんにちは！"の場合に右寄せにするフラグ
-    bool isMessageFromCurrentUser = msg == 'sendこんにちは！';
-
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.black),
+        color: backgroundColor, // 条件によって背景色を設定
+        borderRadius: BorderRadius.circular(10), // 境界の角を丸くする
+        border: Border.all(color: Colors.black), // 黒色の境界線
       ),
-      child: Align(
-        alignment: isMessageFromCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            if (!isMessageFromCurrentUser)
-              Flag.fromString(
-                countryCode,
-                height: 20,
-                width: 30,
-                fit: BoxFit.fill,
-              ),
-            if (!isMessageFromCurrentUser)
-              const SizedBox(width: 8), // 国旗とテキストの間隔
-            Text(
-              msg,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 10,
-              ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
+        children: <Widget>[
+          Flag.fromString(
+            countryCode, // 国コード
+            height: 20,
+            width: 30,
+            fit: BoxFit.fill,
+          ),
+          const SizedBox(width: 8), // 国旗とテキストの間隔
+          Text(
+            msg, // 表示したいテキスト
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 10,
             ),
-            if (isMessageFromCurrentUser)
-              const SizedBox(width: 8), // テキストとアイコンの間隔
-            if (isMessageFromCurrentUser)
-              Flag.fromString(
-                countryCode,
-                height: 20,
-                width: 30,
-                fit: BoxFit.fill,
-              ),
-          ],
-        ),
+          ),
+          const SizedBox(width: 8), // テキストとアイコンの間隔
+          GestureDetector(
+            onTap: () {
+              _resHellow(userID, currentUserID);
+            },
+            child: msg == '待ってるよ！' ?
+            Text('\u{1F4F8}', style: TextStyle(fontSize: 16)) : // 絵文字を表示
+            Icon(Icons.reply, color: Colors.black, size: 20), // 通常のアイコンを表示
+          ),
+        ],
       ),
     );
   }
@@ -475,7 +482,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   }
 
 
-  List<Widget> get connectionWidgets => _connectionWidgetsMap.values.toList();
+  List<ConnectionWidgetData> get connectionWidgets => _connectionWidgetsMap.values.toList();
 
 
 }
