@@ -525,6 +525,8 @@ class CameraScreenState extends State<CameraScreen> {
                                 // 送信後、カメラを終了する
                                 // _controller.dispose();
                                 if (mounted) {
+                                  _controller.dispose();
+                                  chatConnection.emitEvent("leave_shooting_room");
                                   Navigator.pop(context);
                                 }
                               }

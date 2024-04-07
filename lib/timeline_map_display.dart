@@ -572,15 +572,15 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               padding: const EdgeInsets.only(bottom: 0),
             ),
 
-            Positioned(
-              top: widget.size.height * 0.5 - (MediaQuery.of(context).size.height / 8) / 2,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height / 8,
-              child: Container(
-                color: Colors.white.withOpacity(0.8),
-              ),
-            ),
+            // Positioned(
+            //   top: widget.size.height * 0.5 - (MediaQuery.of(context).size.height / 8) / 2,
+            //   left: 0,
+            //   right: 0,
+            //   height: MediaQuery.of(context).size.height / 8,
+            //   child: Container(
+            //     color: Colors.white.withOpacity(0.8),
+            //   ),
+            // ),
 
             if (!showNewListWheelScrollView)Positioned(
               top: widget.size.height * 0.2,
@@ -700,7 +700,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ZoomControl(
               size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
               right: widget.size.width * 0.05,
-              top: (widget.size.height) - (widget.size.height * 0.3) ,
+              top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075) ,
             ),
           ],
         );
