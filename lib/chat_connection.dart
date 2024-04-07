@@ -192,61 +192,63 @@ class ConnectionNumberState extends State<ConnectionNumber> {
   void initState() {
     super.initState();
 
-  }
-
-  @override
-  Widget build(BuildContext context) {
-
     socket?.on('connections', (data) {
-      int connections = data['count'];
+      int connections = data['count'] - 1;
       setState(() {
         totalConnections = connections;
       });
     });
 
+  }
+
+  @override
+  Widget build(BuildContext context) {
 
     double screenWidth = MediaQuery.of(context).size.width;
     double leftMargin = screenWidth * 0.05;  // 画面の横幅の5%
     double screenHeight = MediaQuery.of(context).size.height;
     double bottomMargin = screenHeight * 0.05;  // 画面の横幅の5%
 
-    return Positioned(
-      left: widget.left ?? leftMargin,
-      bottom: widget.bottom ?? bottomMargin,
-      // width: 150,
-      height: screenWidth * 0.1,
-      child: Container(
-        padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),  // 左側のpaddingを0に、右側のpaddingを調整
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: Colors.black, width: 2.5),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const Text(
-              '😀',
-              style: TextStyle(
-                color: Colors.black,
-                fontSize: 20,
+    if (totalConnections >= 1) {
+      return Positioned(
+        left: widget.left ?? leftMargin,
+        bottom: widget.bottom ?? bottomMargin,
+        height: screenWidth * 0.1,
+        child: Container(
+          padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: Colors.black, width: 2.5),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                '😀',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 20,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),  // この値は、アイコンと数字の間のスペースを調整するために変更できます
-            Text(
-              '$totalConnections',
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+              const SizedBox(width: 10),
+              Text(
+                '$totalConnections',
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
-    );
+      );
+    } else {
+      // totalConnectionsが0の場合は何も表示しない
+      return SizedBox.shrink();
+    }
   }
-
 }
 
 class ConnectionWidgetsDisplay extends HookConsumerWidget {
@@ -257,19 +259,34 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
     final connectionWidgetsManager = ref.watch(connectionWidgetsManagerProvider);
     final connectionWidgets = connectionWidgetsManager.connectionWidgets;
 
-    return Stack(
-      children: connectionWidgets.asMap().entries.map((entry) {
-        int idx = entry.key;
-        Widget widget = entry.value;
-        // 各ウィジェットのbottom値を動的に設定して、ウィジェットが積み重なるようにする
-        return Positioned(
-          bottom: 100 + 50.0 * idx, // 各ウィジェットの縦位置を調整
-          left: 10,
-          child: widget,
-        );
-      }).toList(),
+    return Positioned(
+      left: 0,
+      right: 0, // これにより、Positioned ウィジェットは横方向に有界の制約を持ちます
+      bottom: 60,
+      child: Container(
+        // width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height / 4,
+        decoration: BoxDecoration(
+          color: Colors.grey[200]!.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: EdgeInsets.all(10),
+        child: Stack(
+          children: connectionWidgets.asMap().entries.toList().reversed.map((entry) {
+            int idx = entry.key;
+            Widget widget = entry.value;
+            // リストの逆順でbottom値を計算
+            return Positioned(
+              bottom: 35.0 * (connectionWidgets.length - 1 - idx),
+              left: 10,
+              child: widget,
+            );
+          }).toList(),
+        ),
+      ),
     );
   }
+
 }
 
 class ConnectionWidgetsManager extends ChangeNotifier {
@@ -330,6 +347,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
       if (currentUserID.isEmpty || userID == currentUserID) {
+        debugPrint("sendこんにちは！");
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'sendこんにちは！'); // countryCode を _createConnectionWidget に渡す
+        _connectionWidgetsMap[userID] = newWidget;
+        notifyListeners();
         return;
       }
 
@@ -389,46 +410,55 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
   Widget _createConnectionWidget(String countryCode, String userID, String msg) {
-    // メッセージ内容に応じて背景色を決定
     Color backgroundColor = msg == '待ってるよ！' ? Color(0xFFFFCC4D) : Colors.white;
 
+    // メッセージが"sendこんにちは！"の場合に右寄せにするフラグ
+    bool isMessageFromCurrentUser = msg == 'sendこんにちは！';
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: backgroundColor, // 条件によって背景色を設定
-        borderRadius: BorderRadius.circular(10), // 境界の角を丸くする
-        border: Border.all(color: Colors.black), // 黒色の境界線
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.black),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
-        children: <Widget>[
-          Flag.fromString(
-            countryCode, // 国コード
-            height: 20,
-            width: 30,
-            fit: BoxFit.fill,
-          ),
-          const SizedBox(width: 8), // 国旗とテキストの間隔
-          Text(
-            msg, // 表示したいテキスト
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 10,
+      child: Align(
+        alignment: isMessageFromCurrentUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (!isMessageFromCurrentUser)
+              Flag.fromString(
+                countryCode,
+                height: 20,
+                width: 30,
+                fit: BoxFit.fill,
+              ),
+            if (!isMessageFromCurrentUser)
+              const SizedBox(width: 8), // 国旗とテキストの間隔
+            Text(
+              msg,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 10,
+              ),
             ),
-          ),
-          const SizedBox(width: 8), // テキストとアイコンの間隔
-          GestureDetector(
-            onTap: () {
-              _resHellow(userID, currentUserID);
-            },
-            child: msg == '待ってるよ！' ?
-            Text('\u{1F4F8}', style: TextStyle(fontSize: 16)) : // 絵文字を表示
-            Icon(Icons.reply, color: Colors.black, size: 20), // 通常のアイコンを表示
-          ),
-        ],
+            if (isMessageFromCurrentUser)
+              const SizedBox(width: 8), // テキストとアイコンの間隔
+            if (isMessageFromCurrentUser)
+              Flag.fromString(
+                countryCode,
+                height: 20,
+                width: 30,
+                fit: BoxFit.fill,
+              ),
+          ],
+        ),
       ),
     );
   }
+
+
 
 
 
