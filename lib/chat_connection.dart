@@ -213,13 +213,13 @@ class ConnectionNumberState extends State<ConnectionNumber> {
       return Positioned(
         left: widget.left ?? leftMargin,
         bottom: widget.bottom ?? bottomMargin,
-        height: screenWidth * 0.1,
+        height: screenHeight * 0.04,
         child: Container(
           padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
           decoration: BoxDecoration(
             color: Colors.white,
-            border: Border.all(color: Colors.black, width: 2.5),
-            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.black, width: 1.5),
+            borderRadius: BorderRadius.circular(screenHeight * 0.02),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -262,14 +262,14 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
     return Positioned(
       left: 0,
       right: 0,
-      bottom: 60,
+      bottom: MediaQuery.of(context).size.height * 0.1,
       child: Container(
-        height: MediaQuery.of(context).size.height / 4,
+        height: MediaQuery.of(context).size.height * 0.2,
         decoration: BoxDecoration(
-          color: Colors.grey[200]!.withOpacity(0.5),
+          color: Colors.grey[200]!.withOpacity(0.8),
           borderRadius: BorderRadius.circular(10),
         ),
-        padding: EdgeInsets.all(10),
+        padding: EdgeInsets.all(5),
         child: Stack(
           children: connectionWidgets.asMap().entries.toList().reversed.map((entry) {
             int idx = entry.key;
@@ -354,9 +354,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
       if (currentUserID.isEmpty || userID == currentUserID) {
-        debugPrint("sendこんにちは！");
+        // debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'sendこんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
         notifyListeners();
         return;

@@ -583,8 +583,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             // ),
 
             if (!showNewListWheelScrollView)Positioned(
-              top: widget.size.height * 0.2,
-              bottom: widget.size.height * 0.2,
+              top: widget.size.height * 0.3,
+              bottom: widget.size.height * 0.3,
               left: widget.size.width * -0.18, //0.15
               right: widget.size.width * -0.18, //0.15
               child: NotificationListener<ScrollNotification>(
