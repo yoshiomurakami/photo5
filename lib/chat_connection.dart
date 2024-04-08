@@ -428,37 +428,40 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     Color backgroundColor = msg == '待ってるよ！' ? Color(0xFFFFCC4D) : Colors.white;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5), // 内部の余白
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5), // 内部の余白
       decoration: BoxDecoration(
         color: backgroundColor, // 条件によって背景色を設定
-        borderRadius: BorderRadius.circular(10), // 境界の角を丸くする
-        border: Border.all(color: Colors.black), // 黒色の境界線
+        borderRadius: BorderRadius.circular(50), // 境界の角を丸くする
+        border: Border.all(color: Colors.black, width: 1.5), // 黒色の境界線
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
+        crossAxisAlignment: CrossAxisAlignment.center, // 子ウィジェットを上下中央に配置
         children: <Widget>[
-          Flag.fromString(
-            countryCode, // 国コード
-            height: 20,
-            width: 30,
-            fit: BoxFit.fill,
+          ClipOval(
+            child: Flag.fromString(
+              countryCode, // 国コード
+              height: 20,
+              width: 20, // 円形にするために幅と高さを同じにする
+              fit: BoxFit.cover,
+            ),
           ),
-          const SizedBox(width: 8), // 国旗とテキストの間隔
+          const SizedBox(width: 5), // 国旗とテキストの間隔
           Text(
             msg, // 表示したいテキスト
             style: const TextStyle(
               color: Colors.black,
-              fontSize: 10,
+              fontSize: 12,
             ),
           ),
-          const SizedBox(width: 8), // テキストとアイコンの間隔
+          const SizedBox(width: 2), // テキストとアイコンの間隔
           GestureDetector(
             onTap: () {
               _resHellow(userID, currentUserID);
             },
             child: msg == '待ってるよ！' ?
-            Text('\u{1F4F8}', style: TextStyle(fontSize: 16)) : // 絵文字を表示
-            Icon(Icons.reply, color: Colors.black, size: 20), // 通常のアイコンを表示
+            Text('\u{1F4F8}', style: TextStyle(fontSize: 12)) : // 絵文字を表示
+            Icon(Icons.reply, color: Colors.black, size: 12), // 通常のアイコンを表示
           ),
         ],
       ),
