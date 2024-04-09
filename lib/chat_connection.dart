@@ -312,7 +312,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        message = "待ってるよ！";
+        message = "一緒に撮ろう！";
         var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message, isRightAligned);
         debugPrint("data['countryCode'] =${data['countryCode']}");
         _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
@@ -380,7 +380,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
       // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
       bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '一緒に撮ろう！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '返信！', isRightAligned); // countryCode を _createConnectionWidget に渡す
       _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       notifyListeners();
@@ -422,13 +422,76 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
   Widget _createConnectionWidget(String countryCode, String userID, String msg, bool isRightAligned) {
-    // ここでウィジェットを作成し、isRightAligned パラメーターに基づいて位置を調整するロジックを組み込む
-
     // メッセージ内容に応じて背景色を決定
-    Color backgroundColor = msg == '待ってるよ！' ? Color(0xFFFFCC4D) : Colors.white;
+    Color backgroundColor = msg == '一緒に撮ろう！' ? Color(0xFFFFCC4D) : Colors.white;
+
+    List<Widget> rowChildren = [
+      Container(
+        padding: const EdgeInsets.all(1), // 縁取りの太さを調整
+        decoration: const BoxDecoration(
+          color: Colors.grey, // 縁取りの色
+          shape: BoxShape.circle, // 円形の縁取り
+        ),
+        child: ClipOval(
+          child: Flag.fromString(
+            countryCode, // 国コード
+            height: 16,
+            width: 16, // 円形にするために幅と高さを同じにする
+            fit: BoxFit.cover,
+          ),
+        ),
+      ),
+      const SizedBox(width: 5), // 国旗とテキストの間隔
+      Text(
+        msg, // 表示したいテキスト
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 12,
+        ),
+      ),
+    ];
+
+    if (!isRightAligned) {
+      debugPrint('isRightAligned = $isRightAligned');
+      rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
+
+      // msgの値に応じて異なるウィジェットを表示
+      Widget messageWidget;
+      if (msg == '一緒に撮ろう！') {
+        // msgが'一緒に撮ろう！'の場合は絵文字を表示
+        messageWidget = Text('\u{1F4F8}', style: TextStyle(fontSize: 12));
+      } else if (msg == 'こんにちは！') {
+        // msgが'こんにちは！'の場合はアイコンを表示
+        messageWidget = Icon(Icons.reply, color: Colors.black, size: 12);
+      } else {
+        // それ以外の場合は空のテキストを表示
+        messageWidget = Text('', style: TextStyle(fontSize: 12));
+      }
+
+      rowChildren.add(
+        GestureDetector(
+          onTap: () {
+            _resHellow(userID, currentUserID);
+          },
+          child: messageWidget,
+        ),
+      );
+    } else{
+      debugPrint('isRightAligned = $isRightAligned');
+      // isRightAlignedがfalse、またはメッセージが'待ってるよ！'以外の場合にアイコンを追加
+      rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
+      rowChildren.add(
+        GestureDetector(
+          onTap: () {
+            _resHellow(userID, currentUserID);
+          },
+          child: const Text('', style: TextStyle(fontSize: 12)), // 絵文字を表示
+        ),
+      );
+    }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5), // 内部の余白
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // 内部の余白
       decoration: BoxDecoration(
         color: backgroundColor, // 条件によって背景色を設定
         borderRadius: BorderRadius.circular(50), // 境界の角を丸くする
@@ -437,36 +500,11 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       child: Row(
         mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
         crossAxisAlignment: CrossAxisAlignment.center, // 子ウィジェットを上下中央に配置
-        children: <Widget>[
-          ClipOval(
-            child: Flag.fromString(
-              countryCode, // 国コード
-              height: 20,
-              width: 20, // 円形にするために幅と高さを同じにする
-              fit: BoxFit.cover,
-            ),
-          ),
-          const SizedBox(width: 5), // 国旗とテキストの間隔
-          Text(
-            msg, // 表示したいテキスト
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(width: 2), // テキストとアイコンの間隔
-          GestureDetector(
-            onTap: () {
-              _resHellow(userID, currentUserID);
-            },
-            child: msg == '待ってるよ！' ?
-            Text('\u{1F4F8}', style: TextStyle(fontSize: 12)) : // 絵文字を表示
-            Icon(Icons.reply, color: Colors.black, size: 12), // 通常のアイコンを表示
-          ),
-        ],
+        children: rowChildren,
       ),
     );
   }
+
 
 
 
