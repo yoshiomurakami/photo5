@@ -275,7 +275,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
             int idx = entry.key;
             ConnectionWidgetData data = entry.value; // ConnectionWidgetDataを取り出す
             return Positioned(
-              bottom: 35.0 * (connectionWidgets.length - 1 - idx),
+              bottom: MediaQuery.of(context).size.height * 0.045 * (connectionWidgets.length - 1 - idx),
               left: data.isRightAligned ? null : 10,
               right: data.isRightAligned ? 10 : null,
               child: data.widget,
@@ -315,14 +315,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         message = "一緒に撮ろう！";
         var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message, isRightAligned);
         debugPrint("data['countryCode'] =${data['countryCode']}");
-        _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+        String uniqueUserID = userID + '_camera';
+        _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       } else if (data['event']  == "someone_leave_camera") {
         // "someone_leave_camera"イベントが来た場合のメッセージ
         // message = "カメラ停止 - 他のユーザーがカメラを停止しました";
         // "someone_leave_camera"イベントが来た場合、対応するメッセージウィジェットを削除
-        if (_connectionWidgetsMap.containsKey(userID)) {
-          _connectionWidgetsMap.remove(userID); // 特定の userID に対応するメッセージウィジェットを削除
+        String uniqueUserID = userID + '_camera';
+        if (_connectionWidgetsMap.containsKey(uniqueUserID)) {
+          _connectionWidgetsMap.remove(uniqueUserID); // 特定の userID に対応するメッセージウィジェットを削除
         }
       } else {
         // その他のアクションに対するメッセージを定義
@@ -356,7 +358,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (currentUserID.isEmpty || userID == currentUserID) {
         // debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        var newWidget = _createConnectionWidget('',data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
         notifyListeners();
         return;
@@ -369,7 +371,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       } else if (action == 'disconnected') {
-        _connectionWidgetsMap.remove(userID);
+        // _connectionWidgetsMap.remove(userID);
+        bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'またね！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+        _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+
       }
       notifyListeners();
     });
@@ -425,23 +432,44 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor = msg == '一緒に撮ろう！' ? Color(0xFFFFCC4D) : Colors.white;
 
-    List<Widget> rowChildren = [
-      Container(
-        padding: const EdgeInsets.all(1), // 縁取りの太さを調整
-        decoration: const BoxDecoration(
-          color: Colors.grey, // 縁取りの色
-          shape: BoxShape.circle, // 円形の縁取り
-        ),
-        child: ClipOval(
-          child: Flag.fromString(
-            countryCode, // 国コード
-            height: 16,
-            width: 16, // 円形にするために幅と高さを同じにする
-            fit: BoxFit.cover,
+    List<Widget> rowChildren = [];
+
+    // countryCodeがnullではない場合のみ国旗をリストに追加
+    if (countryCode != '') {
+      rowChildren.add(
+        Container(
+          padding: const EdgeInsets.all(1), // 縁取りの太さを調整
+          decoration: const BoxDecoration(
+            color: Colors.grey, // 縁取りの色
+            shape: BoxShape.circle, // 円形の縁取り
+          ),
+          child: ClipOval(
+            child: Flag.fromString(
+              countryCode, // 国コード
+              height: 16,
+              width: 16, // 円形にするために幅と高さを同じにする
+              fit: BoxFit.cover,
+            ),
           ),
         ),
-      ),
-      const SizedBox(width: 5), // 国旗とテキストの間隔
+      );
+
+      // 国旗とテキストの間隔
+      rowChildren.add(const SizedBox(width: 5));
+    } else {
+      // countryCodeが無効（空文字列またはnull）の場合、絵文字を表示
+      rowChildren.add(
+        Text(
+          '😀', // カメラの絵文字
+          style: TextStyle(
+            fontSize: 16, // 絵文字のサイズを調整
+          ),
+        ),
+      );
+    }
+
+    // テキストウィジェットを追加
+    rowChildren.add(
       Text(
         msg, // 表示したいテキスト
         style: const TextStyle(
@@ -449,46 +477,34 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           fontSize: 12,
         ),
       ),
-    ];
+    );
+
+    // isRightAlignedの条件に応じてアイコンまたは空のテキストを追加
+    rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
+    Widget messageWidget = const Text('', style: TextStyle(fontSize: 12)); // デフォルトは空のテキスト
 
     if (!isRightAligned) {
-      debugPrint('isRightAligned = $isRightAligned');
-      rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
-
-      // msgの値に応じて異なるウィジェットを表示
-      Widget messageWidget;
       if (msg == '一緒に撮ろう！') {
-        // msgが'一緒に撮ろう！'の場合は絵文字を表示
-        messageWidget = Text('\u{1F4F8}', style: TextStyle(fontSize: 12));
+        messageWidget = Text('\u{1F4F8}', style: TextStyle(fontSize: 12)); // 絵文字を表示
       } else if (msg == 'こんにちは！') {
-        // msgが'こんにちは！'の場合はアイコンを表示
-        messageWidget = Icon(Icons.reply, color: Colors.black, size: 12);
-      } else {
-        // それ以外の場合は空のテキストを表示
-        messageWidget = Text('', style: TextStyle(fontSize: 12));
+        messageWidget = Icon(Icons.reply, color: Colors.black, size: 12); // アイコンを表示
       }
-
-      rowChildren.add(
-        GestureDetector(
-          onTap: () {
-            _resHellow(userID, currentUserID);
-          },
-          child: messageWidget,
-        ),
-      );
-    } else{
-      debugPrint('isRightAligned = $isRightAligned');
-      // isRightAlignedがfalse、またはメッセージが'待ってるよ！'以外の場合にアイコンを追加
-      rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
-      rowChildren.add(
-        GestureDetector(
-          onTap: () {
-            _resHellow(userID, currentUserID);
-          },
-          child: const Text('', style: TextStyle(fontSize: 12)), // 絵文字を表示
-        ),
-      );
     }
+
+    // GestureDetectorを追加
+    rowChildren.add(
+      GestureDetector(
+        onTap: () {
+          _resHellow(userID, currentUserID);
+          // bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+          var newWidget = _createConnectionWidget(countryCode, currentUserID, '返信に返信', true); // countryCode を _createConnectionWidget に渡す
+          String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: true);
+          notifyListeners();
+        },
+        child: messageWidget,
+      ),
+    );
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // 内部の余白
@@ -504,6 +520,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       ),
     );
   }
+
 
 
 
