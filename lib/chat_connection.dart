@@ -257,7 +257,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final connectionWidgetsManager = ref.watch(connectionWidgetsManagerProvider);
-    final connectionWidgets = connectionWidgetsManager.connectionWidgets;
+    final List<ConnectionWidgetData> connectionWidgetsData = connectionWidgetsManager.connectionWidgets;
 
     return Positioned(
       left: 0,
@@ -270,22 +270,26 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
           borderRadius: BorderRadius.circular(10),
         ),
         padding: EdgeInsets.all(5),
-        child: Stack(
-          children: connectionWidgets.asMap().entries.toList().reversed.map((entry) {
-            int idx = entry.key;
-            ConnectionWidgetData data = entry.value; // ConnectionWidgetDataを取り出す
-            return Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.045 * (connectionWidgets.length - 1 - idx),
-              left: data.isRightAligned ? null : 10,
-              right: data.isRightAligned ? 10 : null,
-              child: data.widget,
-            );
-          }).toList(),
+        child: SingleChildScrollView(
+          reverse: true, // スクロールを反転させる
+          child: Column(
+            children: connectionWidgetsData.map((data) {
+              return Row(
+                mainAxisAlignment: data.isRightAligned ? MainAxisAlignment.end : MainAxisAlignment.start,
+                children: [Container(
+                  margin: EdgeInsets.only(bottom: 5, left: 10, right: 10), // 適切なマージンを設定
+                  child: data.widget,
+                )],
+              );
+            }).toList(),
+          ),
         ),
       ),
     );
   }
 }
+
+
 
 class ConnectionWidgetData {
   final Widget widget;
@@ -312,8 +316,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (data['event'] == "someone_start_camera") {
         // "someone_start_camera"イベントが来た場合のメッセージ
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+        String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         message = "一緒に撮ろう！";
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message, isRightAligned);
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message, isRightAligned, uniqueKey);
         debugPrint("data['countryCode'] =${data['countryCode']}");
         String uniqueUserID = userID + '_camera';
         _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
@@ -358,7 +363,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (currentUserID.isEmpty || userID == currentUserID) {
         // debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        var newWidget = _createConnectionWidget('',data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+        String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+        var newWidget = _createConnectionWidget('',data['userID'],'こんにちは！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
         notifyListeners();
         return;
@@ -367,14 +373,15 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (action == 'connected') {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！', isRightAligned); // countryCode を _createConnectionWidget に渡す
-        _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+        String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'こんにちは！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
+        _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       } else if (action == 'disconnected') {
         // _connectionWidgetsMap.remove(userID);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'またね！', isRightAligned); // countryCode を _createConnectionWidget に渡す
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+        var newWidget = _createConnectionWidget(data['countryCode'],data['userID'],'またね！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       }
@@ -387,7 +394,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
       // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
       bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '返信！', isRightAligned); // countryCode を _createConnectionWidget に渡す
+      String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '返信！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
       _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       notifyListeners();
@@ -428,7 +436,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
 
-  Widget _createConnectionWidget(String countryCode, String userID, String msg, bool isRightAligned) {
+  Widget _createConnectionWidget(String countryCode, String userID, String msg, bool isRightAligned, String uniqueKey) {
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor = msg == '一緒に撮ろう！' ? Color(0xFFFFCC4D) : Colors.white;
 
@@ -495,11 +503,21 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     rowChildren.add(
       GestureDetector(
         onTap: () {
+          // ここでウィジェットに関する情報をデバッグプリント
+          debugPrint('onTapUserID: $userID');
+          debugPrint('onTapCurrentUserID: $currentUserID');
+          debugPrint('onTapCountryCode: $countryCode');
+          debugPrint('onTapMessage: $msg');
+          debugPrint('onTapMessage: $uniqueKey');
           _resHellow(userID, currentUserID);
           // bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-          var newWidget = _createConnectionWidget(countryCode, currentUserID, '返信に返信', true); // countryCode を _createConnectionWidget に渡す
-          String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: true);
+
+          var rewriteWidget = _createConnectionWidget(countryCode, countryCode, msg+' ', isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
+          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
+
+          String new_uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+          var newWidget = _createConnectionWidget(countryCode, currentUserID, '返信に返信', true, ''); // countryCode を _createConnectionWidget に渡す
+          _connectionWidgetsMap[new_uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: true);
           notifyListeners();
         },
         child: messageWidget,
