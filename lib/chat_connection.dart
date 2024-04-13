@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flag/flag.dart';
+import 'dart:math' as math;
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 
@@ -228,7 +229,7 @@ class ConnectionNumberState extends State<ConnectionNumber> {
                 '😀',
                 style: TextStyle(
                   color: Colors.black,
-                  fontSize: 20,
+                  fontSize: 16,
                 ),
               ),
               const SizedBox(width: 10),
@@ -236,7 +237,7 @@ class ConnectionNumberState extends State<ConnectionNumber> {
                 '$totalConnections',
                 style: const TextStyle(
                   color: Colors.black,
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -266,10 +267,10 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
       child: Container(
         height: MediaQuery.of(context).size.height * 0.2,
         decoration: BoxDecoration(
-          color: Colors.grey[200]!.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(10),
+          color: Colors.grey[200]!.withOpacity(0.0),
+          // borderRadius: BorderRadius.circular(10),
         ),
-        padding: EdgeInsets.all(5),
+        padding: EdgeInsets.all(10),
         child: SingleChildScrollView(
           reverse: true, // スクロールを反転させる
           child: Column(
@@ -277,7 +278,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
               return Row(
                 mainAxisAlignment: data.isRightAligned ? MainAxisAlignment.end : MainAxisAlignment.start,
                 children: [Container(
-                  margin: EdgeInsets.only(bottom: 5, left: 10, right: 10), // 適切なマージンを設定
+                  margin: EdgeInsets.only(bottom: 5, left: 15, right: 10), // 適切なマージンを設定
                   child: data.widget,
                 )],
               );
@@ -395,7 +396,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
       bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
       String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], '返信！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
+      var newWidget = _createConnectionWidget(data['countryCode'], data['userID'], 'よろしく！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
       _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
 
       notifyListeners();
@@ -440,37 +441,51 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor = msg == '一緒に撮ろう！' ? Color(0xFFFFCC4D) : Colors.white;
 
+    Widget tail = Container(
+      width: 20,
+      height: 10,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.only(
+          // メッセージウィジェットが右側の時は右下の角を丸くする
+          bottomRight: isRightAligned ? Radius.circular(10) : Radius.zero,
+          // メッセージウィジェットが左側の時は左下の角を丸くする
+          bottomLeft: !isRightAligned ? Radius.circular(10) : Radius.zero,
+        ),
+      ),
+    );
+
+
     List<Widget> rowChildren = [];
 
     // countryCodeがnullではない場合のみ国旗をリストに追加
-    if (countryCode != '') {
-      rowChildren.add(
-        Container(
-          padding: const EdgeInsets.all(1), // 縁取りの太さを調整
-          decoration: const BoxDecoration(
-            color: Colors.grey, // 縁取りの色
-            shape: BoxShape.circle, // 円形の縁取り
-          ),
-          child: ClipOval(
-            child: Flag.fromString(
-              countryCode, // 国コード
-              height: 16,
-              width: 16, // 円形にするために幅と高さを同じにする
-              fit: BoxFit.cover,
-            ),
+    if (countryCode != '' && isRightAligned) {
+      Widget flagWidget = Container(
+        padding: const EdgeInsets.all(1),
+        decoration: const BoxDecoration(
+          color: Colors.grey,
+          shape: BoxShape.circle,
+        ),
+        child: ClipOval(
+          child: Flag.fromString(
+            countryCode,
+            height: 14,
+            width: 14,
+            fit: BoxFit.cover,
           ),
         ),
       );
 
-      // 国旗とテキストの間隔
-      rowChildren.add(const SizedBox(width: 5));
-    } else {
+      // 国旗をメッセージの前に追加
+      rowChildren.insert(0, flagWidget); // 右側に国旗を追加する場合
+      rowChildren.insert(1, const SizedBox(width: 5)); // 国旗とテキストの間隔
+    } else if(isRightAligned) {
       // countryCodeが無効（空文字列またはnull）の場合、絵文字を表示
       rowChildren.add(
         Text(
           '😀', // カメラの絵文字
           style: TextStyle(
-            fontSize: 16, // 絵文字のサイズを調整
+            fontSize: 14, // 絵文字のサイズを調整
           ),
         ),
       );
@@ -482,20 +497,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         msg, // 表示したいテキスト
         style: const TextStyle(
           color: Colors.black,
-          fontSize: 12,
+          fontSize: 16,
         ),
       ),
     );
 
     // isRightAlignedの条件に応じてアイコンまたは空のテキストを追加
     rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
-    Widget messageWidget = const Text('', style: TextStyle(fontSize: 12)); // デフォルトは空のテキスト
+    Widget messageWidget = const Text('', style: TextStyle(fontSize: 16)); // デフォルトは空のテキスト
 
     if (!isRightAligned) {
       if (msg == '一緒に撮ろう！') {
-        messageWidget = Text('\u{1F4F8}', style: TextStyle(fontSize: 12)); // 絵文字を表示
+        messageWidget = Text('\u{1F4F8}', style: TextStyle(fontSize: 16)); // 絵文字を表示
       } else if (msg == 'こんにちは！') {
-        messageWidget = Icon(Icons.reply, color: Colors.black, size: 12); // アイコンを表示
+        messageWidget = Icon(Icons.reply, color: Colors.black, size: 16); // アイコンを表示
       }
     }
 
@@ -507,6 +522,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           debugPrint('onTapUserID: $userID');
           debugPrint('onTapCurrentUserID: $currentUserID');
           debugPrint('onTapCountryCode: $countryCode');
+          // debugPrint('onTapLat: $lat');
+          // debugPrint('onTapLng: $lng');
           debugPrint('onTapMessage: $msg');
           debugPrint('onTapMessage: $uniqueKey');
           _resHellow(userID, currentUserID);
@@ -516,7 +533,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
 
           String new_uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-          var newWidget = _createConnectionWidget(countryCode, currentUserID, '返信に返信', true, ''); // countryCode を _createConnectionWidget に渡す
+          var newWidget = _createConnectionWidget(countryCode, currentUserID, '返信したよ', true, ''); // countryCode を _createConnectionWidget に渡す
           _connectionWidgetsMap[new_uniqueKey] = ConnectionWidgetData(widget: newWidget, isRightAligned: true);
           notifyListeners();
         },
@@ -524,18 +541,99 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       ),
     );
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // 内部の余白
-      decoration: BoxDecoration(
-        color: backgroundColor, // 条件によって背景色を設定
-        borderRadius: BorderRadius.circular(50), // 境界の角を丸くする
-        border: Border.all(color: Colors.black, width: 1.5), // 黒色の境界線
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min, // 内容に合わせてRowのサイズを調整
-        crossAxisAlignment: CrossAxisAlignment.center, // 子ウィジェットを上下中央に配置
-        children: rowChildren,
-      ),
+    // 吹き出しのウィジェット
+    // Widget bubble = Container(
+    //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    //   decoration: BoxDecoration(
+    //     color: backgroundColor,
+    //     borderRadius: BorderRadius.circular(50),
+    //     border: Border.all(color: Colors.black, width: 1.5),
+    //   ),
+    //   child: Row(
+    //     mainAxisSize: MainAxisSize.min,
+    //     crossAxisAlignment: CrossAxisAlignment.center,
+    //     children: rowChildren,
+    //   ),
+    // );
+
+
+    return Stack(
+      alignment: Alignment.centerLeft,
+      clipBehavior: Clip.none, // Overflowを許容
+      children: <Widget>[
+        // 国旗をメッセージの外に配置
+        if (!isRightAligned)
+          Positioned(
+            left: -15, // メッセージから左に25ピクセルずらす（調整が必要かもしれません）
+            top: 5,
+            child: Container(
+              padding: const EdgeInsets.all(1),
+              decoration: const BoxDecoration(
+                color: Colors.grey,
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: Flag.fromString(
+                  countryCode,
+                  height: 20,
+                  width: 20,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+
+        if (!isRightAligned)
+          Positioned(
+            left: -15, // メッセージから左に25ピクセルずらす（調整が必要かもしれません）
+            top: 5,
+            child: Container(
+              padding: const EdgeInsets.all(1),
+              decoration: const BoxDecoration(
+                color: Colors.grey,
+                shape: BoxShape.circle,
+              ),
+              child: ClipOval(
+                child: Flag.fromString(
+                  countryCode,
+                  height: 20,
+                  width: 20,
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+          ),
+
+        // 吹き出しのメイン部分のContainerウィジェット
+        Positioned(
+          top: 13, // 吹き出しの尾のY軸の位置を調整
+          left: isRightAligned ? null : 10, // 吹き出しの尾が左にある場合
+          right: isRightAligned ? 0 : null, // 吹き出しの尾が右にある場合
+          child: Transform.rotate(
+            angle: isRightAligned ? 0 * math.pi / 180 : 0 * math.pi / 180, // 左方向に25度回転（マイナスをつける）
+            child: tail,
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.only(
+            left: isRightAligned ? 0 : 15,
+            right: isRightAligned ? 5 : 0,
+          ),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            decoration: BoxDecoration(
+              color: backgroundColor,
+              borderRadius: BorderRadius.circular(50),
+              // border: Border.all(color: Colors.black, width: 1.5),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: rowChildren,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -561,8 +659,41 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   List<ConnectionWidgetData> get connectionWidgets => _connectionWidgetsMap.values.toList();
 
 
+
 }
 
+// 吹き出しの尾を描画するためのCustomPainterクラス
+// class _BubbleTailPainter extends CustomPainter {
+//   final bool isRightAligned;
+//   final Color color;
+//
+//   _BubbleTailPainter({required this.isRightAligned, required this.color});
+//
+//   @override
+//   void paint(Canvas canvas, Size size) {
+//     Paint paint = Paint()
+//       ..color = color
+//       ..style = PaintingStyle.fill;
+//
+//     Path path = Path();
+//     // 尾の位置が右側か左側かによって、パスを変更
+//     if (isRightAligned) {
+//       path.moveTo(size.width, size.height / 2);
+//       path.lineTo(0, size.height);
+//       path.lineTo(size.width, size.height);
+//     } else {
+//       path.moveTo(0, size.height / 2);
+//       path.lineTo(size.width, 0);
+//       path.lineTo(0, 0);
+//     }
+//     path.close();
+//
+//     canvas.drawPath(path, paint);
+//   }
+//
+//   @override
+//   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+// }
 
 
 final connectionWidgetsManagerProvider = ChangeNotifierProvider<ConnectionWidgetsManager>((ref) {
