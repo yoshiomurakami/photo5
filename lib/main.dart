@@ -12,10 +12,12 @@ import 'package:path/path.dart' as path;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
+// import 'package:flutter_localizations/flutter_localizations.dart';
 import 'error_dialog.dart';
 import 'error_dialog_data.dart';
 import 'main_screen.dart';
 import 'chat_connection.dart';
+import 'l10n/l10n.dart';
 
 
 
@@ -43,6 +45,8 @@ class MyApp extends StatelessWidget {
       color: Colors.transparent,
       // color: Color(0xFFFFCC4D),
         child:MaterialApp(
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
           theme: ThemeData(
             canvasColor: const Color(0xFFFFCC4D)
           ),
@@ -172,7 +176,7 @@ class Startup extends StatefulWidget {
 class StartupState extends State<Startup> with WidgetsBindingObserver {
   late PageController pageController;
   late StreamController<bool> _startupController;
-  String loadingText = 'Now Loading';
+  // String loadingText = 'Now Loading';
   String latestVersion = "";
   // LatLng? _currentLocation;
   // List<TimelineItem>? _timelineItems;
@@ -202,6 +206,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+
     return StreamBuilder<bool>(
       stream: _startupController.stream,
       builder: (context, snapshot) {
@@ -232,6 +237,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
   // @override
   Widget _buildLoadingScreen() {
+    final l10n = L10n.of(context)!;
     return Scaffold(
       body: Stack(
         children: [
@@ -273,7 +279,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 16.0),  // Add spacing between the two text widgets
                   Text(
-                    loadingText,
+                    l10n.loadingText,
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16.0,
