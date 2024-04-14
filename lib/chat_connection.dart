@@ -594,16 +594,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     // テキストウィジェットを追加
     rowChildren.add(
         Flexible(
-          child: Text(
-            msg,
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 16,
+          child: Padding(
+            padding: EdgeInsets.only(left: 5),  // 左側に5ポイントの余白を設定
+            child: Text(
+              msg,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+              ),
+              softWrap: true,  // テキストがコンテナを超える場合に改行する
             ),
-            softWrap: true, // テキストがコンテナを超える場合に改行する
           ),
         )
     );
+
     // isRightAlignedの条件に応じてアイコンまたは空のテキストを追加
     rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
     Widget messageWidget = const Text('', style: TextStyle(fontSize: 16)); // デフォルトは空のテキスト
@@ -718,9 +722,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    spreadRadius: 3,
-                    blurRadius: 10,
+                    color: Colors.black.withOpacity(0.1),
+                    spreadRadius: 2,
+                    blurRadius: 5,
                     offset: Offset(0, 3),
                   ),
                 ],
@@ -747,9 +751,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
-                    spreadRadius: 3,
-                    blurRadius: 10,
+                    color: Colors.black.withOpacity(0.1),
+                    spreadRadius: 2,
+                    blurRadius: 5,
                     offset: Offset(0, 3),
                   ),
                 ],
