@@ -102,20 +102,26 @@ abstract class L10n {
   /// No description provided for @sayhello.
   ///
   /// In en, this message translates to:
-  /// **'Hello!'**
+  /// **'Hello! A test to see how far a long sentence can be displayed. 35 characters so far.'**
   String get sayhello;
 
-  /// No description provided for @res_sayhello.
+  /// No description provided for @res_sayHello.
   ///
   /// In en, this message translates to:
-  /// **'nice to meet you!'**
-  String get res_sayhello;
+  /// **'What’s up?'**
+  String get res_sayHello;
 
   /// No description provided for @saygoodbye.
   ///
   /// In en, this message translates to:
   /// **'see you!'**
   String get saygoodbye;
+
+  /// No description provided for @shotTogether.
+  ///
+  /// In en, this message translates to:
+  /// **'Shot together!'**
+  String get shotTogether;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

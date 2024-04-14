@@ -1,6 +1,7 @@
 {
   "loadingText": "ローディング中",
-  "sayhello": "こんにちは！",
-  "res_sayhello": "よろしく！",
-  "saygoodbye": "またね！"
+  "sayhello": "こんにちは！長い文章はどこまで表示されるのかテスト。ここまでで３５文字。",
+  "res_sayHello": "よろしく！",
+  "saygoodbye": "またね！",
+  "shotTogether": "一緒に撮ろう！"
 }

@@ -272,7 +272,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
       right: 0,
       bottom: MediaQuery.of(context).size.height * 0.1,
       child: Container(
-        height: MediaQuery.of(context).size.height * 0.2,
+        height: MediaQuery.of(context).size.height * 0.22,
         decoration: BoxDecoration(
           color: Colors.grey[200]!.withOpacity(0.0),
           // borderRadius: BorderRadius.circular(10),
@@ -434,7 +434,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
       String commonMsg = 'res_sayhello';
       if (l10n != null) {
-        String msg = l10n.res_sayhello;
+        String msg = l10n.res_sayHello;
         var newWidget = _createConnectionWidget(
             context, data['countryCode'], data['userID'], msg, commonMsg,
             isRightAligned,
@@ -447,17 +447,27 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       chatConnection.on('camera_event', (data) {
         String userID = data['userID'];
-        String message;
+        // String message;
         if (data['event'] == "someone_start_camera") {
           // "someone_start_camera"イベントが来た場合のメッセージ
           bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
           String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-          message = "一緒に撮ろう！";
-          String commonMsg = 'what';
-          var newWidget = _createConnectionWidget(context, data['countryCode'],data['userID'], message, commonMsg, isRightAligned, uniqueKey);
-          debugPrint("data['countryCode'] =${data['countryCode']}");
-          String uniqueUserID = '${userID}_camera';
-          _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
+          String commonMsg = 'shotTogether';
+          if (l10n != null) {
+            String msg = l10n.shotTogether;
+            var newWidget = _createConnectionWidget(
+                context,
+                data['countryCode'],
+                data['userID'],
+                msg,
+                commonMsg,
+                isRightAligned,
+                uniqueKey);
+            debugPrint("data['countryCode'] =${data['countryCode']}");
+            String uniqueUserID = '${userID}_camera';
+            _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(
+                widget: newWidget, isRightAligned: isRightAligned);
+          }
 
         } else if (data['event']  == "someone_leave_camera") {
           // "someone_leave_camera"イベントが来た場合のメッセージ
@@ -469,7 +479,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           }
         } else {
           // その他のアクションに対するメッセージを定義
-          message = "その他のイベント発生";
+          // message = "その他のイベント発生";
         }
 
         // メッセージウィジェットを動的に生成して_mapに追加
@@ -529,10 +539,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   Widget _createConnectionWidget(context, String countryCode, String userID, String msg, String commonMsg, bool isRightAligned, String uniqueKey) {
     var l10n = L10n.of(context);
     // メッセージ内容に応じて背景色を決定
-    Color backgroundColor = msg == '一緒に撮ろう！' ? const Color(0xFFFFCC4D) : Colors.white;
+    Color backgroundColor = commonMsg == 'shotTogether' ? const Color(0xFFFFCC4D) : Colors.white;
 
     Widget tail = Container(
-      width: 20,
+      width: 10,
       height: 10,
       decoration: BoxDecoration(
         color: backgroundColor,
@@ -583,24 +593,56 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     // テキストウィジェットを追加
     rowChildren.add(
-      Text(
-        msg, // 表示したいテキスト
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 16,
-        ),
-      ),
+        Flexible(
+          child: Text(
+            msg,
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 16,
+            ),
+            softWrap: true, // テキストがコンテナを超える場合に改行する
+          ),
+        )
     );
-
     // isRightAlignedの条件に応じてアイコンまたは空のテキストを追加
     rowChildren.add(const SizedBox(width: 2)); // テキストとアイコンの間隔
     Widget messageWidget = const Text('', style: TextStyle(fontSize: 16)); // デフォルトは空のテキスト
 
     if (!isRightAligned) {
-      if (msg == '一緒に撮ろう！') {
-        messageWidget = const Text('\u{1F4F8}', style: TextStyle(fontSize: 16)); // 絵文字を表示
+      if (commonMsg == 'shotTogether') {
+        // messageWidget = const Text('\u{1F4F8}', style: TextStyle(fontSize: 16)); // 絵文字を表示
+        messageWidget = Container(
+          padding: EdgeInsets.all(2),  // 内側の余白を設定
+          decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFFFFCC4D), // 形状を円形に設定
+              border: Border.all(color: Colors.black, width: 0.5) // 黒い枠線を設定
+          ),
+          child: const Text(
+            '\u{1F4F8}', // 手を挙げた絵文字
+            style: TextStyle(
+              fontSize: 14, // フォントサイズを16に設定
+              color: Colors.black, // 文字色を黒に設定
+            ),
+          ),
+        );
       } else if (commonMsg == 'sayhello') {
-        messageWidget = const Icon(Icons.reply, color: Colors.black, size: 16); // アイコンを表示
+        // messageWidget = const Icon(Icons.comment, color: Colors.black, size: 16); // アイコンを表示
+        messageWidget = Container(
+          padding: EdgeInsets.all(2),  // 内側の余白を設定
+          decoration: BoxDecoration(
+              color: Colors.white, // 背景色を白に設定
+              shape: BoxShape.circle, // 形状を円形に設定
+              border: Border.all(color: Colors.black, width: 0.5) // 黒い枠線を設定
+          ),
+          child: const Text(
+            '\u{1F590}', // 手を挙げた絵文字
+            style: TextStyle(
+              fontSize: 14, // フォントサイズを16に設定
+              color: Colors.black, // 文字色を黒に設定
+            ),
+          ),
+        );
       }
     }
 
@@ -616,23 +658,27 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           // debugPrint('onTapLng: $lng');
           debugPrint('onTapMessage: $msg');
           debugPrint('onTapMessage: $uniqueKey');
+          debugPrint('onTapcommonMsg: $commonMsg');
           _resHellow(userID, currentUserID);
           // bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-          String commonMsg = 'what';
-          var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, '$msg ', commonMsg, isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
-          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
 
-          String newUniquekey = "message_${DateTime.now().millisecondsSinceEpoch}";
-          commonMsg = 'res_sayhello';
-          if (l10n != null) {
-            String msg = l10n.res_sayhello;
+          if (l10n != null && commonMsg == 'sayhello') {
+            // String msg = l10n.res_sayHello;
+            commonMsg = 'res_sayhello';
+            var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, msg, commonMsg, isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
+            _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
+          }
+          if (l10n != null && commonMsg == 'res_sayhello') {
+            String newUniquekey = "message_${DateTime.now().millisecondsSinceEpoch}";
+            commonMsg = 'res_sayhello';
+            String msg = l10n.res_sayHello;
             var newWidget = _createConnectionWidget(
                 context, countryCode, currentUserID, msg, commonMsg, true,
                 ''); // countryCode を _createConnectionWidget に渡す
             _connectionWidgetsMap[newUniquekey] =
                 ConnectionWidgetData(widget: newWidget, isRightAligned: true);
-            notifyListeners();
           }
+          notifyListeners();
         },
         child: messageWidget,
       ),
@@ -657,6 +703,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     return Stack(
       alignment: Alignment.centerLeft,
       clipBehavior: Clip.none, // Overflowを許容
+
+
       children: <Widget>[
         // 国旗をメッセージの外に配置
         if (!isRightAligned)
@@ -665,9 +713,17 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             top: 5,
             child: Container(
               padding: const EdgeInsets.all(1),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.grey,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    spreadRadius: 3,
+                    blurRadius: 10,
+                    offset: Offset(0, 3),
+                  ),
+                ],
               ),
               child: ClipOval(
                 child: Flag.fromString(
@@ -686,9 +742,17 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             top: 5,
             child: Container(
               padding: const EdgeInsets.all(1),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.grey,
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.2),
+                    spreadRadius: 3,
+                    blurRadius: 10,
+                    offset: Offset(0, 3),
+                  ),
+                ],
               ),
               child: ClipOval(
                 child: Flag.fromString(
@@ -701,33 +765,55 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             ),
           ),
 
-        // 吹き出しのメイン部分のContainerウィジェット
-        Positioned(
-          top: 13, // 吹き出しの尾のY軸の位置を調整
-          left: isRightAligned ? null : 10, // 吹き出しの尾が左にある場合
-          right: isRightAligned ? 0 : null, // 吹き出しの尾が右にある場合
-          child: Transform.rotate(
-            angle: isRightAligned ? 0 * math.pi / 180 : 0 * math.pi / 180, // 左方向に25度回転（マイナスをつける）
-            child: tail,
-          ),
-        ),
+        // // 吹き出しのメイン部分のContainerウィジェット
+        // Positioned(
+        //   top: 20, // 吹き出しの尾のY軸の位置を調整
+        //   left: isRightAligned ? null : 10, // 吹き出しの尾が左にある場合
+        //   right: isRightAligned ? 0 : null, // 吹き出しの尾が右にある場合
+        //   child: Transform.rotate(
+        //     angle: isRightAligned ? 0 * math.pi / 180 : 0 * math.pi / 180, // 左方向に25度回転（マイナスをつける）
+        //     child: tail,
+        //   ),
+        // ),
         Padding(
           padding: EdgeInsets.only(
             left: isRightAligned ? 0 : 15,
             right: isRightAligned ? 5 : 0,
           ),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            decoration: BoxDecoration(
-              color: backgroundColor,
-              borderRadius: BorderRadius.circular(50),
-              // border: Border.all(color: Colors.black, width: 1.5),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: rowChildren,
-            ),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      spreadRadius: 3,
+                      blurRadius: 10,
+                      offset: Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: rowChildren,
+                ),
+              ),
+              // 吹き出し部分の配置
+              Positioned(
+                left: isRightAligned ? null : -5, // 左寄せの場合は左に出す
+                right: isRightAligned ? -5 : null, // 右寄せの場合は右に出す
+                top: 10, // 下に位置させる
+                child: tail,
+              ),
+            ],
           ),
         ),
       ],

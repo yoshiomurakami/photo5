@@ -8,11 +8,14 @@ class L10nEn extends L10n {
   String get loadingText => 'Now Loading';
 
   @override
-  String get sayhello => 'Hello!';
+  String get sayhello => 'Hello! A test to see how far a long sentence can be displayed. 35 characters so far.';
 
   @override
-  String get res_sayhello => 'nice to meet you!';
+  String get res_sayHello => 'What’s up?';
 
   @override
   String get saygoodbye => 'see you!';
+
+  @override
+  String get shotTogether => 'Shot together!';
 }

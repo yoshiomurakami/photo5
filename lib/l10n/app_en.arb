@@ -1,6 +1,7 @@
 {
   "loadingText": "Now Loading",
-  "sayhello": "Hello!",
-  "res_sayhello": "nice to meet you!",
-  "saygoodbye": "see you!"
+  "sayhello": "Hello! A test to see how far a long sentence can be displayed. 35 characters so far.",
+  "res_sayHello": "What’s up?",
+  "saygoodbye": "see you!",
+  "shotTogether": "Shot together!"
 }

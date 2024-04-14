@@ -8,11 +8,14 @@ class L10nJa extends L10n {
   String get loadingText => 'ローディング中';
 
   @override
-  String get sayhello => 'こんにちは！';
+  String get sayhello => 'こんにちは！長い文章はどこまで表示されるのかテスト。ここまでで３５文字。';
 
   @override
-  String get res_sayhello => 'よろしく！';
+  String get res_sayHello => 'よろしく！';
 
   @override
   String get saygoodbye => 'またね！';
+
+  @override
+  String get shotTogether => '一緒に撮ろう！';
 }
