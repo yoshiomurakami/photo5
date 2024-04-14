@@ -1,4 +1,6 @@
 {
   "loadingText": "Now Loading",
-  "sayhello": "Hello!"
+  "sayhello": "Hello!",
+  "res_sayhello": "nice to meet you!",
+  "saygoodbye": "see you!"
 }

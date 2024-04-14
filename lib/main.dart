@@ -443,6 +443,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         debugPrint("New userID: $newUserId");
         if (newUserId.length == 8) {
           prefs.setString('userID', newUserId);
+          // ignore: non_constant_identifier_names
           String SPuserID = prefs.getString('userID') ?? "";
           debugPrint("SPuserID in SharedPreferences = $SPuserID");
         } else {

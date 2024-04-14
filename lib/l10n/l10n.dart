@@ -104,6 +104,18 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Hello!'**
   String get sayhello;
+
+  /// No description provided for @res_sayhello.
+  ///
+  /// In en, this message translates to:
+  /// **'nice to meet you!'**
+  String get res_sayhello;
+
+  /// No description provided for @saygoodbye.
+  ///
+  /// In en, this message translates to:
+  /// **'see you!'**
+  String get saygoodbye;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

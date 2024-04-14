@@ -1,4 +1,6 @@
 {
   "loadingText": "ローディング中",
-  "sayhello": "こんにちは！"
+  "sayhello": "こんにちは！",
+  "res_sayhello": "よろしく！",
+  "saygoodbye": "またね！"
 }

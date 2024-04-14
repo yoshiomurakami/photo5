@@ -9,4 +9,10 @@ class L10nJa extends L10n {
 
   @override
   String get sayhello => 'こんにちは！';
+
+  @override
+  String get res_sayhello => 'よろしく！';
+
+  @override
+  String get saygoodbye => 'またね！';
 }
