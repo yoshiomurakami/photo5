@@ -84,13 +84,38 @@ class IntroductionScreenState extends State<IntroductionScreen> {
 
 
   Widget _introduction(BuildContext context) {
+    var l10n = L10n.of(context);
     return Scaffold(
       body: OverBoard(
-        nextText: 'next',
-        skipText: 'skip',
-        finishText: 'agree',
+        nextText: l10n!.next,
+        skipText: l10n.skip,
+        finishText: l10n.agree,
         allowScroll: true,
-        pages: pages,
+        pages: [
+          PageModel(
+              color: const Color(0xFF0097A7),
+              imageAssetPath: 'assets/01.png',
+              title: l10n.intro1Title,
+              body: l10n.intro1Body,
+              doAnimateImage: true),
+          PageModel(
+              color: const Color(0xFF536DFE),
+              imageAssetPath: 'assets/02.png',
+              title: l10n.intro2Title,
+              body: l10n.intro2Body,
+              doAnimateImage: true),
+          PageModel(
+              color: const Color(0xFF9B90BC),
+              imageAssetPath: 'assets/03.png',
+              title: l10n.intro3Title,
+              body: l10n.intro3Body,
+              doAnimateImage: true),
+          PageModel.withChild(
+              child: const TermsAndPrivacyPolicyPage(),
+              color: const Color(0xFF5886d6),
+              doAnimateChild: true)
+
+        ],
         showBullets: true,
         inactiveBulletColor: Colors.blue,
         finishCallback: () async {
@@ -112,49 +137,51 @@ class IntroductionScreenState extends State<IntroductionScreen> {
   }
 }
 
-  final pages = [
-    PageModel(
-        color: const Color(0xFF0097A7),
-        imageAssetPath: 'assets/01.png',
-        title: 'Screen 1',
-        body: 'Share your ideas with the team',
-        doAnimateImage: true),
-    PageModel(
-        color: const Color(0xFF536DFE),
-        imageAssetPath: 'assets/02.png',
-        title: 'Screen 2',
-        body: 'See the increase in productivity & output',
-        doAnimateImage: true),
-    PageModel(
-        color: const Color(0xFF9B90BC),
-        imageAssetPath: 'assets/03.png',
-        title: 'Screen 3',
-        body: 'Connect with the people from different places',
-        doAnimateImage: true),
-    PageModel.withChild(
-        child: const TermsAndPrivacyPolicyPage(),
-        color: const Color(0xFF5886d6),
-        doAnimateChild: true)
-
-  ];
+  // final pages = [
+  //   PageModel(
+  //       color: const Color(0xFF0097A7),
+  //       imageAssetPath: 'assets/01.png',
+  //       title: l10n!.next,
+  //       body: 'Share your ideas with the team',
+  //       doAnimateImage: true),
+  //   PageModel(
+  //       color: const Color(0xFF536DFE),
+  //       imageAssetPath: 'assets/02.png',
+  //       title: 'Screen 2',
+  //       body: 'See the increase in productivity & output',
+  //       doAnimateImage: true),
+  //   PageModel(
+  //       color: const Color(0xFF9B90BC),
+  //       imageAssetPath: 'assets/03.png',
+  //       title: 'Screen 3',
+  //       body: 'Connect with the people from different places',
+  //       doAnimateImage: true),
+  //   PageModel.withChild(
+  //       child: const TermsAndPrivacyPolicyPage(),
+  //       color: const Color(0xFF5886d6),
+  //       doAnimateChild: true)
+  //
+  // ];
 
 class TermsAndPrivacyPolicyPage extends StatelessWidget {
   const TermsAndPrivacyPolicyPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    var l10n = L10n.of(context);
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.6,
         color: Colors.white,
-        child: const Scrollbar(
+        child: Scrollbar(
           child: SingleChildScrollView(
             child: Padding(
-              padding: EdgeInsets.all(8.0),
+              padding: const EdgeInsets.all(8.0),
               child: Text(
-                "利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー", // Replace this with your actual terms and privacy policy
-                style: TextStyle(fontSize: 18.0),
+                // "利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー利用規約とプライバシーポリシー", // Replace this with your actual terms and privacy policy
+                l10n!.termsAndPrivacyPolicy,
+                style: const TextStyle(fontSize: 18.0),
               ),
             ),
           ),
@@ -206,7 +233,6 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-
     return StreamBuilder<bool>(
       stream: _startupController.stream,
       builder: (context, snapshot) {
@@ -271,7 +297,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
                   ),
                   const SizedBox(height: 16.0),
                   Text(
-                    "Latest version from server: $latestVersion", // Display the latest version here
+                    "${l10n.latestVersion}$latestVersion", // Display the latest version here
+                    // l10n.latestVersion, // Display the latest version here
                     style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16.0,
@@ -338,6 +365,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   }
 
   Future<void> _checkConnectivity(BuildContext context) async {
+
     // await Future.delayed(Duration(seconds: 5));
     debugPrint("Connectivity check starting");
     var connectivityResult = await (Connectivity().checkConnectivity());
@@ -354,8 +382,9 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         }
       });
       if (mounted) {
+        var l10n = L10n.of(context);
         throw createErrorDialogData(
-            'No internet connection',
+            l10n!.errorNoInternetConnection,
                 (ctx) => _startupProcedures(ctx),
             ErrorDialogType.dependDialog,
             context
@@ -369,6 +398,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   }
 
   Future<void> _checkVersion() async {
+    var l10n = L10n.of(context);
     debugPrint("Version check starting");
 
     String? currentVersion; // nullable に変更
@@ -381,7 +411,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('Error fetching package info: $e');
       if (mounted) {
-        throw createErrorDialogData('Could not fetch the app version. Please check if the application is properly installed.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorGetAppVersion, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -397,14 +427,14 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         }
       } else {
         if (mounted) {
-          throw createErrorDialogData('Failed to load version info from the server', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          throw createErrorDialogData(l10n!.errorFetchAppVersion, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
         }
         return;
       }
     } catch (e) {
       debugPrint('Error fetching server version: $e');
       if (mounted) {
-        throw createErrorDialogData('No internet connection or server unreachable. Please check your internet connection.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorNoInternetConnection, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -415,6 +445,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
 
   Future<void> _checkUserId() async {
+    var l10n = L10n.of(context);
     debugPrint("UserId check starting");
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String userID = prefs.getString('userID') ?? "";
@@ -426,7 +457,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
       return;
     } else if (userID.isNotEmpty) {
       if (mounted) {
-        throw createErrorDialogData('The UserID is corrupted. Please initialize the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorGetUserId, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -448,19 +479,19 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
           debugPrint("SPuserID in SharedPreferences = $SPuserID");
         } else {
           if (mounted) {
-            throw createErrorDialogData('Could not fetch valid UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+            throw createErrorDialogData(l10n!.errorFetchUserId, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
           }
           return;
         }
       } else {
         if (mounted) {
-          throw createErrorDialogData('Could not fetch UserID from server. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          throw createErrorDialogData(l10n!.errorFetchUserId, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
         }
         return;
       }
     } catch (e) {
       if (mounted) {
-        throw createErrorDialogData('Unexpected error occurred while fetching UserID. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorFetchUserId, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -468,6 +499,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   }
 
   Future<void> _checkStatus() async {
+    var l10n = L10n.of(context);
     debugPrint("Status check starting");
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -477,7 +509,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
       prefs = await SharedPreferences.getInstance();
     } catch (e) {
       if (mounted) {
-        throw createErrorDialogData('Could not access app data. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorAccessAppdata, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -487,7 +519,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
       debugPrint('Current status value: $status');
     } catch (e) {
       if (mounted) {
-        throw createErrorDialogData('Could not read app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+        throw createErrorDialogData(l10n!.errorAccessAppdata, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
       }
       return;
     }
@@ -498,7 +530,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         prefs.setString('status', '1'); // 本当は1にする。
       } catch (e) {
         if (mounted) {
-          throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          throw createErrorDialogData(l10n!.errorCompleteTutorial, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
         }
         return;
       }
@@ -508,7 +540,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         prefs.setString('status', '1'); // 本当は1にする。
       } catch (e) {
         if (mounted) {
-          throw createErrorDialogData('Could not initialize app status. Please restart the application.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+          throw createErrorDialogData(l10n!.errorInitializeApp, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
         }
         return;
       }
@@ -522,7 +554,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
           prefs.setString('status', '1'); // Set status to '1' after tutorial
         } catch (e) {
           if (mounted) {
-            throw createErrorDialogData('Could not complete the tutorial. Please check your network connection and try again.', (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
+            throw createErrorDialogData(l10n!.errorCompleteTutorial, (ctx) => _startupProcedures(context), ErrorDialogType.dependDialog, context);
           }
           return;
         }
@@ -559,6 +591,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
     if (!mounted) return;
 
     if (locationStatus.isDenied || cameraStatus.isDenied) {
+      var l10n = L10n.of(context);
       await showDialog(
         context: context,
         barrierDismissible: false,
@@ -570,8 +603,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
               child: PageView(
                 controller: pageController,
                 children: <Widget>[
-                  if (locationStatus.isDenied) _tutorialPage('assets/tutorial1.png', 'Tutorial text 1', Permission.location, showButton: true),
-                  if (cameraStatus.isDenied) _tutorialPage('assets/tutorial2.png', 'Tutorial text 2', Permission.camera, showButton: true),
+                  if (locationStatus.isDenied) _tutorialPage('assets/tutorial1.png', l10n!.permissionLocation, Permission.location, showButton: true),
+                  if (cameraStatus.isDenied) _tutorialPage('assets/tutorial2.png', l10n!.permissionCamera, Permission.camera, showButton: true),
                 ],
               ),
             ),
@@ -613,6 +646,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
 
   Widget _tutorialPage(String imagePath, String text, Permission permission, {bool showButton = false}) {
+    var l10n = L10n.of(context);
     return Column(
       children: <Widget>[
         SizedBox(
@@ -633,13 +667,14 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
                 );
               }
             },
-            child: const Text('Request Permission'),
+            child: Text(l10n!.permissionAllowButton),
           ),
       ],
     );
   }
 
   Future<bool> _requestPermission(Permission permission) async {
+    var l10n = L10n.of(context);
     final status = await permission.request();
 
     if (!mounted) return false;
@@ -649,11 +684,11 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: const Text('Permission error'),
-            content: const Text('Permission is needed.'),
+            title: Text(l10n!.permissionErrorDialogTitle),
+            content: Text(l10n.permissionErrorDialogText),
             actions: <Widget>[
               TextButton(
-                child: const Text('Retry'),
+                child: Text(l10n.permissionErrorDialogButton),
                 onPressed: () {
                   Navigator.of(context).pop();
                   _requestPermission(permission);

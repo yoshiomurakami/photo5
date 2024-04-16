@@ -378,7 +378,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'sayhello';
         if (l10n != null) {
-          String msg = l10n.sayhello;
+          String msg = l10n.sayHello;
           debugPrint("tranced msgA = $msg");
           var newWidget = _createConnectionWidget(
               context, '', data['userID'], msg, commonMsg, isRightAligned,
@@ -398,7 +398,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'sayhello';
         if (l10n != null) {
-          String msg = l10n.sayhello;
+          String msg = l10n.sayHello;
           debugPrint("tranced msgB = $msg");
           var newWidget = _createConnectionWidget(
               context, data['countryCode'], data['userID'], msg, commonMsg,
@@ -413,7 +413,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'saygoodbye';
         if (l10n != null) {
-          String msg = l10n.saygoodbye;
+          String msg = l10n.sayGoodbye;
           var newWidget = _createConnectionWidget(
               context, data['countryCode'], data['userID'], msg, commonMsg,
               isRightAligned,
@@ -434,7 +434,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
       String commonMsg = 'res_sayhello';
       if (l10n != null) {
-        String msg = l10n.res_sayHello;
+        String msg = l10n.resSayHello;
         var newWidget = _createConnectionWidget(
             context, data['countryCode'], data['userID'], msg, commonMsg,
             isRightAligned,
@@ -595,7 +595,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     rowChildren.add(
         Flexible(
           child: Padding(
-            padding: EdgeInsets.only(left: 5),  // 左側に5ポイントの余白を設定
+            padding: const EdgeInsets.only(left: 5),  // 左側に5ポイントの余白を設定
             child: Text(
               msg,
               style: const TextStyle(
@@ -616,10 +616,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (commonMsg == 'shotTogether') {
         // messageWidget = const Text('\u{1F4F8}', style: TextStyle(fontSize: 16)); // 絵文字を表示
         messageWidget = Container(
-          padding: EdgeInsets.all(2),  // 内側の余白を設定
+          padding: const EdgeInsets.all(4),  // 内側の余白を設定
           decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: Color(0xFFFFCC4D), // 形状を円形に設定
+              color: const Color(0xFFFFCC4D), // 形状を円形に設定
               border: Border.all(color: Colors.black, width: 0.5) // 黒い枠線を設定
           ),
           child: const Text(
@@ -633,7 +633,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       } else if (commonMsg == 'sayhello') {
         // messageWidget = const Icon(Icons.comment, color: Colors.black, size: 16); // アイコンを表示
         messageWidget = Container(
-          padding: EdgeInsets.all(2),  // 内側の余白を設定
+          padding: const EdgeInsets.all(4),  // 内側の余白を設定
           decoration: BoxDecoration(
               color: Colors.white, // 背景色を白に設定
               shape: BoxShape.circle, // 形状を円形に設定
@@ -675,7 +675,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           if (l10n != null && commonMsg == 'res_sayhello') {
             String newUniquekey = "message_${DateTime.now().millisecondsSinceEpoch}";
             commonMsg = 'res_sayhello';
-            String msg = l10n.res_sayHello;
+            String msg = l10n.resSayHello;
             var newWidget = _createConnectionWidget(
                 context, countryCode, currentUserID, msg, commonMsg, true,
                 ''); // countryCode を _createConnectionWidget に渡す
@@ -725,7 +725,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                     color: Colors.black.withOpacity(0.1),
                     spreadRadius: 2,
                     blurRadius: 5,
-                    offset: Offset(0, 3),
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -754,7 +754,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                     color: Colors.black.withOpacity(0.1),
                     spreadRadius: 2,
                     blurRadius: 5,
-                    offset: Offset(0, 3),
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
@@ -800,7 +800,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                       color: Colors.black.withOpacity(0.2),
                       spreadRadius: 3,
                       blurRadius: 10,
-                      offset: Offset(0, 3),
+                      offset: const Offset(0, 3),
                     ),
                   ],
                 ),
