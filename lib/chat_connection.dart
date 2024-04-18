@@ -313,10 +313,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
-    _setupCameraEventListener(); // ここでカメライベントリスナーを設定
+    // _setupCameraEventListener(); // ここでカメライベントリスナーを設定
   }
 
-  void _setupCameraEventListener() {
+  // void _setupCameraEventListener() {
 
     // chatConnection.on('camera_event', (data) {
     //   String userID = data['userID'];
@@ -354,7 +354,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     //
     //   notifyListeners();
     // });
-  }
+  // }
 
 
 
@@ -371,6 +371,17 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       String action = data['action'];
       String userID = data['userID'];
 
+      // 緯度と経度を double 型として取得
+      // data['lat'] と data['lng'] が文字列として送られてくる可能性があるため、double.parseを使用
+      double? lat = double.tryParse(data['lat']);
+      double? lng = double.tryParse(data['lng']);
+
+      // lat または lng が null である場合、適切なデフォルト値を設定するか、エラーハンドリングを行う
+      if (lat == null || lng == null) {
+        debugPrint('Latitude or Longitude data is invalid.');
+        return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
+      }
+
       // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
       if (currentUserID.isEmpty || userID == currentUserID) {
         // debugPrint("sendこんにちは！");
@@ -381,7 +392,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           String msg = l10n.sayHello;
           debugPrint("tranced msgA = $msg");
           var newWidget = _createConnectionWidget(
-              context, '', data['userID'], msg, commonMsg, isRightAligned,
+              context, '', data['userID'], lat, lng, msg, commonMsg, isRightAligned,
               uniqueKey);
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
@@ -401,7 +412,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           String msg = l10n.sayHello;
           debugPrint("tranced msgB = $msg");
           var newWidget = _createConnectionWidget(
-              context, data['countryCode'], data['userID'], msg, commonMsg,
+              context, data['countryCode'], data['userID'], lat, lng, msg, commonMsg,
               isRightAligned,
               uniqueKey);
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
@@ -415,7 +426,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         if (l10n != null) {
           String msg = l10n.sayGoodbye;
           var newWidget = _createConnectionWidget(
-              context, data['countryCode'], data['userID'], msg, commonMsg,
+              context, data['countryCode'], data['userID'], lat, lng, msg, commonMsg,
               isRightAligned,
               uniqueKey); // countryCode を _createConnectionWidget に渡す
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
@@ -436,7 +447,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (l10n != null) {
         String msg = l10n.resSayHello;
         var newWidget = _createConnectionWidget(
-            context, data['countryCode'], data['userID'], msg, commonMsg,
+            context, data['countryCode'], data['userID'], 0, 0, msg, commonMsg,
             isRightAligned,
             uniqueKey); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = ConnectionWidgetData(
@@ -459,6 +470,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                 context,
                 data['countryCode'],
                 data['userID'],
+                0,
+                0,
                 msg,
                 commonMsg,
                 isRightAligned,
@@ -536,7 +549,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
 
-  Widget _createConnectionWidget(context, String countryCode, String userID, String msg, String commonMsg, bool isRightAligned, String uniqueKey) {
+  Widget _createConnectionWidget(context, String countryCode, String userID, double lat, double lng, String msg, String commonMsg, bool isRightAligned, String uniqueKey) {
     var l10n = L10n.of(context);
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor = commonMsg == 'shotTogether' ? const Color(0xFFFFCC4D) : Colors.white;
@@ -658,8 +671,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           debugPrint('onTapUserID: $userID');
           debugPrint('onTapCurrentUserID: $currentUserID');
           debugPrint('onTapCountryCode: $countryCode');
-          // debugPrint('onTapLat: $lat');
-          // debugPrint('onTapLng: $lng');
+          debugPrint('onTapLat: $lat');
+          debugPrint('onTapLng: $lng');
           debugPrint('onTapMessage: $msg');
           debugPrint('onTapMessage: $uniqueKey');
           debugPrint('onTapcommonMsg: $commonMsg');
@@ -669,7 +682,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           if (l10n != null && commonMsg == 'sayhello') {
             // String msg = l10n.res_sayHello;
             commonMsg = 'res_sayhello';
-            var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, msg, commonMsg, isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
+            var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, lat, lng, msg, commonMsg, isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
             _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
           }
           if (l10n != null && commonMsg == 'res_sayhello') {
@@ -677,7 +690,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             commonMsg = 'res_sayhello';
             String msg = l10n.resSayHello;
             var newWidget = _createConnectionWidget(
-                context, countryCode, currentUserID, msg, commonMsg, true,
+                context, countryCode, currentUserID, lat, lng, msg, commonMsg, true,
                 ''); // countryCode を _createConnectionWidget に渡す
             _connectionWidgetsMap[newUniquekey] =
                 ConnectionWidgetData(widget: newWidget, isRightAligned: true);
