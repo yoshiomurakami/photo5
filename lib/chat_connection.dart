@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
+// import 'dart:math';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:geocoding/geocoding.dart';
+import 'package:geolocator/geolocator.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_hooks/flutter_hooks.dart';
@@ -363,7 +365,23 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     currentUserID = prefs.getString('userID') ?? '';
   }
 
+  // double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
+  //   var earthRadius = 6371; // 地球の半径、キロメートル
+  //   var dLat = _degreesToRadians(lat2 - lat1);
+  //   var dLng = _degreesToRadians(lng2 - lng1);
+  //   var a = sin(dLat / 2) * sin(dLat / 2) +
+  //       cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
+  //           sin(dLng / 2) * sin(dLng / 2);
+  //   var c = 2 * atan2(sqrt(a), sqrt(1 - a));
+  //   return earthRadius * c;
+  // }
+
+  // double _degreesToRadians(double degrees) {
+  //   return degrees * pi / 180;
+  // }
+
   void setupConnectionsListener(BuildContext context) {
+
     if (!_isListenerSetup) {
       _isListenerSetup = true;
     var l10n = L10n.of(context);
@@ -373,18 +391,33 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       // 緯度と経度を double 型として取得
       // data['lat'] と data['lng'] が文字列として送られてくる可能性があるため、double.parseを使用
-      double? lat = double.tryParse(data['lat']);
-      double? lng = double.tryParse(data['lng']);
+      // double? chatLat = double.tryParse(data['lat']);
+      // double? chatLng = double.tryParse(data['lng']);
+      double? chatLat = 35.689594143552014;
+      double? chatLng = 139.70021608871818;
+      debugPrint("chatlat = $chatLat /chatlng = $chatLng");
 
-      // lat または lng が null である場合、適切なデフォルト値を設定するか、エラーハンドリングを行う
-      if (lat == null || lng == null) {
-        debugPrint('Latitude or Longitude data is invalid.');
-        return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
-      }
+      SharedPreferences.getInstance().then((prefs) {
+        double myLat = prefs.getDouble('latitude') ?? 0.0;
+        double myLng = prefs.getDouble('longitude') ?? 0.0;
+        // double myLat = 90.97769452525533;
+        // double myLng = -175.3511541534225;
+        debugPrint("mylat = $myLat /mylng = $myLng");
+
+        // lat または lng が null である場合、適切なデフォルト値を設定するか、エラーハンドリングを行う
+        if (chatLat == null || chatLng == null) {
+          debugPrint('Latitude or Longitude data is invalid.');
+          return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
+        }
+
+        // 2点間の距離を計算
+        double distance = Geolocator.distanceBetween(myLat, myLng, chatLat, chatLng);
+        debugPrint('Distance between points: ${distance.toStringAsFixed(2)} meters');
 
       // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
-      if (currentUserID.isEmpty || userID == currentUserID) {
-        // debugPrint("sendこんにちは！");
+        if ((currentUserID.isEmpty || userID == currentUserID) && distance >= 10000) {
+
+        debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'sayhello';
@@ -392,7 +425,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           String msg = l10n.sayHello;
           debugPrint("tranced msgA = $msg");
           var newWidget = _createConnectionWidget(
-              context, '', data['userID'], lat, lng, msg, commonMsg, isRightAligned,
+              context, '', data['userID'], chatLat, chatLng, msg, commonMsg, isRightAligned,
               uniqueKey);
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
@@ -403,7 +436,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         return;
       }
 
-      if (action == 'connected') {
+      if (action == 'connected' && distance >= 10000) {
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -412,13 +445,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           String msg = l10n.sayHello;
           debugPrint("tranced msgB = $msg");
           var newWidget = _createConnectionWidget(
-              context, data['countryCode'], data['userID'], lat, lng, msg, commonMsg,
+              context, data['countryCode'], data['userID'], chatLat, chatLng, msg, commonMsg,
               isRightAligned,
               uniqueKey);
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
-      } else if (action == 'disconnected') {
+      } else if (action == 'disconnected' || distance >= 10000) {
         // _connectionWidgetsMap.remove(userID);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -426,7 +459,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         if (l10n != null) {
           String msg = l10n.sayGoodbye;
           var newWidget = _createConnectionWidget(
-              context, data['countryCode'], data['userID'], lat, lng, msg, commonMsg,
+              context, data['countryCode'], data['userID'], chatLat, chatLng, msg, commonMsg,
               isRightAligned,
               uniqueKey); // countryCode を _createConnectionWidget に渡す
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
@@ -518,6 +551,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     //
     //   notifyListeners(); // 変更をリスナーに通知
     // });
+    });
     }
   }
 
