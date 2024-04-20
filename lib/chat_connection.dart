@@ -316,7 +316,22 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
     // _setupCameraEventListener(); // ここでカメライベントリスナーを設定
+    // _setupUserMapListener();
   }
+
+  // void _setupUserMapListener() {
+  //   chatConnection.on('existingUserLocations', (data) {
+  //     // data['userLocations'] はユーザーの位置情報を含む配列です。
+  //     var existingUserLocations = data['userLocations'] as List<dynamic>;
+  //     debugPrint("Received ${existingUserLocations.length} users data from server.");
+  //     for (var user in existingUserLocations) {
+  //       debugPrint("User ID: ${user['userID']}, Lat: ${user['lat']}, Lng: ${user['lng']}");
+  //       // ここで受け取った各ユーザーのデータに基づいて何らかの処理を行う
+  //     }
+  //     // 受け取った位置情報をもとに、アプリ内で必要な更新を行う
+  //     notifyListeners();  // ビューを更新するためにリスナーに通知
+  //   });
+  // }
 
   // void _setupCameraEventListener() {
 
@@ -382,6 +397,32 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
   void setupConnectionsListener(BuildContext context) {
 
+    chatConnection.on('existingUserLocations', (data) async {
+      var existingUserLocations = data['userLocations'] as List<dynamic>;
+      debugPrint("Received ${existingUserLocations.length} users data from server.");
+
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      double myLat = prefs.getDouble('latitude') ?? 0.0; // 緯度の取得
+      double myLng = prefs.getDouble('longitude') ?? 0.0; // 経度の取得
+
+      List<dynamic> updatedUserLocations = [];
+
+      for (var user in existingUserLocations) {
+        double userLat = double.tryParse(user['lat']) ?? 0.0;
+        double userLng = double.tryParse(user['lng']) ?? 0.0;
+        double distance = Geolocator.distanceBetween(myLat, myLng, userLat, userLng);
+        debugPrint("distance = $distance");
+
+        user['status'] = (distance <= 10000) ? '1' : '0';
+        updatedUserLocations.add(user);
+        debugPrint("User ID: ${user['userID']}, Lat: ${user['lat']}, Lng: ${user['lng']}, Status: ${user['status']}");
+      }
+
+      // Update internal state with the modified list
+      existingUserLocations = updatedUserLocations;
+      notifyListeners();  // Notify listeners to update UI or other components
+    });
+
     if (!_isListenerSetup) {
       _isListenerSetup = true;
     var l10n = L10n.of(context);
@@ -405,10 +446,11 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         debugPrint("mylat = $myLat /mylng = $myLng");
 
         // lat または lng が null である場合、適切なデフォルト値を設定するか、エラーハンドリングを行う
-        if (chatLat == null || chatLng == null) {
-          debugPrint('Latitude or Longitude data is invalid.');
-          return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
-        }
+
+        // if (chatLat == null || chatLng == null) {
+        //   debugPrint('Latitude or Longitude data is invalid.');
+        //   return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
+        // }
 
         // 2点間の距離を計算
         double distance = Geolocator.distanceBetween(myLat, myLng, chatLat, chatLng);
