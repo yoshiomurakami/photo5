@@ -312,6 +312,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   String currentUserID = ''; // 現在のユーザーIDを格納
   final Map<String, ConnectionWidgetData> _connectionWidgetsMap = {};
   bool _isListenerSetup = false;  // リスナーが設定されたかを追跡するプライベート変数
+  List<dynamic> existingUserLocations = [];  // クラスレベルでのリスト定義
 
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
@@ -395,32 +396,29 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   //   return degrees * pi / 180;
   // }
 
-  void setupConnectionsListener(BuildContext context) {
+  void updateExistingUserLocations(List<dynamic> userLocations) {
+    SharedPreferences.getInstance().then((prefs) {
+      double myLat = prefs.getDouble('latitude') ?? 0.0;
+      double myLng = prefs.getDouble('longitude') ?? 0.0;
 
-    chatConnection.on('existingUserLocations', (data) async {
-      var existingUserLocations = data['userLocations'] as List<dynamic>;
-      debugPrint("Received ${existingUserLocations.length} users data from server.");
-
-      SharedPreferences prefs = await SharedPreferences.getInstance();
-      double myLat = prefs.getDouble('latitude') ?? 0.0; // 緯度の取得
-      double myLng = prefs.getDouble('longitude') ?? 0.0; // 経度の取得
-
-      List<dynamic> updatedUserLocations = [];
-
-      for (var user in existingUserLocations) {
+      for (var user in userLocations) {
         double userLat = double.tryParse(user['lat']) ?? 0.0;
         double userLng = double.tryParse(user['lng']) ?? 0.0;
         double distance = Geolocator.distanceBetween(myLat, myLng, userLat, userLng);
-        debugPrint("distance = $distance");
 
         user['status'] = (distance <= 10000) ? '1' : '0';
-        updatedUserLocations.add(user);
-        debugPrint("User ID: ${user['userID']}, Lat: ${user['lat']}, Lng: ${user['lng']}, Status: ${user['status']}");
+        debugPrint("Updated User ID: ${user['userID']}, Distance: $distance, Status: ${user['status']}");
       }
+    });
+  }
 
-      // Update internal state with the modified list
-      existingUserLocations = updatedUserLocations;
-      notifyListeners();  // Notify listeners to update UI or other components
+  void setupConnectionsListener(BuildContext context) {
+
+    // 既存ユーザーの位置情報を取得するリスナー
+    chatConnection.on('existingUserLocations', (data) async {
+      var existingUserLocations = data['userLocations'] as List<dynamic>;
+      debugPrint("Received ${existingUserLocations.length} users data from server.");
+      updateExistingUserLocations(existingUserLocations);
     });
 
     if (!_isListenerSetup) {
@@ -432,32 +430,38 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       // 緯度と経度を double 型として取得
       // data['lat'] と data['lng'] が文字列として送られてくる可能性があるため、double.parseを使用
-      // double? chatLat = double.tryParse(data['lat']);
-      // double? chatLng = double.tryParse(data['lng']);
-      double? chatLat = 35.689594143552014;
-      double? chatLng = 139.70021608871818;
+      double? chatLat = double.tryParse(data['lat']) ?? 0.0;
+      double? chatLng = double.tryParse(data['lng']) ?? 0.0;
+      // double? chatLat = 35.689594143552014;
+      // double? chatLng = 100.70021608871818;
       debugPrint("chatlat = $chatLat /chatlng = $chatLng");
 
       SharedPreferences.getInstance().then((prefs) {
-        double myLat = prefs.getDouble('latitude') ?? 0.0;
-        double myLng = prefs.getDouble('longitude') ?? 0.0;
-        // double myLat = 90.97769452525533;
-        // double myLng = -175.3511541534225;
+        // double myLat = prefs.getDouble('latitude') ?? 0.0;
+        // double myLng = prefs.getDouble('longitude') ?? 0.0;
+        double myLat = 90.97769452525533;
+        double myLng = -175.3511541534225;
         debugPrint("mylat = $myLat /mylng = $myLng");
-
-        // lat または lng が null である場合、適切なデフォルト値を設定するか、エラーハンドリングを行う
-
-        // if (chatLat == null || chatLng == null) {
-        //   debugPrint('Latitude or Longitude data is invalid.');
-        //   return; // ここで処理を終了し、エラーがあればそれ以上進まないようにする
-        // }
 
         // 2点間の距離を計算
         double distance = Geolocator.distanceBetween(myLat, myLng, chatLat, chatLng);
         debugPrint('Distance between points: ${distance.toStringAsFixed(2)} meters');
 
-      // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合は処理をスキップ
-        if ((currentUserID.isEmpty || userID == currentUserID) && distance >= 10000) {
+        // 新しいユーザーをexistingUserLocationsに追加する処理
+        Map<String, dynamic> newUser = {
+          'userID': userID,
+          'lat': chatLat.toString(),
+          'lng': chatLng.toString(),
+          'status': distance <= 10000 ? '1' : '0'
+        };
+
+        existingUserLocations.add(newUser);
+        debugPrint('existingUserLocations = $existingUserLocations');
+
+        // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合、
+        // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
+        bool hasStatusZero = existingUserLocations.any((user) => user['status'] == '0');
+        if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
 
         debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
@@ -483,6 +487,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'sayhello';
+        debugPrint("print sayhello");
         if (l10n != null) {
           String msg = l10n.sayHello;
           debugPrint("tranced msgB = $msg");
@@ -493,7 +498,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
-      } else if (action == 'disconnected' || distance >= 10000) {
+      } else if (action == 'disconnected' && distance >= 10000) {
         // _connectionWidgetsMap.remove(userID);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
