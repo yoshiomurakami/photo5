@@ -401,7 +401,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       double myLat = prefs.getDouble('latitude') ?? 0.0;
       double myLng = prefs.getDouble('longitude') ?? 0.0;
 
-      for (var user in userLocations) {
+      for (var user in existingUserLocations) {
         double userLat = double.tryParse(user['lat']) ?? 0.0;
         double userLng = double.tryParse(user['lng']) ?? 0.0;
         double distance = Geolocator.distanceBetween(myLat, myLng, userLat, userLng);
@@ -410,6 +410,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         debugPrint("Updated User ID: ${user['userID']}, Distance: $distance, Status: ${user['status']}");
       }
     });
+    existingUserLocations = userLocations;  // ローカルからグローバルリストへの更新
+    debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
+
   }
 
   void setupConnectionsListener(BuildContext context) {
@@ -437,10 +440,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       debugPrint("chatlat = $chatLat /chatlng = $chatLng");
 
       SharedPreferences.getInstance().then((prefs) {
-        // double myLat = prefs.getDouble('latitude') ?? 0.0;
-        // double myLng = prefs.getDouble('longitude') ?? 0.0;
-        double myLat = 90.97769452525533;
-        double myLng = -175.3511541534225;
+        double myLat = prefs.getDouble('latitude') ?? 0.0;
+        double myLng = prefs.getDouble('longitude') ?? 0.0;
+        // double myLat = 90.97769452525533;
+        // double myLng = -175.3511541534225;
         debugPrint("mylat = $myLat /mylng = $myLng");
 
         // 2点間の距離を計算
@@ -456,7 +459,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         };
 
         existingUserLocations.add(newUser);
-        debugPrint('existingUserLocations = $existingUserLocations');
+        debugPrint('existingUserLocations = ${existingUserLocations}');
 
         // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合、
         // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
