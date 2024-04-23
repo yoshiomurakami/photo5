@@ -427,6 +427,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     if (!_isListenerSetup) {
       _isListenerSetup = true;
     var l10n = L10n.of(context);
+
     chatConnection.on('connections', (data) {
       String action = data['action'];
       String userID = data['userID'];
@@ -458,12 +459,29 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           'status': distance <= 10000 ? '1' : '0'
         };
 
-        existingUserLocations.add(newUser);
-        debugPrint('existingUserLocations = ${existingUserLocations}');
+        // existingUserLocations.add(newUser);
+
+        // アクションに基づいてexistingUserLocationsを更新
+        if (action == 'connected') {
+          // 既存のユーザー情報を更新または追加
+          var index = existingUserLocations.indexWhere((user) => user['userID'] == userID);
+          if (index != -1) {
+            existingUserLocations[index] = newUser;  // 既存ユーザー更新
+          } else {
+            existingUserLocations.add(newUser);  // 新規ユーザー追加
+          }
+        } else if (action == 'disconnected') {
+          // ユーザー情報を削除
+          existingUserLocations.removeWhere((user) => user['userID'] == userID);
+        }
+
+        debugPrint('Updated existingUserLocations = ${existingUserLocations}');
+
 
         // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合、
         // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
         bool hasStatusZero = existingUserLocations.any((user) => user['status'] == '0');
+
         if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
 
         debugPrint("sendこんにちは！");
@@ -541,6 +559,14 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
       chatConnection.on('camera_event', (data) {
         String userID = data['userID'];
+
+        // 状態を確認し、statusが1の場合は処理をスキップする
+        var user = existingUserLocations.firstWhere((user) => user['userID'] == userID && user['status'] == '1', orElse: () => null);
+        if (user != null) {
+          debugPrint("User ${userID} has status 1, skipping widget creation.");
+          return;  // statusが1の場合は何もせず終了
+        }
+
         // String message;
         if (data['event'] == "someone_start_camera") {
           // "someone_start_camera"イベントが来た場合のメッセージ
