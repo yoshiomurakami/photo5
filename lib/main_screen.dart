@@ -24,6 +24,8 @@ class _MainScreenState extends State<_MainScreenContent> {
   final PageController _pageController = PageController(viewportFraction: 1); // ここでビューポートの幅を設定
   ChatConnection? chatConnection;
 
+  // int totalConnections = 0;
+
 
   @override
   void initState() {

@@ -237,3 +237,28 @@ final timelineAddProvider = StateNotifierProvider<TimelineNotifier, List<Timelin
 
 
 final userIdProvider = StateProvider<String?>((ref) => null);
+
+
+
+//接続数を示す数値
+// final totalConnectionsProvider = StateNotifierProvider<TotalConnectionsNotifier, int>((ref) {
+//   return TotalConnectionsNotifier();
+// });
+//
+// class TotalConnectionsNotifier extends StateNotifier<int> {
+//   TotalConnectionsNotifier() : super(0);
+//
+//   void increment() {
+//     state++;
+//   }
+//
+//   void decrement() {
+//     state--;
+//   }
+//
+//   void setTotalConnections(int newTotal) {
+//     state = newTotal;
+//   }
+// }
+
+final totalConnectionsProvider = StateProvider<int>((ref) => 0);

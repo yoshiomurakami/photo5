@@ -13,10 +13,13 @@ import 'package:flag/flag.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 import 'l10n/l10n.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 io.Socket?socket;
 
 typedef CameraActionCallback = void Function();
+
+// int totalConnections = 0;
 
 // このProviderを使用して、アプリのどこからでもshootingGroupIdを参照・更新できます。
 // final shootingGroupIdProvider = StateProvider<String?>((ref) => null);
@@ -179,34 +182,34 @@ class ChatConnection {
   }
 }
 
-class ConnectionNumber extends StatefulWidget {
+class ConnectionNumber extends ConsumerStatefulWidget {
   final double? left;
   final double? bottom;
 
-  const ConnectionNumber({super.key, this.left, this.bottom});
+  const ConnectionNumber({Key? key, this.left, this.bottom}) : super(key: key);
 
   @override
   ConnectionNumberState createState() => ConnectionNumberState();
 }
 
-class ConnectionNumberState extends State<ConnectionNumber> {
-  int totalConnections = 0;
+class ConnectionNumberState extends ConsumerState<ConnectionNumber> {
+  // int totalConnections = 0;
 
   @override
   void initState() {
     super.initState();
-
     socket?.on('connections', (data) {
       int connections = data['count'] - 1;
-      setState(() {
-        totalConnections = connections;
-      });
+      ref.read(totalConnectionsProvider.notifier).state = connections;
     });
-
   }
 
   @override
   Widget build(BuildContext context) {
+    // final ref = ProviderScope.containerOf(context);
+    final totalConnections = ref.watch(totalConnectionsProvider);
+
+
 
     double screenWidth = MediaQuery.of(context).size.width;
     double leftMargin = screenWidth * 0.05;  // 画面の横幅の5%
@@ -228,22 +231,9 @@ class ConnectionNumberState extends State<ConnectionNumber> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              const Text(
-                '😀',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                ),
-              ),
+              const Text('😀', style: TextStyle(color: Colors.black, fontSize: 16)),
               const SizedBox(width: 10),
-              Text(
-                '$totalConnections',
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('$totalConnections', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -313,11 +303,15 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   final Map<String, ConnectionWidgetData> _connectionWidgetsMap = {};
   bool _isListenerSetup = false;  // リスナーが設定されたかを追跡するプライベート変数
   List<dynamic> existingUserLocations = [];  // クラスレベルでのリスト定義
+  final ProviderContainer _container;
 
-  ConnectionWidgetsManager({required this.chatConnection}) {
+  ConnectionWidgetsManager({required this.chatConnection}) : _container = ProviderContainer() {
     _loadCurrentUserID();
-    // _setupCameraEventListener(); // ここでカメライベントリスナーを設定
-    // _setupUserMapListener();
+  }
+
+  void updateTotalConnections(int value) {
+    _container.read(totalConnectionsProvider.notifier).state += value;
+    notifyListeners();
   }
 
   // void _setupUserMapListener() {
@@ -380,21 +374,6 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     currentUserID = prefs.getString('userID') ?? '';
   }
-
-  // double calculateDistance(double lat1, double lng1, double lat2, double lng2) {
-  //   var earthRadius = 6371; // 地球の半径、キロメートル
-  //   var dLat = _degreesToRadians(lat2 - lat1);
-  //   var dLng = _degreesToRadians(lng2 - lng1);
-  //   var a = sin(dLat / 2) * sin(dLat / 2) +
-  //       cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
-  //           sin(dLng / 2) * sin(dLng / 2);
-  //   var c = 2 * atan2(sqrt(a), sqrt(1 - a));
-  //   return earthRadius * c;
-  // }
-
-  // double _degreesToRadians(double degrees) {
-  //   return degrees * pi / 180;
-  // }
 
   void updateExistingUserLocations(List<dynamic> userLocations) {
     SharedPreferences.getInstance().then((prefs) {
@@ -465,6 +444,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         if (action == 'connected') {
           // 既存のユーザー情報を更新または追加
           var index = existingUserLocations.indexWhere((user) => user['userID'] == userID);
+
           if (index != -1) {
             existingUserLocations[index] = newUser;  // 既存ユーザー更新
           } else {
@@ -473,6 +453,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         } else if (action == 'disconnected') {
           // ユーザー情報を削除
           existingUserLocations.removeWhere((user) => user['userID'] == userID);
+
+
         }
 
         debugPrint('Updated existingUserLocations = ${existingUserLocations}');
@@ -504,6 +486,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       }
 
       if (action == 'connected' && distance >= 10000) {
+
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -519,7 +502,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
-      } else if (action == 'disconnected' && distance >= 10000) {
+      }
+      else if (action == 'connected' && distance <= 10000) {
+        updateTotalConnections(-1); // ここでtotalConnectionsをデクリメント
+        debugPrint("distance = $distance /chachacha");
+      }
+      else if (action == 'disconnected' && distance >= 10000) {
         // _connectionWidgetsMap.remove(userID);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -533,7 +521,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
+      } else if (action == 'disconnected' && distance <= 10000) {
+        updateTotalConnections(1); // ここでtotalConnectionsをデクリメント
       }
+      // }
       notifyListeners();
     });
 
