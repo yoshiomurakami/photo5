@@ -13,7 +13,7 @@ import 'package:flag/flag.dart';
 import 'timeline_providers.dart';
 // import 'timeline_map_display.dart';
 import 'l10n/l10n.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 io.Socket?socket;
 
@@ -198,16 +198,45 @@ class ConnectionNumberState extends ConsumerState<ConnectionNumber> {
   @override
   void initState() {
     super.initState();
-    socket?.on('connections', (data) {
-      int connections = data['count'] - 1;
-      ref.read(totalConnectionsProvider.notifier).state = connections;
-    });
+    // // ConnectionWidgetsManager のリスナーを追加
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   final manager = ref.read(connectionWidgetsManagerProvider);
+    //   manager.addListener(_handleConnectionEvent);
+    // });
   }
 
   @override
+  void dispose() {
+    // final manager = ref.read(connectionWidgetsManagerProvider);
+    // manager.removeListener(_handleConnectionEvent);
+    super.dispose();
+  }
+
+  // void _handleConnectionEvent() {
+  //   ref.read(totalConnectionsProvider.notifier).state += 1;
+  // }
+
+  @override
   Widget build(BuildContext context) {
-    // final ref = ProviderScope.containerOf(context);
-    final totalConnections = ref.watch(totalConnectionsProvider);
+
+    // ref.listen(connectionChangeProvider, (previous, next) {
+    //   if (next != 0) { // nextが0でない場合、状態更新
+    //     ref.read(totalConnectionsProvider.notifier).state += next;
+    //     ref.read(connectionChangeProvider.notifier).state = 0; // イベント状態をリセット
+    //   }
+    // });
+    final manager = ref.watch(connectionWidgetsManagerProvider);
+    // final totalConnections = ref.watch(totalConnectionsProvider);
+
+    // socket?.on('connections', (data) {
+    //   // int connections = data['count'] - 1;
+    //   ref.read(totalConnectionsProvider.notifier).state = data['count'];
+    // });
+
+    //handleTotalconnectionsをここで処理。int valueの値をref.read(totalConnectionsProvider.notifier).state += value;とする
+    // ref.listen[totalConnectionsProvider]((previous, next) {
+    //   ref.read(totalConnectionsProvider.notifier).state += value;
+    // });
 
 
 
@@ -216,7 +245,7 @@ class ConnectionNumberState extends ConsumerState<ConnectionNumber> {
     double screenHeight = MediaQuery.of(context).size.height;
     double bottomMargin = screenHeight * 0.05;  // 画面の横幅の5%
 
-    if (totalConnections >= 1) {
+    if (manager.totalConnections >= 1) {
       return Positioned(
         left: widget.left ?? leftMargin,
         bottom: widget.bottom ?? bottomMargin,
@@ -233,7 +262,7 @@ class ConnectionNumberState extends ConsumerState<ConnectionNumber> {
             children: <Widget>[
               const Text('😀', style: TextStyle(color: Colors.black, fontSize: 16)),
               const SizedBox(width: 10),
-              Text('$totalConnections', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('${manager.totalConnections}', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -296,79 +325,23 @@ class ConnectionWidgetData {
   ConnectionWidgetData({required this.widget, required this.isRightAligned});
 }
 
+// final connectionChangeProvider = StateProvider<int>((ref) => 0);
+
 class ConnectionWidgetsManager extends ChangeNotifier {
 
+  int totalConnections  = 0;
+
   final ChatConnection chatConnection;
+
   String currentUserID = ''; // 現在のユーザーIDを格納
   final Map<String, ConnectionWidgetData> _connectionWidgetsMap = {};
   bool _isListenerSetup = false;  // リスナーが設定されたかを追跡するプライベート変数
   List<dynamic> existingUserLocations = [];  // クラスレベルでのリスト定義
-  final ProviderContainer _container;
+  // final ProviderContainer _container;
 
-  ConnectionWidgetsManager({required this.chatConnection}) : _container = ProviderContainer() {
+  ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
   }
-
-  void updateTotalConnections(int value) {
-    _container.read(totalConnectionsProvider.notifier).state += value;
-    notifyListeners();
-  }
-
-  // void _setupUserMapListener() {
-  //   chatConnection.on('existingUserLocations', (data) {
-  //     // data['userLocations'] はユーザーの位置情報を含む配列です。
-  //     var existingUserLocations = data['userLocations'] as List<dynamic>;
-  //     debugPrint("Received ${existingUserLocations.length} users data from server.");
-  //     for (var user in existingUserLocations) {
-  //       debugPrint("User ID: ${user['userID']}, Lat: ${user['lat']}, Lng: ${user['lng']}");
-  //       // ここで受け取った各ユーザーのデータに基づいて何らかの処理を行う
-  //     }
-  //     // 受け取った位置情報をもとに、アプリ内で必要な更新を行う
-  //     notifyListeners();  // ビューを更新するためにリスナーに通知
-  //   });
-  // }
-
-  // void _setupCameraEventListener() {
-
-    // chatConnection.on('camera_event', (data) {
-    //   String userID = data['userID'];
-    //   String message;
-    //   if (data['event'] == "someone_start_camera") {
-    //     // "someone_start_camera"イベントが来た場合のメッセージ
-    //     bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
-    //     String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-    //     message = "一緒に撮ろう！";
-    //     String commonMsg = 'what';
-    //     var newWidget = _createConnectionWidget(context, data['countryCode'],data['userID'], message, commonMsg, isRightAligned, uniqueKey);
-    //     debugPrint("data['countryCode'] =${data['countryCode']}");
-    //     String uniqueUserID = '${userID}_camera';
-    //     _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
-    //
-    //   } else if (data['event']  == "someone_leave_camera") {
-    //     // "someone_leave_camera"イベントが来た場合のメッセージ
-    //     // message = "カメラ停止 - 他のユーザーがカメラを停止しました";
-    //     // "someone_leave_camera"イベントが来た場合、対応するメッセージウィジェットを削除
-    //     String uniqueUserID = '${userID}_camera';
-    //     if (_connectionWidgetsMap.containsKey(uniqueUserID)) {
-    //       _connectionWidgetsMap.remove(uniqueUserID); // 特定の userID に対応するメッセージウィジェットを削除
-    //     }
-    //   } else {
-    //     // その他のアクションに対するメッセージを定義
-    //     message = "その他のイベント発生";
-    //   }
-    //
-    //   // メッセージウィジェットを動的に生成して_mapに追加
-    //   // String uniqueKey = "camera_event_${DateTime.now().millisecondsSinceEpoch}";
-    //   // var newWidget = _createConnectionWidget("Info", uniqueKey, message);
-    //   // var newWidget = _createConnectionWidget(data['countryCode'],data['userID'], message);
-    //   // debugPrint("data['countryCode'] =${data['countryCode']}");
-    //   // _connectionWidgetsMap[userID] = newWidget;
-    //
-    //   notifyListeners();
-    // });
-  // }
-
-
 
   Future<void> _loadCurrentUserID() async {
     final prefs = await SharedPreferences.getInstance();
@@ -396,10 +369,31 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
   void setupConnectionsListener(BuildContext context) {
 
+    // ここでは内部状態を保持しており、ウィジェット側でリスニングされます。
+
+
+    // void incrementConnection() {
+    //   totalConnections ++;
+    //   debugPrint("incre_totalConnections = $totalConnections");
+    //   notifyListeners();
+    // }
+    //
+    // void decrementConnection() {
+    //   totalConnections --;
+    //   notifyListeners();
+    // }
+
+    void keepState(value) {
+      totalConnections  = value;
+      notifyListeners();
+    }
+
     // 既存ユーザーの位置情報を取得するリスナー
     chatConnection.on('existingUserLocations', (data) async {
       var existingUserLocations = data['userLocations'] as List<dynamic>;
       debugPrint("Received ${existingUserLocations.length} users data from server.");
+      // リストの内容をJSON文字列として出力
+      debugPrint("User Locations Data: ${json.encode(existingUserLocations)}");
       updateExistingUserLocations(existingUserLocations);
     });
 
@@ -453,16 +447,23 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         } else if (action == 'disconnected') {
           // ユーザー情報を削除
           existingUserLocations.removeWhere((user) => user['userID'] == userID);
-
-
         }
 
-        debugPrint('Updated existingUserLocations = ${existingUserLocations}');
+        debugPrint('Updated existingUserLocations = $existingUserLocations');
 
 
         // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合、
         // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
         bool hasStatusZero = existingUserLocations.any((user) => user['status'] == '0');
+        // existingUserLocations から status が '0' である要素の数を数える
+        // existingUserLocations から status が '0' であるユニークな userID の集合を作成する
+        int countUniqueUserIdsWithStatusZero(List<dynamic> userLocations) {
+          var uniqueUserIdsWithStatusZero = userLocations
+              .where((user) => user is Map<String, dynamic> && user['status'] == '0')
+              .map((user) => (user as Map<String, dynamic>)['userID'] as String)
+              .toSet();
+          return uniqueUserIdsWithStatusZero.length;
+        }
 
         if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
 
@@ -481,11 +482,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
         // var newWidget = _createConnectionWidget('',data['userID'],'こんにちは！', isRightAligned, uniqueKey); // countryCode を _createConnectionWidget に渡す
         // _connectionWidgetsMap[userID] = ConnectionWidgetData(widget: newWidget, isRightAligned: isRightAligned);
-        notifyListeners();
+        // int connections = data['count'] - 1;
+        keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
+
         return;
       }
 
       if (action == 'connected' && distance >= 10000) {
+
+        keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
+
 
         // var message = "Connected: UserID=$userID, Country=${data['countryCode']}, Lat=${data['lat']}, Lng=${data['lng']}";
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
@@ -504,10 +510,14 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
       }
       else if (action == 'connected' && distance <= 10000) {
-        updateTotalConnections(-1); // ここでtotalConnectionsをデクリメント
         debugPrint("distance = $distance /chachacha");
+
       }
       else if (action == 'disconnected' && distance >= 10000) {
+
+        keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
+
+
         // _connectionWidgetsMap.remove(userID);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -521,16 +531,17 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
-      } else if (action == 'disconnected' && distance <= 10000) {
-        updateTotalConnections(1); // ここでtotalConnectionsをデクリメント
       }
-      // }
-      notifyListeners();
+      else if (action == 'disconnected' && distance <= 10000) {
+
+      }
+
+
     });
 
     chatConnection.on('receive_res_hellow', (data) {
       String userID = data['userID'];
-      debugPrint("Received data: $data");
+      debugPrint("Received receive_res_hellow data: $data");
       // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
       // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
       bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
@@ -554,7 +565,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         // 状態を確認し、statusが1の場合は処理をスキップする
         var user = existingUserLocations.firstWhere((user) => user['userID'] == userID && user['status'] == '1', orElse: () => null);
         if (user != null) {
-          debugPrint("User ${userID} has status 1, skipping widget creation.");
+          debugPrint("User $userID has status 1, skipping widget creation.");
           return;  // statusが1の場合は何もせず終了
         }
 
@@ -778,7 +789,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           debugPrint('onTapMessage: $uniqueKey');
           debugPrint('onTapcommonMsg: $commonMsg');
           _resHellow(userID, currentUserID);
-          // bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+          bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
 
           if (l10n != null && commonMsg == 'sayhello') {
             // String msg = l10n.res_sayHello;

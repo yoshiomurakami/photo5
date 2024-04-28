@@ -618,9 +618,24 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
   Future<void> _checkCountryCode() async {
     debugPrint("Country code and location check starting");
+
+    // 疑似的な位置情報を生成
+    Position fakePosition = Position(
+      latitude: 28.462898373204474,
+      longitude: 77.37800790383884,
+      timestamp: DateTime.now(), // 現在時刻を設定
+      accuracy: 0, // 精度を適宜設定
+      altitude: 0, // 標高を適宜設定
+      heading: 0, // 向きを適宜設定
+      speed: 0, // 速度を適宜設定
+      speedAccuracy: 0, // 速度精度を適宜設定
+    );
+
     try {
+
       // 位置情報の取得
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      // Position position = fakePosition;
       debugPrint("Location: Lat ${position.latitude}, Lng ${position.longitude}");
 
       // 国コードの取得
