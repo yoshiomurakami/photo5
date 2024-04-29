@@ -687,8 +687,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     if (countryCode != '' && isRightAligned) {
       Widget flagWidget = Container(
         padding: const EdgeInsets.all(1),
-        decoration: const BoxDecoration(
-          color: Colors.grey,
+        decoration: BoxDecoration(
+          color: Colors.grey.withOpacity(0.5),
           shape: BoxShape.circle,
         ),
         child: ClipOval(
@@ -697,6 +697,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             height: 14,
             width: 14,
             fit: BoxFit.cover,
+            flagSize: FlagSize.size_1x1, // 1x1サイズを指定
           ),
         ),
       );
@@ -843,13 +844,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             child: Container(
               padding: const EdgeInsets.all(1),
               decoration: BoxDecoration(
-                color: Colors.grey,
+                color: Colors.grey.withOpacity(0.5),
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
                     spreadRadius: 2,
-                    blurRadius: 5,
+                    blurRadius: 4,
                     offset: const Offset(0, 3),
                   ),
                 ],
@@ -860,6 +861,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                   height: 20,
                   width: 20,
                   fit: BoxFit.cover,
+                  flagSize: FlagSize.size_1x1, // 1x1サイズを指定
                 ),
               ),
             ),
@@ -883,14 +885,14 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                   ),
                 ],
               ),
-              child: ClipOval(
-                child: Flag.fromString(
-                  countryCode,
-                  height: 20,
-                  width: 20,
-                  fit: BoxFit.cover,
-                ),
-              ),
+              // child: ClipOval(
+              //   child: Flag.fromString(
+              //     countryCode,
+              //     height: 20,
+              //     width: 20,
+              //     fit: BoxFit.cover,
+              //   ),
+              // ),
             ),
           ),
 
