@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'dart:convert';
 // import 'dart:math';
@@ -9,9 +11,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flag/flag.dart';
+import 'package:camera/camera.dart';
 // import 'dart:math' as math;
 import 'timeline_providers.dart';
-// import 'timeline_map_display.dart';
+import 'timeline_camera.dart';
 import 'l10n/l10n.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -740,23 +743,40 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     if (!isRightAligned) {
       if (commonMsg == 'shotTogether') {
-        // messageWidget = const Text('\u{1F4F8}', style: TextStyle(fontSize: 16)); // 絵文字を表示
-        messageWidget = Container(
-          padding: const EdgeInsets.all(4),  // 内側の余白を設定
-          decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFCC4D), // 形状を円形に設定
-              border: Border.all(color: Colors.black, width: 0.5) // 黒い枠線を設定
-          ),
-          child: const Text(
-            '\u{1F4F8}', // 手を挙げた絵文字
-            style: TextStyle(
-              fontSize: 14, // フォントサイズを16に設定
-              color: Colors.black, // 文字色を黒に設定
+        messageWidget = GestureDetector(
+          onTap: () async {
+            // カメラとgroupIDの取得は非同期処理かもしれないため、async/awaitを使う
+            List<CameraDescription> cameras = await availableCameras();
+            if (cameras.isNotEmpty) {
+              chatConnection.emitEvent("enter_shooting_room");
+              _waitForGroupId().then((groupID) {
+                if (groupID != null) {
+                  CameraHelper.openCamera(context, cameras.first, groupID);
+                } else {
+                  debugPrint("Failed to get the group ID.");
+                }
+              });
+            } else {
+              debugPrint("No available cameras found.");
+            }
+          },
+          child: Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFFFFCC4D),
+                border: Border.all(color: Colors.black, width: 0.5)
+            ),
+            child: const Text(
+              '\u{1F4F8}',  // カメラ絵文字
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+              ),
             ),
           ),
         );
-      } else if (commonMsg == 'sayhello') {
+      }else if (commonMsg == 'sayhello') {
         // messageWidget = const Icon(Icons.comment, color: Colors.black, size: 16); // アイコンを表示
         messageWidget = Container(
           padding: const EdgeInsets.all(4),  // 内側の余白を設定
@@ -972,6 +992,19 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
   List<ConnectionWidgetData> get connectionWidgets => _connectionWidgetsMap.values.toList();
 
+  // このメソッドはサーバーからcurrentShootingGroupIDを待つ
+  Future<String?> _waitForGroupId() async {
+    Completer<String?> completer = Completer();
+
+    // 'assign_group_id' イベントのリスナーを設定
+    chatConnection.on('assign_group_id', (data) {
+      completer.complete(data as String?);
+      // イベントリスナーを解除
+      chatConnection.off('assign_group_id');
+    });
+
+    return completer.future;
+  }
 
 
 }
@@ -1158,6 +1191,21 @@ final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) {
   final chatConnection = ChatConnection();
   return ChatNotifier(chatConnection: chatConnection,ref: ref);
 });
+
+
+class CameraHelper {
+  static void openCamera(BuildContext context, CameraDescription cameraDescription, String groupID) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => CameraScreen(
+          camera: cameraDescription,
+          groupID: groupID,
+        ),
+      ),
+    );
+  }
+}
 
 
 
