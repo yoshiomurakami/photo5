@@ -743,53 +743,34 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     if (!isRightAligned) {
       if (commonMsg == 'shotTogether') {
-        messageWidget = GestureDetector(
-          onTap: () async {
-            // カメラとgroupIDの取得は非同期処理かもしれないため、async/awaitを使う
-            List<CameraDescription> cameras = await availableCameras();
-            if (cameras.isNotEmpty) {
-              chatConnection.emitEvent("enter_shooting_room");
-              _waitForGroupId().then((groupID) {
-                if (groupID != null) {
-                  CameraHelper.openCamera(context, cameras.first, groupID);
-                } else {
-                  debugPrint("Failed to get the group ID.");
-                }
-              });
-            } else {
-              debugPrint("No available cameras found.");
-            }
-          },
-          child: Container(
+        messageWidget = Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFFFFCC4D),
                 border: Border.all(color: Colors.black, width: 0.5)
             ),
-            child: const Text(
-              '\u{1F4F8}',  // カメラ絵文字
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.black,
-              ),
+          child: const Text(
+            '\u{1F4F8}',  // カメラ絵文字
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.black,
             ),
           ),
         );
-      }else if (commonMsg == 'sayhello') {
-        // messageWidget = const Icon(Icons.comment, color: Colors.black, size: 16); // アイコンを表示
+      } else if (commonMsg == 'sayhello') {
         messageWidget = Container(
-          padding: const EdgeInsets.all(4),  // 内側の余白を設定
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-              color: Colors.white, // 背景色を白に設定
-              shape: BoxShape.circle, // 形状を円形に設定
-              border: Border.all(color: Colors.black, width: 0.5) // 黒い枠線を設定
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.black, width: 0.5)
           ),
           child: const Text(
             '\u{1F590}', // 手を挙げた絵文字
             style: TextStyle(
-              fontSize: 14, // フォントサイズを16に設定
-              color: Colors.black, // 文字色を黒に設定
+              fontSize: 14,
+              color: Colors.black,
             ),
           ),
         );
@@ -833,23 +814,6 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         child: messageWidget,
       ),
     );
-
-    // 吹き出しのウィジェット
-    // Widget bubble = Container(
-    //   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-    //   decoration: BoxDecoration(
-    //     color: backgroundColor,
-    //     borderRadius: BorderRadius.circular(50),
-    //     border: Border.all(color: Colors.black, width: 1.5),
-    //   ),
-    //   child: Row(
-    //     mainAxisSize: MainAxisSize.min,
-    //     crossAxisAlignment: CrossAxisAlignment.center,
-    //     children: rowChildren,
-    //   ),
-    // );
-
-
     return Stack(
       alignment: Alignment.centerLeft,
       clipBehavior: Clip.none, // Overflowを許容
@@ -905,68 +869,67 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                   ),
                 ],
               ),
-              // child: ClipOval(
-              //   child: Flag.fromString(
-              //     countryCode,
-              //     height: 20,
-              //     width: 20,
-              //     fit: BoxFit.cover,
-              //   ),
-              // ),
             ),
           ),
 
-        // // 吹き出しのメイン部分のContainerウィジェット
-        // Positioned(
-        //   top: 20, // 吹き出しの尾のY軸の位置を調整
-        //   left: isRightAligned ? null : 10, // 吹き出しの尾が左にある場合
-        //   right: isRightAligned ? 0 : null, // 吹き出しの尾が右にある場合
-        //   child: Transform.rotate(
-        //     angle: isRightAligned ? 0 * math.pi / 180 : 0 * math.pi / 180, // 左方向に25度回転（マイナスをつける）
-        //     child: tail,
-        //   ),
-        // ),
         Padding(
           padding: EdgeInsets.only(
             left: isRightAligned ? 0 : 15,
             right: isRightAligned ? 5 : 0,
           ),
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                constraints: BoxConstraints(
-                  maxWidth: MediaQuery.of(context).size.width * 0.7,
+          child: GestureDetector(
+            onTap: commonMsg == 'shotTogether' ? () async {
+              List<CameraDescription> cameras = await availableCameras();
+              if (cameras.isNotEmpty) {
+                chatConnection.emitEvent("enter_shooting_room");
+                await _waitForGroupId().then((groupID) {
+                  if (groupID != null) {
+                    CameraHelper.openCamera(context, cameras.first, groupID);
+                  } else {
+                    debugPrint("Failed to get the group ID.");
+                  }
+                });
+              } else {
+                debugPrint("No available cameras found.");
+              }
+            } : null,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.7,
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: backgroundColor,
+                    borderRadius: BorderRadius.circular(15),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.2),
+                        spreadRadius: 3,
+                        blurRadius: 10,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: rowChildren,
+                  ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                decoration: BoxDecoration(
-                  color: backgroundColor,
-                  borderRadius: BorderRadius.circular(15),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      spreadRadius: 3,
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+                Positioned(
+                  left: isRightAligned ? null : -5,
+                  right: isRightAligned ? -5 : null,
+                  top: 10,
+                  child: tail,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: rowChildren,
-                ),
-              ),
-              // 吹き出し部分の配置
-              Positioned(
-                left: isRightAligned ? null : -5, // 左寄せの場合は左に出す
-                right: isRightAligned ? -5 : null, // 右寄せの場合は右に出す
-                top: 10, // 下に位置させる
-                child: tail,
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+
       ],
     );
   }
