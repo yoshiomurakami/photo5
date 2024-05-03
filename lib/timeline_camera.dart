@@ -60,6 +60,8 @@ class CameraScreenState extends State<CameraScreen> {
   final ChatConnection chatConnection = ChatConnection()..connect();
 
 
+
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +71,22 @@ class CameraScreenState extends State<CameraScreen> {
     );
     _initializeControllerFuture = _controller.initialize();
     _showImage = false;
+
+    // // カメラ起動時にサーバーにイベントを送信
+    // _initializeControllerFuture.then((_) {
+    //   chatConnection.emitEvent("enter_shooting_room");
+    //   // サーバーからの応答をリスン
+    //   chatConnection.on('room_count', (data) {
+    //     debugPrint('Shooting room count: ${data['count']}');
+    //   });
+    //   chatConnection.on('assign_group_id', (data) {
+    //     debugPrint('Assigned Group ID: $data');
+    //   });
+    // });
   }
+
+
+
 
   @override
   void dispose() {
@@ -77,6 +94,7 @@ class CameraScreenState extends State<CameraScreen> {
     _controller.dispose();
     super.dispose();
   }
+
 
   // Generate a random string
   String _getRandomString(int length) {
@@ -98,9 +116,6 @@ class CameraScreenState extends State<CameraScreen> {
       Navigator.pop(context);
     }
   }
-
-
-
 
   Future<void> _takePicture() async {
     final Directory tempDir = await getTemporaryDirectory();
@@ -426,6 +441,19 @@ class CameraScreenState extends State<CameraScreen> {
   @override
   Widget build(BuildContext context) {
     final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
+
+    chatConnection.listenToCameraEvent(context, (Map<String, dynamic> data) {
+      String event = data['event'];
+      if (event == "someone_start_camera") {
+        debugPrint("check_start_camera in camera");
+      } else if (event == "someone_leave_camera") {
+        debugPrint("check_leave_camera in camera");
+      } else if (event == "existingUserLocations") {
+        debugPrint("existingUserLocations  in camera is $data");
+      } else if (event == "update_user_list") {
+        debugPrint("Updated user list from server with ${data['userLocations']}");
+      }
+    });
 
     return Scaffold(
       body: FutureBuilder<void>(

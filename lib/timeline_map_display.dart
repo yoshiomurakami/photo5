@@ -307,6 +307,7 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
 
     chatConnection.listenToCameraEvent(context, (Map<String, dynamic> data) {
       String event = data['event'];
+      debugPrint("listenToCameraEvent = $event");
       if (event == "someone_start_camera") {
         debugPrint("check_start_camera");
         setState(() {
@@ -317,6 +318,11 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
         setState(() {
           showCameraBadge = false;
         });
+      } else if (event == "existingUserLocations") {
+        debugPrint("existingUserLocations is $data");
+
+      } else if (event == "update_user_list") {
+        debugPrint("update_user_list is $data");
       }
     });
 

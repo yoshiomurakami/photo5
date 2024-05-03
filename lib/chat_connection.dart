@@ -113,6 +113,10 @@ class ChatConnection {
       debugPrint('Received camera_event with data: $data');
       callback(data);
     });
+    socket?.on('update_user_list', (data) {
+      debugPrint('Received update_user_list with data: $data');
+      callback(data);
+    });
   }
 
   // void listenToLeaveShootingRoomEvent(BuildContext context, void Function() callback) {
