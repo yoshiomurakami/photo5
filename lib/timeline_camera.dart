@@ -17,9 +17,9 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+// import 'package:flutter_hooks/flutter_hooks.dart';
 import 'chat_connection.dart';
-import 'timeline_providers.dart';
+// import 'timeline_providers.dart';
 import 'dart:convert';
 
 final cameraButtonKey = GlobalKey();
@@ -472,9 +472,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
   @override
   Widget build(BuildContext context) {
 
-
+    final connectionWidgetsManager = ref.watch(connectionWidgetsManagerProvider);
+    // existingUserLocations の変更をリアルタイムで取得し、何かしらの形で表示
+    List<dynamic> locations = connectionWidgetsManager.existingUserLocations;
 
     final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
+
+    debugPrint("existingUserLocations in Widget = $locations");
 
     return Scaffold(
       body: FutureBuilder<void>(
@@ -492,7 +496,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
               } else {
                 scale = screenAspectRatio / previewAspectRatio;
               }
-
               return Stack(
                 children: [
                   // Camera preview scaled according to the aspect ratio
@@ -531,7 +534,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> {
 
                               _navigateBack(context);
                             },
-                            child: const Text('Back'),
+                            // child: const Text('Back'),
+                            child: Text('count ${locations.length}'),
                           ),
 
                         ],

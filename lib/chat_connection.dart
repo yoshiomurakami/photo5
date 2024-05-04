@@ -343,20 +343,18 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   String currentUserID = ''; // 現在のユーザーIDを格納
   final Map<String, ConnectionWidgetData> _connectionWidgetsMap = {};
   bool _isListenerSetup = false;  // リスナーが設定されたかを追跡するプライベート変数
-  List<dynamic> existingUserLocations = [];  // クラスレベルでのリスト定義
-  // final ProviderContainer _container;
-
-
+  List<dynamic> _existingUserLocations = [];  // クラスレベルでのリスト定義
+  List<dynamic> get existingUserLocations => _existingUserLocations;
 
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
   }
 
   // リストを更新するメソッド
-  void updateLocations(List<dynamic> newLocations) {
-    existingUserLocations = newLocations;
-    notifyListeners();  // ウィジェットの更新をトリガー
-  }
+  // void updateLocations(List<dynamic> newLocations) {
+  //   existingUserLocations = newLocations;
+  //   notifyListeners();  // ウィジェットの更新をトリガー
+  // }
 
   Future<void> _loadCurrentUserID() async {
     final prefs = await SharedPreferences.getInstance();
@@ -368,15 +366,15 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       double myLat = prefs.getDouble('latitude') ?? 0.0;
       double myLng = prefs.getDouble('longitude') ?? 0.0;
 
-      List<dynamic> updatedLocations = userLocations.map((user) {
+      List<dynamic> newLocations = userLocations.map((user) {
         double userLat = double.tryParse(user['lat']) ?? 0.0;
         double userLng = double.tryParse(user['lng']) ?? 0.0;
         double distance = Geolocator.distanceBetween(myLat, myLng, userLat, userLng);
-        user['status'] = (distance <= 10000) ? '1' : '0';
+        user['distance'] = (distance <= 10000) ? '1' : '0';
         return user;
       }).toList();
 
-      existingUserLocations = updatedLocations; // 新しいリストで更新
+      _existingUserLocations = newLocations; // 新しいリストで更新
       notifyListeners();  // ウィジェットの更新をトリガー
       debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
     });
@@ -452,12 +450,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
         // currentUserIDが設定されていない場合、またはuserIDがcurrentUserIDと一致する場合、
         // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
-        bool hasStatusZero = existingUserLocations.any((user) => user['status'] == '0');
+        bool hasStatusZero = existingUserLocations.any((user) => user['distance'] == '0');
         // existingUserLocations から status が '0' である要素の数を数える
 // existingUserLocations から status が '0' であるユニークな userID の集合を作成する
         int countUniqueUserIdsWithStatusZero(List<dynamic> userLocations) {
           var uniqueUserIdsWithStatusZero = userLocations
-              .where((user) => user is Map<String, dynamic> && user['status'] == '0')
+              .where((user) => user is Map<String, dynamic> && user['distance'] == '0')
               .map((user) {
             // Map<String, dynamic>へのキャストを保証
             var userMap = user as Map<String, dynamic>;
@@ -567,7 +565,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         String userID = data['userID'];
 
         // 状態を確認し、statusが1の場合は処理をスキップする
-        var user = existingUserLocations.firstWhere((user) => user['userID'] == userID && user['status'] == '1', orElse: () => null);
+        var user = existingUserLocations.firstWhere((user) => user['userID'] == userID && user['distance'] == '1', orElse: () => null);
         if (user != null) {
           debugPrint("User $userID has status 1, skipping widget creation.");
           return;  // statusが1の場合は何もせず終了
