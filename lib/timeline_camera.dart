@@ -16,12 +16,15 @@ import 'package:http_parser/http_parser.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'chat_connection.dart';
+import 'timeline_providers.dart';
 import 'dart:convert';
 
 final cameraButtonKey = GlobalKey();
 
-class CameraScreen extends StatefulWidget {
+class CameraScreen extends ConsumerStatefulWidget {
 
   final CameraDescription camera;
   final String groupID;
@@ -33,10 +36,10 @@ class CameraScreen extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  CameraScreenState createState() => CameraScreenState();
+  ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
 
-class CameraScreenState extends State<CameraScreen> {
+class _CameraScreenState extends ConsumerState<CameraScreen> {
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   late bool _showImage;
@@ -59,6 +62,8 @@ class CameraScreenState extends State<CameraScreen> {
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
 
+  late final void Function(Map<String, dynamic>) eventHandler;
+
 
 
 
@@ -72,17 +77,13 @@ class CameraScreenState extends State<CameraScreen> {
     _initializeControllerFuture = _controller.initialize();
     _showImage = false;
 
-    // // カメラ起動時にサーバーにイベントを送信
-    // _initializeControllerFuture.then((_) {
-    //   chatConnection.emitEvent("enter_shooting_room");
-    //   // サーバーからの応答をリスン
-    //   chatConnection.on('room_count', (data) {
-    //     debugPrint('Shooting room count: ${data['count']}');
-    //   });
-    //   chatConnection.on('assign_group_id', (data) {
-    //     debugPrint('Assigned Group ID: $data');
-    //   });
-    // });
+    eventHandler = (Map<String, dynamic> data) {
+      handleCameraEvent(data);
+    };
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
+    });
   }
 
 
@@ -92,6 +93,10 @@ class CameraScreenState extends State<CameraScreen> {
   void dispose() {
     // socket?.emit('leave_shooting_room');
     _controller.dispose();
+    // イベントリスナーを安全に削除
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(connectionWidgetsManagerProvider).chatConnection.removeListeners();
+    });
     super.dispose();
   }
 
@@ -437,23 +442,39 @@ class CameraScreenState extends State<CameraScreen> {
     return true;
   }
 
+  void handleCameraEvent(Map<String, dynamic> data) {
+
+    String event = data['event'];
+    if (event == "someone_start_camera") {
+      debugPrint("check_start_camera in camera");
+    } else if (event == "someone_leave_camera") {
+      debugPrint("check_leave_camera in camera");
+    } else if (event == "existingUserLocations") {
+      debugPrint("existingUserLocations in camera is $data");
+      ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
+      // existingUserLocations を参照してデバッグ出力
+      List<dynamic> currentLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
+      debugPrint("Current existingUserLocations in camera: ${currentLocations.length} users");
+
+    } else if (event == "update_user_list") {
+      debugPrint("Updated user list from server  in camera with ${data['userLocations']}");
+      ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
+
+      // 更新後の existingUserLocations を参照してデバッグ出力
+      List<dynamic> updatedLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
+      debugPrint("Updated existingUserLocations in camera: ${updatedLocations.length} users");
+    }
+  }
+
+
+
 
   @override
   Widget build(BuildContext context) {
-    final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
 
-    chatConnection.listenToCameraEvent(context, (Map<String, dynamic> data) {
-      String event = data['event'];
-      if (event == "someone_start_camera") {
-        debugPrint("check_start_camera in camera");
-      } else if (event == "someone_leave_camera") {
-        debugPrint("check_leave_camera in camera");
-      } else if (event == "existingUserLocations") {
-        debugPrint("existingUserLocations  in camera is $data");
-      } else if (event == "update_user_list") {
-        debugPrint("Updated user list from server with ${data['userLocations']}");
-      }
-    });
+
+
+    final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
 
     return Scaffold(
       body: FutureBuilder<void>(

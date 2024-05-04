@@ -7,7 +7,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
-// import 'package:sqflite/sqflite.dart';
+// import 'chat_connection.dart';
 
 int currentPage = 0; // これで現在のページを追跡します
 
@@ -254,3 +254,4 @@ class TotalConnectionsNotifier extends StateNotifier<int> {
 }
 
 // final totalConnectionsProvider = StateProvider<int>((ref) => 0);
+

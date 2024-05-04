@@ -346,8 +346,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   List<dynamic> existingUserLocations = [];  // クラスレベルでのリスト定義
   // final ProviderContainer _container;
 
+
+
   ConnectionWidgetsManager({required this.chatConnection}) {
     _loadCurrentUserID();
+  }
+
+  // リストを更新するメソッド
+  void updateLocations(List<dynamic> newLocations) {
+    existingUserLocations = newLocations;
+    notifyListeners();  // ウィジェットの更新をトリガー
   }
 
   Future<void> _loadCurrentUserID() async {
@@ -360,35 +368,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       double myLat = prefs.getDouble('latitude') ?? 0.0;
       double myLng = prefs.getDouble('longitude') ?? 0.0;
 
-      for (var user in existingUserLocations) {
+      List<dynamic> updatedLocations = userLocations.map((user) {
         double userLat = double.tryParse(user['lat']) ?? 0.0;
         double userLng = double.tryParse(user['lng']) ?? 0.0;
         double distance = Geolocator.distanceBetween(myLat, myLng, userLat, userLng);
-
         user['status'] = (distance <= 10000) ? '1' : '0';
-        debugPrint("Updated User ID: ${user['userID']}, Distance: $distance, Status: ${user['status']}");
-      }
+        return user;
+      }).toList();
+
+      existingUserLocations = updatedLocations; // 新しいリストで更新
+      notifyListeners();  // ウィジェットの更新をトリガー
+      debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
     });
-    existingUserLocations = userLocations;  // ローカルからグローバルリストへの更新
-    debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
-
   }
-
   void setupConnectionsListener(BuildContext context) {
-
-    // ここでは内部状態を保持しており、ウィジェット側でリスニングされます。
-
-
-    // void incrementConnection() {
-    //   totalConnections ++;
-    //   debugPrint("incre_totalConnections = $totalConnections");
-    //   notifyListeners();
-    // }
-    //
-    // void decrementConnection() {
-    //   totalConnections --;
-    //   notifyListeners();
-    // }
 
     void keepState(value) {
       totalConnections  = value;
@@ -397,11 +390,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     // 既存ユーザーの位置情報を取得するリスナー
     chatConnection.on('existingUserLocations', (data) async {
-      var existingUserLocations = data['userLocations'] as List<dynamic>;
-      debugPrint("Received ${existingUserLocations.length} users data from server.");
-      // リストの内容をJSON文字列として出力
-      debugPrint("User Locations Data: ${json.encode(existingUserLocations)}");
-      updateExistingUserLocations(existingUserLocations);
+      var userLocations = data['userLocations'] as List<dynamic>;
+      debugPrint("Received ${userLocations.length} users data from server.");
+      updateExistingUserLocations(userLocations);
     });
 
     if (!_isListenerSetup) {
@@ -463,14 +454,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         // さらにexistingUserLocations内にstatusが'0'のデータが少なくとも一つ存在する場合にif文を実行
         bool hasStatusZero = existingUserLocations.any((user) => user['status'] == '0');
         // existingUserLocations から status が '0' である要素の数を数える
-        // existingUserLocations から status が '0' であるユニークな userID の集合を作成する
+// existingUserLocations から status が '0' であるユニークな userID の集合を作成する
         int countUniqueUserIdsWithStatusZero(List<dynamic> userLocations) {
           var uniqueUserIdsWithStatusZero = userLocations
               .where((user) => user is Map<String, dynamic> && user['status'] == '0')
-              .map((user) => (user as Map<String, dynamic>)['userID'] as String)
+              .map((user) {
+            // Map<String, dynamic>へのキャストを保証
+            var userMap = user as Map<String, dynamic>;
+            // userIDがnullでないことを保証し、nullなら空文字を返す
+            return userMap['userID'] as String? ?? '';
+          })
               .toSet();
           return uniqueUserIdsWithStatusZero.length;
         }
+
 
         if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
 
@@ -1009,10 +1006,15 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 //   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 // }
 
+// ChatConnectionプロバイダーの定義
+final chatConnectionProvider = Provider<ChatConnection>((ref) {
+  return ChatConnection();
+});
 
+// ConnectionWidgetsManagerプロバイダーの定義
 final connectionWidgetsManagerProvider = ChangeNotifierProvider<ConnectionWidgetsManager>((ref) {
-  // ChatConnectionインスタンスを取得または生成
-  final chatConnection = ChatConnection();
+  // ref.readを使用してChatConnectionインスタンスを取得
+  final chatConnection = ref.read(chatConnectionProvider);
   return ConnectionWidgetsManager(chatConnection: chatConnection);
 });
 
