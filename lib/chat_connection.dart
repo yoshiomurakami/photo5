@@ -538,6 +538,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       }
       else if (action == 'disconnected' && distance <= 10000) {
 
+
+
       }
 
 
