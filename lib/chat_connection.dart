@@ -93,7 +93,7 @@ class ChatConnection {
 
   void onNewPhoto(void Function(dynamic) callback, {Function? onReceived}) {
     socket?.on('new_photo', (data) {
-      debugPrint("Type of data: ${data.runtimeType}");
+      debugPrint("new_photo in Type of data: ${data.runtimeType}");
       if (data is String) {
         data = jsonDecode(data);
       }
@@ -113,8 +113,12 @@ class ChatConnection {
       debugPrint('Received camera_event with data: $data');
       callback(data);
     });
-    socket?.on('update_user_list', (data) {
-      debugPrint('Received update_user_list with data: $data');
+    socket?.on('update_user_shootinglist', (data) {
+      debugPrint('Received update_user_shootinglist with data: $data');
+      callback(data);
+    });
+    socket?.on('existingUserLocations', (data) {
+      debugPrint('Received existingUserLocations with data: $data');
       callback(data);
     });
   }
@@ -171,10 +175,25 @@ class ChatConnection {
   //   });
   // }
 
-  void emitEvent(String eventName) {
-    socket?.emit(eventName);
+// SharedPreferencesからuserIDを取得する非同期関数
+  Future<String?> _getCurrentUserId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('userID');
   }
 
+// イベントをサーバーに送信するための非同期関数
+  void emitEvent(String eventName) async {
+    String? userID = await _getCurrentUserId();
+    if (userID != null) {
+      // userIDが取得できた場合、その情報を含むデータを作成
+      Map<String, dynamic> data = {
+        'userID': userID  // イベントデータにuserIDを含める
+      };
+      socket?.emit(eventName, data);  // イベント名とデータをサーバーに送信
+    } else {
+      debugPrint("Failed to retrieve user ID.");
+    }
+  }
   void sendMessage(String message) {
     socket?.emit('message', message);
   }
@@ -375,7 +394,6 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         user['status'] = (distance <= 10000) ? '1' : '0';
         return user;
       }).toList();
-
       existingUserLocations = updatedLocations; // 新しいリストで更新
       notifyListeners();  // ウィジェットの更新をトリガー
       debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
@@ -388,12 +406,19 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       notifyListeners();
     }
 
-    // 既存ユーザーの位置情報を取得するリスナー
+// 既存ユーザーの位置情報を取得するリスナー
     chatConnection.on('existingUserLocations', (data) async {
-      var userLocations = data['userLocations'] as List<dynamic>;
-      debugPrint("Received ${userLocations.length} users data from server.");
-      updateExistingUserLocations(userLocations);
+      // data['userLocations'] が null でないかつ List<dynamic> 型であることを確認
+      if (data['userLocations'] != null && data['userLocations'] is List<dynamic>) {
+        var userLocations = data['userLocations'] as List<dynamic>;
+        debugPrint("Received ${userLocations.length} users data from server.");
+        updateExistingUserLocations(userLocations);
+      } else {
+        debugPrint("Received invalid or empty userLocations data");
+        // 必要に応じて、適切なフォールバック処理をここに追加
+      }
     });
+
 
     if (!_isListenerSetup) {
       _isListenerSetup = true;

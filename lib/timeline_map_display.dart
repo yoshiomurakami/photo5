@@ -321,8 +321,8 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
       } else if (event == "existingUserLocations") {
         debugPrint("existingUserLocations is $data");
 
-      } else if (event == "update_user_list") {
-        debugPrint("update_user_list is $data");
+      } else if (event == "update_user_shootinglist") {
+        debugPrint("update_user_shootinglist is $data");
       }
     });
 

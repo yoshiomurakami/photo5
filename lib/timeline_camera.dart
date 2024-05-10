@@ -66,15 +66,47 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
 
+  //タイマーのないinitstate
+  // @override
+  // void initState() {
+  //   super.initState();
+  //   _controller = CameraController(
+  //     widget.camera,
+  //     ResolutionPreset.high,
+  //   );
+  //   _initializeControllerFuture = _controller.initialize();
+  //   _showImage = false;
+  //
+  //   eventHandler = (Map<String, dynamic> data) {
+  //     handleCameraEvent(data);
+  //   };
+  //
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
+  //   });
+  //
+  //   // WidgetsBindingObserverを追加してアプリのライフサイクルイベントを監視
+  //   WidgetsBinding.instance.addObserver(this);
+  //
+  // }
+
 
   @override
+  //タイマーシャッターを組み込んだinitstate
   void initState() {
     super.initState();
     _controller = CameraController(
       widget.camera,
       ResolutionPreset.high,
     );
-    _initializeControllerFuture = _controller.initialize();
+    _initializeControllerFuture = _controller.initialize().then((_) {
+      // カメラの初期化が完了した後にタイマーを設定
+      Future.delayed(Duration(seconds: 5), () async {
+        if (mounted) {
+          await _takePicture();
+        }
+      });
+    });
     _showImage = false;
 
     eventHandler = (Map<String, dynamic> data) {
@@ -85,19 +117,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
     });
 
-    // WidgetsBindingObserverを追加してアプリのライフサイクルイベントを監視
     WidgetsBinding.instance.addObserver(this);
-
   }
-
 
 
 
   @override
   void dispose() {
-    // socket?.emit('leave_shooting_room');
     _controller.dispose();
-    // chatConnection.removeListeners();  // イベントリスナーを直接解除
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     if (_controller.value.isInitialized) {
       _controller.dispose();
@@ -462,29 +489,31 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
   void handleCameraEvent(Map<String, dynamic> data) {
-    if (!mounted) return;  // ウィジェットがマウントされていない場合は何もしない
+    // if (!mounted) return;  // ウィジェットがマウントされていない場合は何もしない
 
     String event = data['event'];
     if (event == "someone_start_camera") {
-      debugPrint("check_start_camera in camera");
+      debugPrint("check_start_camera in camera ${data['userID']} from ${data['countryCode']}");
     } else if (event == "someone_leave_camera") {
-      debugPrint("check_leave_camera in camera");
+      debugPrint("check_leave_camera in camera ${data['userID']} from ${data['countryCode']}");
     } else if (event == "existingUserLocations") {
       debugPrint("existingUserLocations in camera is $data");
-      if (mounted) {  // 再度 mounted をチェック
-        ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
-        // existingUserLocations を参照してデバッグ出力
-        List<dynamic> currentLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
-        debugPrint("Current existingUserLocations in camera: ${currentLocations.length} users");
-      }
-    } else if (event == "update_user_list") {
-      debugPrint("Updated user list from server in camera with ${data['userLocations']}");
-      if (mounted) {  // 再度 mounted をチェック
-        ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
-        // 更新後の existingUserLocations を参照してデバッグ出力
-        List<dynamic> updatedLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
-        debugPrint("Updated existingUserLocations in camera: ${updatedLocations.length} users");
-      }
+      //
+      // if (mounted) {  // 再度 mounted をチェック
+      //   ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
+      //   // existingUserLocations を参照してデバッグ出力
+      //   List<dynamic> currentLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
+      //   debugPrint("Current existingUserLocations in camera: ${currentLocations.length} users");
+      // }
+    } else if (event == "update_user_shootinglist" && data['usersInShootingRoom'] != null) {
+      var usersInShootingRoom = data['usersInShootingRoom'] as List<dynamic>;
+      debugPrint("Updated user list from server in camera with $usersInShootingRoom}");
+      // if (mounted) {  // 再度 mounted をチェック
+      //   ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(userLocations);
+      //   // 更新後の existingUserLocations を参照してデバッグ出力
+      //   List<dynamic> updatedLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
+      //   debugPrint("Updated existingUserLocations in camera: ${updatedLocations.length} users");
+      // }
     }
   }
 
