@@ -25,19 +25,21 @@ import 'dart:convert';
 final cameraButtonKey = GlobalKey();
 
 class CameraScreen extends ConsumerStatefulWidget {
-
   final CameraDescription camera;
   final String groupID;
+  final int takePictureStartTime;
 
-  const CameraScreen({
+  CameraScreen({
     Key? key,
     required this.camera,
     required this.groupID,
-  }) : super(key: key);
+    required this.takePictureStartTime,  // コンストラクタでtimestampを要求
+  }) : super(key: ValueKey(takePictureStartTime));  // ValueKey を使って key を更新
 
   @override
   ConsumerState<CameraScreen> createState() => _CameraScreenState();
 }
+
 
 class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBindingObserver {
   late CameraController _controller;
@@ -58,41 +60,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   String _geocodedCountry='';
   String _geocodedCity='';
 
+  // 新しい状態変数
+  int now = 0;
+  int triggerTime = 0;
+  int delay = 0;
 
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
 
   late final void Function(Map<String, dynamic>) eventHandler;
 
-
-
-  //タイマーのないinitstate
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   _controller = CameraController(
-  //     widget.camera,
-  //     ResolutionPreset.high,
-  //   );
-  //   _initializeControllerFuture = _controller.initialize();
-  //   _showImage = false;
-  //
-  //   eventHandler = (Map<String, dynamic> data) {
-  //     handleCameraEvent(data);
-  //   };
-  //
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
-  //   });
-  //
-  //   // WidgetsBindingObserverを追加してアプリのライフサイクルイベントを監視
-  //   WidgetsBinding.instance.addObserver(this);
-  //
-  // }
-
-
   @override
   //タイマーシャッターを組み込んだinitstate
+  @override
   void initState() {
     super.initState();
     _controller = CameraController(
@@ -100,25 +80,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       ResolutionPreset.high,
     );
     _initializeControllerFuture = _controller.initialize().then((_) {
-      // カメラの初期化が完了した後にタイマーを設定
-      Future.delayed(Duration(seconds: 5), () async {
+      setState(() {  // setStateを使用してUIの更新をトリガー
+        now = DateTime.now().millisecondsSinceEpoch;
+        triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
+        delay = triggerTime - now;  // 残り時間を計算
+        if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
+      });
+
+      Future.delayed(Duration(milliseconds: delay), () async {
         if (mounted) {
           await _takePicture();
         }
       });
     });
+
     _showImage = false;
 
+    // eventHandlerを初期化
     eventHandler = (Map<String, dynamic> data) {
       handleCameraEvent(data);
     };
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // eventHandlerが初期化された後で使用する
       ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
     });
 
     WidgetsBinding.instance.addObserver(this);
   }
+
 
 
 
@@ -557,6 +547,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       ),
                     ),
                   ),
+                  // Time and Delay Info
+                  Positioned(
+                    top: 10,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black.withOpacity(0.5),
+                      child: Text(
+                        'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                   // The controls should be outside the scaled preview
                   if (!_showImage)  // Only show the buttons if _showImage is false
                     Positioned.fill(
@@ -591,53 +598,53 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                     ),
                   _showImage && _imagePath != null
                       ? Positioned.fill(
-                    child: Stack(
-                      children: <Widget>[
-                        Positioned.fill(
-                          child: Image.file(
-                            File(_imagePath!),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 20,
-                          left: 20,
-                          child: ElevatedButton(
-                            onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                                ? () async {
-                              if (_uploadImagePath != null && _uploadThumbnailPath != null) {
-                                SharedPreferences prefs = await SharedPreferences.getInstance();
-                                String userID = prefs.getString('userID') ?? "";
+                        child: Stack(
+                          children: <Widget>[
+                            Positioned.fill(
+                              child: Image.file(
+                                File(_imagePath!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 20,
+                              left: 20,
+                              child: ElevatedButton(
+                                onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
+                                    ? () async {
+                                  if (_uploadImagePath != null && _uploadThumbnailPath != null) {
+                                    SharedPreferences prefs = await SharedPreferences.getInstance();
+                                    String userID = prefs.getString('userID') ?? "";
 
-                                // call _progressUpload with necessary arguments
-                                await _progressUpload(
-                                    _uploadImagePath!,
-                                    _uploadThumbnailPath!,
-                                    userID,
-                                    _localTimestamp,
-                                    _imageCountry ?? '',
-                                    _imageLat ?? '',
-                                    _imageLng ?? '',
-                                    widget.groupID,
-                                    _geocodedCountry,
-                                    _geocodedCity,
-                                );
+                                    // call _progressUpload with necessary arguments
+                                    await _progressUpload(
+                                      _uploadImagePath!,
+                                      _uploadThumbnailPath!,
+                                      userID,
+                                      _localTimestamp,
+                                      _imageCountry ?? '',
+                                      _imageLat ?? '',
+                                      _imageLng ?? '',
+                                      widget.groupID,
+                                      _geocodedCountry,
+                                      _geocodedCity,
+                                    );
 
-                                // 送信後、カメラを終了する
-                                // _controller.dispose();
-                                if (mounted) {
-                                  _controller.dispose();
-                                  chatConnection.emitEvent("leave_shooting_room");
-                                  Navigator.pop(context);
+                                    // 送信後、カメラを終了する
+                                    // _controller.dispose();
+                                    if (mounted) {
+                                      _controller.dispose();
+                                      chatConnection.emitEvent("leave_shooting_room");
+                                      Navigator.pop(context);
+                                    }
+                                  }
                                 }
-                              }
-                            }
-                                : null,
-                            child: const Text('Send'),  // Enable the button only if the conversion is completed
-                          ),
-                        ),
+                                    : null,
+                                child: const Text('Send'),  // Enable the button only if the conversion is completed
+                              ),
+                            ),
 
-                        Positioned(
+                            Positioned(
                           bottom: 20,
                           right: 20,
                           child: ElevatedButton(

@@ -92,5 +92,5 @@ class L10nJa extends L10n {
   String get sayGoodbye => 'またね！';
 
   @override
-  String get shotTogether => '一緒に撮ろう！';
+  String get shotTogether => '一緒に撮ろう！📸';
 }

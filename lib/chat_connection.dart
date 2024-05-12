@@ -770,23 +770,24 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     Widget messageWidget = const Text('', style: TextStyle(fontSize: 16)); // デフォルトは空のテキスト
 
     if (!isRightAligned) {
-      if (commonMsg == 'shotTogether') {
-        messageWidget = Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFFFFCC4D),
-                border: Border.all(color: Colors.black, width: 0.5)
-            ),
-          child: const Text(
-            '\u{1F4F8}',  // カメラ絵文字
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.black,
-            ),
-          ),
-        );
-      } else if (commonMsg == 'sayhello') {
+      // if (commonMsg == 'shotTogether') {
+      //   messageWidget = Container(
+      //       padding: const EdgeInsets.all(4),
+      //       decoration: BoxDecoration(
+      //           shape: BoxShape.circle,
+      //           color: const Color(0xFFFFCC4D),
+      //           border: Border.all(color: Colors.black, width: 0.5)
+      //       ),
+      //     child: const Text(
+      //       '\u{1F4F8}',  // カメラ絵文字
+      //       style: TextStyle(
+      //         fontSize: 14,
+      //         color: Colors.black,
+      //       ),
+      //     ),
+      //   );
+      // } else if (commonMsg == 'sayhello') {
+      if (commonMsg == 'sayhello') {
         messageWidget = Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
@@ -910,9 +911,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               List<CameraDescription> cameras = await availableCameras();
               if (cameras.isNotEmpty) {
                 chatConnection.emitEvent("enter_shooting_room");
-                await _waitForGroupId().then((groupID) {
-                  if (groupID != null) {
-                    CameraHelper.openCamera(context, cameras.first, groupID);
+                await _waitForGroupIdAndTimestamp().then((cameraData) {
+                  if (cameraData != null) {
+                    CameraHelper.openCamera(context, cameras.first, cameraData);
                   } else {
                     debugPrint("Failed to get the group ID.");
                   }
@@ -984,18 +985,29 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   List<ConnectionWidgetData> get connectionWidgets => _connectionWidgetsMap.values.toList();
 
   // このメソッドはサーバーからcurrentShootingGroupIDを待つ
-  Future<String?> _waitForGroupId() async {
-    Completer<String?> completer = Completer();
+  Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
+    Completer<Map<String, dynamic>?> completer = Completer();
 
     // 'assign_group_id' イベントのリスナーを設定
     chatConnection.on('assign_group_id', (data) {
-      completer.complete(data as String?);
-      // イベントリスナーを解除
-      chatConnection.off('assign_group_id');
+      if (data is Map<String, dynamic>) {
+        String groupID = data['groupID'];
+        int timestamp = data['timestamp'];
+
+        // groupIDとtimestampをCompleterを通じて返す
+        completer.complete({'groupID': groupID, 'timestamp': timestamp});
+
+        // イベントリスナーを解除
+        chatConnection.off('assign_group_id');
+      } else {
+        debugPrint('Received data is not in the expected format');
+        completer.completeError('Invalid data format');
+      }
     });
 
     return completer.future;
   }
+
 
 
 }
@@ -1190,18 +1202,21 @@ final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) {
 
 
 class CameraHelper {
-  static void openCamera(BuildContext context, CameraDescription cameraDescription, String groupID) {
+  // cameraDataはMap<String, dynamic>型で、groupIDとtimestampを含む
+  static void openCamera(BuildContext context, CameraDescription cameraDescription, Map<String, dynamic> cameraData) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CameraScreen(
           camera: cameraDescription,
-          groupID: groupID,
+          groupID: cameraData['groupID'],
+          takePictureStartTime: cameraData['timestamp'],
         ),
       ),
     );
   }
 }
+
 
 
 

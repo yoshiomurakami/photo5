@@ -270,7 +270,7 @@ abstract class L10n {
   /// No description provided for @shotTogether.
   ///
   /// In en, this message translates to:
-  /// **'Shot together!'**
+  /// **'Shot together!📸'**
   String get shotTogether;
 }
 

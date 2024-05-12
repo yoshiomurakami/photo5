@@ -681,12 +681,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   if (_jumpToTopKey.currentState?.isCentered == true) {
                     if (_cameras != null && _cameras!.isNotEmpty) {
                       chatConnection.emitEvent("enter_shooting_room");
-                      _waitForGroupId().then((groupID) {
-                        if(groupID != null) {
-                          _openCamera(_cameras![0], groupID);
+                      _waitForGroupIdAndTimestamp().then((cameraData) {
+                        if (cameraData != null) {
+                          _openCamera(_cameras![0], cameraData);
                         } else {
-                          debugPrint("Failed to get the group ID.");
+                          debugPrint("Failed to get the group ID and timestamp.");
                         }
+                      }).catchError((error) {
+                        debugPrint("Error fetching group ID and timestamp: $error");
                       });
                     } else {
                       debugPrint("No available cameras found.");
@@ -801,31 +803,45 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
-  void _openCamera(CameraDescription cameraDescription, String groupID) { // groupIDを引数として追加
+  void _openCamera(CameraDescription cameraDescription, Map<String, dynamic> cameraData) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CameraScreen(
           camera: cameraDescription,
-          groupID: groupID, // CameraScreenにgroupIDを渡す
+          groupID: cameraData['groupID'],
+          takePictureStartTime: cameraData['timestamp'], // CameraScreenにtimestampも渡す
         ),
       ),
     );
   }
 
+
   // このメソッドはサーバーからcurrentShootingGroupIDを待つ
-  Future<String?> _waitForGroupId() async {
-    Completer<String?> completer = Completer();
+  Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
+    Completer<Map<String, dynamic>?> completer = Completer();
 
     // 'assign_group_id' イベントのリスナーを設定
     chatConnection.on('assign_group_id', (data) {
-      completer.complete(data as String?);
-      // イベントリスナーを解除
-      chatConnection.off('assign_group_id');
+      if (data is Map<String, dynamic>) {
+        String groupID = data['groupID'];
+        int timestamp = data['timestamp'];
+        debugPrint("timestamp in map Display = $timestamp");
+
+        // groupIDとtimestampをCompleterを通じて返す
+        completer.complete({'groupID': groupID, 'timestamp': timestamp});
+
+        // イベントリスナーを解除
+        chatConnection.off('assign_group_id');
+      } else {
+        debugPrint('Received data is not in the expected format');
+        completer.completeError('Invalid data format');
+      }
     });
 
     return completer.future;
   }
+
 
   List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
     // groupIDをキーとして持つマップを作成
