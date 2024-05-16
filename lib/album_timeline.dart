@@ -86,7 +86,7 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
 
   // 取得したデータをコンソールに出力
   for (var album in albumList) {
-    debugPrint(album.toString());
+    debugPrint("albumlist = ${album.toString()}");
   }
 
   return albumList;

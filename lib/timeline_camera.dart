@@ -64,6 +64,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   int now = 0;
   int triggerTime = 0;
   int delay = 0;
+  late Timer countdownTimer;
+  int remainingSeconds = 0;
 
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
@@ -85,10 +87,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
         delay = triggerTime - now;  // 残り時間を計算
         if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
+        remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
+        if (remainingSeconds > 10) remainingSeconds = 10; // 11秒以上にならないように制限
+      });
+
+      // カウントダウンタイマーのセットアップ
+      countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (remainingSeconds > 1) {
+          setState(() {
+            remainingSeconds--;
+          });
+        } else {
+          timer.cancel();
+        }
       });
 
       Future.delayed(Duration(milliseconds: delay), () async {
-        if (mounted) {
+        if (mounted && remainingSeconds > 0) {
           await _takePicture();
         }
       });
@@ -115,6 +130,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   @override
   void dispose() {
     _controller.dispose();
+    countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     if (_controller.value.isInitialized) {
       _controller.dispose();
@@ -548,6 +564,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                     ),
                   ),
                   // Time and Delay Info
+                  // Time and Delay Info
                   Positioned(
                     top: 10,
                     left: 10,
@@ -558,6 +575,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
                         style: const TextStyle(
                           fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Countdown Timer in the Center
+                  Center(
+                    child: Container(
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      height: MediaQuery.of(context).size.width * 0.5,
+                      alignment: Alignment.center,
+                      color: Colors.black.withOpacity(0.5),
+                      child: Text(
+                        remainingSeconds > 0 ? '$remainingSeconds' : '',
+                        style: const TextStyle(
+                          fontSize: 48,
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                         ),

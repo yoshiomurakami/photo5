@@ -15,6 +15,7 @@ import 'package:camera/camera.dart';
 // import 'dart:math' as math;
 import 'timeline_providers.dart';
 import 'timeline_camera.dart';
+import 'album_timeline.dart';
 import 'l10n/l10n.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -1164,8 +1165,11 @@ class ChatNotifier extends ChangeNotifier {
             timelineItems.insert(insertIndex + 1, newItem);
           }
           // UIの更新をトリガーする
-          notifyListeners();
+          // notifyListeners();
         }
+
+          shiftSelectedItemsMap(timelineItems);
+          notifyListeners();
 
 
         } else {
