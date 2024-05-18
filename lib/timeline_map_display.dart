@@ -692,82 +692,116 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ValueListenableBuilder<TimelineItem?>(
               valueListenable: selectedItemNotifier,
               builder: (context, selectedItem, child) {
-                if (selectedItem == null) {
+                if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
                   return const SizedBox();
                 }
+
                 // localtimeを分割して必要な部分を取得
                 final timeParts = selectedItem.localtime.split(' ');
 
                 return Positioned(
-                  bottom: widget.size.height * 0.5 + 75, // ウィジェットの高さの半分上方向に移動
+                  bottom: widget.size.height * 0.5 + 40, // ウィジェットの高さの半分上方向に移動
                   left: widget.size.width * 0.15,
                   right: widget.size.width * 0.15,
-                  child: Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(1),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.black),
-                    ),
-                    child: Stack(
-                      clipBehavior: Clip.none, // ウィジェットの境界を超えて表示できるように設定
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  timeParts[4],
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey,
-                                    fontWeight: FontWeight.bold,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      CustomPaint(
+                        painter: BubblePainter(),
+                        child: Container(
+                          width: double.infinity, // ウィジェットの横幅を固定
+                          padding: const EdgeInsets.all(15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                height: 20, // 固定の高さを設定
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    timeParts[4], // 時間：分だけを表示
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              '${selectedItem.geocodedCountry ?? 'N/A'} ${selectedItem.geocodedCity ?? ''}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.black,
-                                fontWeight: FontWeight.bold,
                               ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                                fontWeight: FontWeight.bold,
+                              const SizedBox(height: 5),
+                              SizedBox(
+                                height: 20, // 固定の高さを設定
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '${selectedItem.geocodedCountry ?? 'N/A'}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        Positioned(
-                          top: -30, // 上部に半分ほど重ねる
-                          left: (widget.size.width * 0.7) / 2 - 12, // ウィジェットの中央に配置
-                          child: buildFlagWidget(selectedItem.country),
-                        ),
-                        Positioned(
-                          top: 0,
-                          right: 0,
-                          child: IconButton(
-                            icon: Icon(Icons.close),
-                            onPressed: () {
-                              // ここでボタンの動作を定義します
-                            },
+                              SizedBox(
+                                height: 20, // 固定の高さを設定
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '${selectedItem.geocodedCity ?? ''}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.black,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              SizedBox(
+                                height: 20, // 固定の高さを設定
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  alignment: Alignment.centerLeft,
+                                  child: Text(
+                                    '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                            ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      Positioned(
+                        top: -15, // 上部に半分ほど重ねる
+                        left: (widget.size.width * 0.7) / 2 - 15, // ウィジェットの中央に配置
+                        child: buildFlagWidget(selectedItem.country),
+                      ),
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: IconButton(
+                          icon: Icon(Icons.close),
+                          onPressed: () {
+                            // ここでボタンの動作を定義します
+                          },
+                        ),
+                      ),
+                    ],
                   ),
                 );
               },
             ),
+
 
 
           ],
@@ -949,8 +983,56 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       });
     });
   }
+}
 
+class BubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white
+      ..style = PaintingStyle.fill;
 
+    final borderRadius = 10.0;
+    final arrowSize = 10.0;
 
+    final path = Path()
+      ..moveTo(borderRadius, 0)
+      ..lineTo(size.width - borderRadius, 0)
+      ..arcToPoint(
+        Offset(size.width, borderRadius),
+        radius: Radius.circular(borderRadius),
+      )
+      ..lineTo(size.width, size.height - borderRadius - arrowSize)
+      ..arcToPoint(
+        Offset(size.width - borderRadius, size.height - arrowSize),
+        radius: Radius.circular(borderRadius),
+      )
+      ..lineTo(size.width / 2 + arrowSize * 0.5, size.height - arrowSize)
+      ..lineTo(size.width / 2, size.height)
+      ..lineTo(size.width / 2 - arrowSize * 0.5, size.height - arrowSize)
+      ..lineTo(borderRadius, size.height - arrowSize)
+      ..arcToPoint(
+        Offset(0, size.height - borderRadius - arrowSize),
+        radius: Radius.circular(borderRadius),
+      )
+      ..lineTo(0, borderRadius)
+      ..arcToPoint(
+        Offset(borderRadius, 0),
+        radius: Radius.circular(borderRadius),
+      )
+      ..close();
+
+    canvas.drawPath(path, paint);
+
+    final borderPaint = Paint()
+      ..color = Colors.black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0; // 線の太さを設定
+
+    canvas.drawPath(path, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => false;
 }
 

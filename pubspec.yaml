@@ -99,7 +99,12 @@ flutter:
     - assets/placeholder_thumb.png
     - assets/placeholder_thumb_transparent.png
 
-
+#  fonts:
+#    - family: NotoSans
+#      fonts:
+#        - asset: assets/fonts/NotoSans-Regular.ttf
+#        - asset: assets/fonts/NotoSans-Bold.ttf
+#          weight: 700
 
     #     - images/a_dot_burr.jpeg
 #     - images/a_dot_ham.jpeg
