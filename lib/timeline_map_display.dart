@@ -8,6 +8,7 @@ import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_camera.dart';
 import 'album_timeline.dart';
+import 'package:flag/flag.dart';
 
 
 
@@ -694,37 +695,71 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 if (selectedItem == null) {
                   return const SizedBox();
                 }
+                // localtimeを分割して必要な部分を取得
+                final timeParts = selectedItem.localtime.split(' ');
+
                 return Positioned(
-                  top: widget.size.height * 0.3 - 50,
-                  left: widget.size.width * 0.5 - 100,
+                  bottom: widget.size.height * 0.5 + 75, // ウィジェットの高さの半分上方向に移動
+                  left: widget.size.width * 0.15,
+                  right: widget.size.width * 0.15,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
-                    color: Colors.black.withOpacity(0.5),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(1),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.black),
+                    ),
+                    child: Stack(
+                      clipBehavior: Clip.none, // ウィジェットの境界を超えて表示できるように設定
                       children: [
-                        Text(
-                          'country: ${selectedItem.country}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  timeParts[4],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              '${selectedItem.geocodedCountry ?? 'N/A'} ${selectedItem.geocodedCity ?? ''}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.black,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                        Text(
-                          'geocodedCountry: ${selectedItem.geocodedCountry ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Positioned(
+                          top: -30, // 上部に半分ほど重ねる
+                          left: (widget.size.width * 0.7) / 2 - 12, // ウィジェットの中央に配置
+                          child: buildFlagWidget(selectedItem.country),
                         ),
-                        Text(
-                          'geocodedCity: ${selectedItem.geocodedCity ?? 'N/A'}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                        Positioned(
+                          top: 0,
+                          right: 0,
+                          child: IconButton(
+                            icon: Icon(Icons.close),
+                            onPressed: () {
+                              // ここでボタンの動作を定義します
+                            },
                           ),
                         ),
                       ],
@@ -733,6 +768,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 );
               },
             ),
+
+
           ],
         );
       },
@@ -817,6 +854,24 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
+  Widget buildFlagWidget(String countryCode) {
+    return Container(
+      padding: const EdgeInsets.all(1),
+      decoration: BoxDecoration(
+        color: Colors.grey.withOpacity(1),
+        shape: BoxShape.circle,
+      ),
+      child: ClipOval(
+        child: Flag.fromString(
+          countryCode,
+          height: 30,
+          width: 30,
+          fit: BoxFit.cover,
+          flagSize: FlagSize.size_1x1,
+        ),
+      ),
+    );
+  }
 
 
   Future<void> _initializeCamera() async {
