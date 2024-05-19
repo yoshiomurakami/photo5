@@ -345,6 +345,24 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
   }
 }
 
+// sayhelloウィジェットを再接続のたびに表示しないように、userIDとcommonMsgを引き渡すためのクラス
+class ConnectionWidget extends StatelessWidget {
+  final String userID;
+  final String commonMsg;
+
+  ConnectionWidget({
+    required this.userID,
+    required this.commonMsg,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      // ウィジェットのビルド...
+    );
+  }
+}
+
 class ConnectionWidgetData {
   final Widget widget;
   final bool isRightAligned;
@@ -495,8 +513,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
 
 
-        if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
+        // Check if sayhello message is already displayed
+        bool sayhelloExists = _connectionWidgetsMap.values.any((widgetData) {
+          if (widgetData.widget is ConnectionWidget) {
+            final connectionWidget = widgetData.widget as ConnectionWidget;
+            return connectionWidget.userID == userID && connectionWidget.commonMsg == 'sayhello';
+          }
+          return false;
+        });
 
+        if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero && !sayhelloExists) {
         debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -518,7 +544,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         return;
       }
 
-      if (action == 'connected' && distance >= 10000) {
+        if (action == 'connected' && distance >= 10000 && !sayhelloExists) {
 
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
 

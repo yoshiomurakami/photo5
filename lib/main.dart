@@ -632,30 +632,37 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
     );
 
     try {
-
       // 位置情報の取得
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       // Position position = fakePosition;
       debugPrint("Location: Lat ${position.latitude}, Lng ${position.longitude}");
 
-      // 国コードの取得
+      // 国コードと住所の取得
       List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-      String? countryCode = placemarks.first.isoCountryCode;
-      // String? countryCode = "GR";
+      Placemark placemark = placemarks.first;
+      String? countryCode = placemark.isoCountryCode;
+      String? city = placemark.administrativeArea;
+      String? country = placemark.country;
 
       debugPrint("Country Code: $countryCode");
+      debugPrint("City: $city");
+      debugPrint("Country: $country");
 
-      // SharedPreferencesに国コードと緯度経度を保存
+      // SharedPreferencesに国コード、住所、緯度経度を保存
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('countryCode', countryCode ?? 'Unknown');
+      await prefs.setString('city', city ?? 'Unknown');
+      await prefs.setString('country', country ?? 'Unknown');
       await prefs.setDouble('latitude', position.latitude);
       await prefs.setDouble('longitude', position.longitude);
-      debugPrint('Country Code and location saved to SharedPreferences');
+      debugPrint('Country Code, city, country, and location saved to SharedPreferences');
 
     } catch (e) {
-      debugPrint("Failed to get location, country code or save to SharedPreferences: $e");
+      debugPrint("Failed to get location, country code, city, country or save to SharedPreferences: $e");
     }
   }
+
+
 
 
 

@@ -8,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 // import 'chat_connection.dart';
+import 'package:intl/intl.dart';
 
 int currentPage = 0; // これで現在のページを追跡します
 
@@ -47,6 +48,9 @@ class TimelineItem {
   static Map<String, dynamic> empty({
     required double lat,
     required double lng,
+    required String geocodedCountry,
+    required String geocodedCity,
+    required String localtime,
   }) {
     return {
       'systemId': 'shootbutton',
@@ -57,8 +61,11 @@ class TimelineItem {
       'lng': lng.toString(),
       'imageFilename': '03.png',
       'thumbnailFilename': '03.png',
+      // 'localtime': localtime,
       'localtime': 'dummy',
       'groupID': 'camera',
+      'geocodedCountry': geocodedCountry,
+      'geocodedCity': geocodedCity,
     };
   }
 
@@ -124,10 +131,10 @@ Future<Map<String, String>> getGeocodedLocation(LatLng position) async {
   return {'country': 'unknown', 'city': 'unknown'}; // エラーを返さずに未知の値を返す
 }
 
-Future<LatLng> determinePosition() async {
-  Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-  return LatLng(position.latitude, position.longitude);
-}
+// Future<LatLng> determinePosition() async {
+//   Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+//   return LatLng(position.latitude, position.longitude);
+// }
 
 Future<List<TimelineItem>> getMoreTimelineItems() async {
   currentPage++; // ページ番号を増やす
@@ -163,15 +170,24 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
 
         double latitude = prefs.getDouble('latitude') ?? 0.0;
         double longitude = prefs.getDouble('longitude') ?? 0.0;
+        String country = prefs.getString('country') ?? 'Unknown';
+        String city = prefs.getString('city') ?? 'Unknown';
+        // 現在のローカルタイムを取得し、フォーマット
+        DateTime now = DateTime.now();
+        String formattedLocaltime = DateFormat('EEE, dd MM, yyyy, HH:mm').format(now);
+
 
         // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
-        Map<String, dynamic> emptyTimelineItem = TimelineItem.empty(
+        Map<String, dynamic> firstTimelineItem = TimelineItem.empty(
           lat: latitude,
           lng: longitude,
+          geocodedCountry: country,
+          geocodedCity: city,
+          localtime: formattedLocaltime,
         );
 
         // 空の TimelineItem をリストの先頭に追加します。
-        data.insert(0, emptyTimelineItem);
+        data.insert(0, firstTimelineItem);
       }
 
       // デバッグ情報として、取得したデータを出力

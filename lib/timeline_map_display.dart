@@ -700,7 +700,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 final timeParts = selectedItem.localtime.split(' ');
 
                 return Positioned(
-                  bottom: widget.size.height * 0.5 + 40, // ウィジェットの高さの半分上方向に移動
+                  bottom: widget.size.height * 0.5 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
                   left: widget.size.width * 0.15,
                   right: widget.size.width * 0.15,
                   child: Stack(
@@ -801,9 +801,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 );
               },
             ),
-
-
-
           ],
         );
       },
@@ -993,7 +990,7 @@ class BubblePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final borderRadius = 10.0;
-    final arrowSize = 10.0;
+    final arrowSize = 7.0;
 
     final path = Path()
       ..moveTo(borderRadius, 0)

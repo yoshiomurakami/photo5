@@ -15,7 +15,7 @@ class HorizontalGroupedItems extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final void Function(TimelineItem)? onTapCallback;
-  final VoidCallback? onCameraButtonPressed;
+  // final VoidCallback? onCameraButtonPressed;
   final ValueChanged<int> onHorizontalIndexChanged;
   // final Map<String, int> selectedItemsMap;
   final int centralRowIndex; // 追加
@@ -29,7 +29,7 @@ class HorizontalGroupedItems extends StatefulWidget {
     required this.pickerController,
     required this.items,
     this.onTapCallback,
-    this.onCameraButtonPressed,
+    // this.onCameraButtonPressed,
     required this.onHorizontalIndexChanged,
     // required this.selectedItemsMap,
     required this.centralRowIndex, // 追加
@@ -150,7 +150,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
                   pickerController: widget.pickerController,
                   items: widget.items,
                   onTapCallback: widget.onTapCallback,
-                  onCameraButtonPressed: widget.onCameraButtonPressed,
+                  // onCameraButtonPressed: widget.onCameraButtonPressed,
                 ),
               ),
             );
@@ -175,7 +175,7 @@ class TimelineCard extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final void Function(TimelineItem)? onTapCallback;
-  final VoidCallback? onCameraButtonPressed;
+  // final VoidCallback? onCameraButtonPressed;
 
   const TimelineCard({
     Key? key,
@@ -186,7 +186,7 @@ class TimelineCard extends StatefulWidget {
     required this.pickerController,
     required this.items,
     this.onTapCallback,
-    required this.onCameraButtonPressed,
+    // required this.onCameraButtonPressed,
   }) : super(key: key);
 
   @override
@@ -240,7 +240,8 @@ class TimelineCardState extends State<TimelineCard> {
                       foregroundColor: Colors.black,
                       elevation: 0,
                       shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-                      onPressed: widget.onCameraButtonPressed,
+                      // onPressed: widget.onCameraButtonPressed,
+                      onPressed: () {  },
                       child: const Center(
                         child: Text(
                           '\u{1F4F8}',
