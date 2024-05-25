@@ -920,6 +920,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
           camera: cameraDescription,
           groupID: cameraData['groupID'],
           takePictureStartTime: cameraData['timestamp'], // CameraScreenにtimestampも渡す
+          shootingRoomCount: cameraData['shootingRoomCount'],
         ),
       ),
     );
@@ -935,10 +936,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       if (data is Map<String, dynamic>) {
         String groupID = data['groupID'];
         int timestamp = data['timestamp'];
+        int shootingRoomCount = data['shootingRoomCount'];
         debugPrint("timestamp in map Display = $timestamp");
 
         // groupIDとtimestampをCompleterを通じて返す
-        completer.complete({'groupID': groupID, 'timestamp': timestamp});
+        completer.complete({'groupID': groupID, 'timestamp': timestamp,'shootingRoomCount': shootingRoomCount});
 
         // イベントリスナーを解除
         chatConnection.off('assign_group_id');

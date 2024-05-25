@@ -15,7 +15,7 @@ import 'package:camera/camera.dart';
 // import 'dart:math' as math;
 import 'timeline_providers.dart';
 import 'timeline_camera.dart';
-import 'album_timeline.dart';
+// import 'album_timeline.dart';
 import 'l10n/l10n.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -146,21 +146,21 @@ class ChatConnection {
     });
   }
 
-  void listenToRoomCount(BuildContext context) {
-    socket?.on('room_count', (data) {
-      debugPrint('Number of users in "shooting" room: ${data['count']}');
-
-      String actionMessage = data['action'] == "entered" ? "入室" : "退出";
-
-      // ここで context を使用してSnackBarを表示します。
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("$actionMessage - Number of users in \"shooting\" room: ${data['count']}"),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    });
-  }
+  // void listenToRoomCount(BuildContext context) {
+  //   socket?.on('room_count', (data) {
+  //     debugPrint('Number of users in "shooting" room: ${data['count']}');
+  //
+  //     String actionMessage = data['action'] == "entered" ? "入室" : "退出";
+  //
+  //     // ここで context を使用してSnackBarを表示します。
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(
+  //         content: Text("$actionMessage - Number of users in \"shooting\" room: ${data['count']}"),
+  //         duration: const Duration(seconds: 3),
+  //       ),
+  //     );
+  //   });
+  // }
 
   // void newConnetction(BuildContext context) {
   //   socket?.on('connections', (data) {
@@ -345,23 +345,23 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
   }
 }
 
-// sayhelloウィジェットを再接続のたびに表示しないように、userIDとcommonMsgを引き渡すためのクラス
-class ConnectionWidget extends StatelessWidget {
-  final String userID;
-  final String commonMsg;
-
-  ConnectionWidget({
-    required this.userID,
-    required this.commonMsg,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      // ウィジェットのビルド...
-    );
-  }
-}
+// // sayhelloウィジェットを再接続のたびに表示しないように、userIDとcommonMsgを引き渡すためのクラス
+// class ConnectionWidget extends StatelessWidget {
+//   final String userID;
+//   final String commonMsg;
+//
+//   ConnectionWidget({
+//     required this.userID,
+//     required this.commonMsg,
+//   });
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return Container(
+//       // ウィジェットのビルド...
+//     );
+//   }
+// }
 
 class ConnectionWidgetData {
   final Widget widget;
@@ -513,16 +513,16 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
 
 
-        // Check if sayhello message is already displayed
-        bool sayhelloExists = _connectionWidgetsMap.values.any((widgetData) {
-          if (widgetData.widget is ConnectionWidget) {
-            final connectionWidget = widgetData.widget as ConnectionWidget;
-            return connectionWidget.userID == userID && connectionWidget.commonMsg == 'sayhello';
-          }
-          return false;
-        });
+        // // Check if sayhello message is already displayed
+        // bool sayhelloExists = _connectionWidgetsMap.values.any((widgetData) {
+        //   if (widgetData.widget is ConnectionWidget) {
+        //     final connectionWidget = widgetData.widget as ConnectionWidget;
+        //     return connectionWidget.userID == userID && connectionWidget.commonMsg == 'sayhello';
+        //   }
+        //   return false;
+        // });
 
-        if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero && !sayhelloExists) {
+        if ((currentUserID.isEmpty || userID == currentUserID) && hasStatusZero) {
         debugPrint("sendこんにちは！");
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
@@ -544,7 +544,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         return;
       }
 
-        if (action == 'connected' && distance >= 10000 && !sayhelloExists) {
+        if (action == 'connected' && distance >= 10000) {
 
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
 
@@ -1241,6 +1241,7 @@ class CameraHelper {
           camera: cameraDescription,
           groupID: cameraData['groupID'],
           takePictureStartTime: cameraData['timestamp'],
+          shootingRoomCount: cameraData['shootingRoomCount'],
         ),
       ),
     );

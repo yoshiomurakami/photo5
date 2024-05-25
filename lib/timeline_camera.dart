@@ -17,9 +17,9 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+// import 'package:flutter_hooks/flutter_hooks.dart';
 import 'chat_connection.dart';
-import 'timeline_providers.dart';
+// import 'timeline_providers.dart';
 import 'dart:convert';
 
 final cameraButtonKey = GlobalKey();
@@ -28,12 +28,14 @@ class CameraScreen extends ConsumerStatefulWidget {
   final CameraDescription camera;
   final String groupID;
   final int takePictureStartTime;
+  final int shootingRoomCount;  // shootingRoomCount を追加
 
   CameraScreen({
     Key? key,
     required this.camera,
     required this.groupID,
     required this.takePictureStartTime,  // コンストラクタでtimestampを要求
+    required this.shootingRoomCount,  // コンストラクタでshootingRoomCountを要求
   }) : super(key: ValueKey(takePictureStartTime));  // ValueKey を使って key を更新
 
   @override
@@ -67,16 +69,19 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   late Timer countdownTimer;
   int remainingSeconds = 0;
 
+
+  int userShootingListCount = 0; // データ件数を保持する状態変数
+
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
 
   late final void Function(Map<String, dynamic>) eventHandler;
-
-  @override
+  
   //タイマーシャッターを組み込んだinitstate
   @override
   void initState() {
     super.initState();
+    userShootingListCount = widget.shootingRoomCount;
     _controller = CameraController(
       widget.camera,
       ResolutionPreset.high,
@@ -121,7 +126,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
     });
 
+
+
     WidgetsBinding.instance.addObserver(this);
+
+
   }
 
 
@@ -495,34 +504,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
   void handleCameraEvent(Map<String, dynamic> data) {
-    // if (!mounted) return;  // ウィジェットがマウントされていない場合は何もしない
+    if (!mounted) return;  // ウィジェットがマウントされていない場合は何もしない
 
     String event = data['event'];
     if (event == "someone_start_camera") {
-      debugPrint("check_start_camera in camera ${data['userID']} from ${data['countryCode']}");
+      debugPrint("check_start_camera in camera ${data['userID']} from ${data['countryCode']} total ${data['shootingRoomCount']}");
+      handleUpdateUserShootingList(data);
     } else if (event == "someone_leave_camera") {
+      handleUpdateUserShootingList(data);
       debugPrint("check_leave_camera in camera ${data['userID']} from ${data['countryCode']}");
     } else if (event == "existingUserLocations") {
       debugPrint("existingUserLocations in camera is $data");
-      //
-      // if (mounted) {  // 再度 mounted をチェック
-      //   ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(data['userLocations']);
-      //   // existingUserLocations を参照してデバッグ出力
-      //   List<dynamic> currentLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
-      //   debugPrint("Current existingUserLocations in camera: ${currentLocations.length} users");
-      // }
-    } else if (event == "update_user_shootinglist" && data['usersInShootingRoom'] != null) {
-      var usersInShootingRoom = data['usersInShootingRoom'] as List<dynamic>;
-      debugPrint("Updated user list from server in camera with $usersInShootingRoom}");
-      // if (mounted) {  // 再度 mounted をチェック
-      //   ref.read(connectionWidgetsManagerProvider).updateExistingUserLocations(userLocations);
-      //   // 更新後の existingUserLocations を参照してデバッグ出力
-      //   List<dynamic> updatedLocations = ref.read(connectionWidgetsManagerProvider).existingUserLocations;
-      //   debugPrint("Updated existingUserLocations in camera: ${updatedLocations.length} users");
-      // }
+    } else if (event == "update_user_shootinglist") {
+      // handleUpdateUserShootingList(data);
+      debugPrint("handleUpdateUserShootingList(data) = $data");
     }
   }
 
+  void handleUpdateUserShootingList(Map<String, dynamic> data) {
+    setState(() {
+      userShootingListCount = data['shootingRoomCount'];
+    });
+  }
 
 
 
@@ -563,7 +566,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       ),
                     ),
                   ),
-                  // Time and Delay Info
                   // Time and Delay Info
                   Positioned(
                     top: 10,
@@ -618,10 +620,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           ElevatedButton(
                             onPressed: () {
                               chatConnection.emitEvent("leave_shooting_room");
-
-                              // カメラのリソースを解放
-                              _controller.dispose();
-
                               _navigateBack(context);
                             },
                             child: const Text('Back'),
@@ -710,9 +708,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                     ),
                   )
                       : const SizedBox(),
+                  Positioned(
+                    bottom: 50,
+                    left: 10,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black.withOpacity(0.5),
+                      child: Text(
+                        'Shooting List Count: $userShootingListCount',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               );
-
             } else {
               return const SizedBox.shrink();
             }
