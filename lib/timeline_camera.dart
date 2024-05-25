@@ -81,7 +81,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    userShootingListCount = widget.shootingRoomCount;
+    userShootingListCount = widget.shootingRoomCount - 1;
     _controller = CameraController(
       widget.camera,
       ResolutionPreset.high,
@@ -89,11 +89,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     _initializeControllerFuture = _controller.initialize().then((_) {
       setState(() {  // setStateを使用してUIの更新をトリガー
         now = DateTime.now().millisecondsSinceEpoch;
-        triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
+        triggerTime = widget.takePictureStartTime + 20000;  // デバイスAのタイムスタンプから10秒後
         delay = triggerTime - now;  // 残り時間を計算
         if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
         remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
-        if (remainingSeconds > 10) remainingSeconds = 10; // 11秒以上にならないように制限
+        if (remainingSeconds > 30) remainingSeconds = 10; // 11秒以上にならないように制限
       });
 
       // カウントダウンタイマーのセットアップ
@@ -523,7 +523,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   void handleUpdateUserShootingList(Map<String, dynamic> data) {
     setState(() {
-      userShootingListCount = data['shootingRoomCount'];
+      userShootingListCount = data['shootingRoomCount'] - 1;
     });
   }
 
@@ -567,22 +567,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                     ),
                   ),
                   // Time and Delay Info
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      color: Colors.black.withOpacity(0.5),
-                      child: Text(
-                        'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Positioned(
+                  //   top: 10,
+                  //   left: 10,
+                  //   child: Container(
+                  //     padding: const EdgeInsets.all(8),
+                  //     color: Colors.black.withOpacity(0.5),
+                  //     child: Text(
+                  //       'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
+                  //       style: const TextStyle(
+                  //         fontSize: 16,
+                  //         color: Colors.white,
+                  //         fontWeight: FontWeight.bold,
+                  //       ),
+                  //     ),
+                  //   ),
+                  // ),
                   // Countdown Timer in the Center
                   Center(
                     child: Container(
@@ -609,7 +609,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       ),
                     ),
                     Positioned(
-                      bottom: 0,
+                      top: 50,
                       left: 0,
                       child: Row(
                         children: [
@@ -708,22 +708,36 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                     ),
                   )
                       : const SizedBox(),
+                  if (userShootingListCount >= 1)
                   Positioned(
-                    bottom: 50,
-                    left: 10,
+                    bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
+                    left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
+                    height: MediaQuery.of(context).size.height * 0.04,
                     child: Container(
-                      padding: const EdgeInsets.all(8),
-                      color: Colors.black.withOpacity(0.5),
-                      child: Text(
-                        'Shooting List Count: $userShootingListCount',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        border: Border.all(color: Colors.black, width: 1.5),
+                        borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
+                          const SizedBox(width: 10),
+                          Text(
+                            '$userShootingListCount',
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
+                  )
+
                 ],
               );
             } else {
