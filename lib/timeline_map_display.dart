@@ -524,13 +524,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   String _lastSelectedAlbumGroupID = '';
   ValueNotifier<TimelineItem?> selectedItemNotifier = ValueNotifier<TimelineItem?>(null); // ValueNotifierを使用して再描画を最小限にする
 
+
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
     _pickerController.addListener(_scrollListener);
     final chatNotifier = ref.read(chatNotifierProvider);
-    chatNotifier.addPostedPhoto(widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
+    chatNotifier.addPostedPhoto(widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
 
     _initializeCamera();
 
@@ -583,15 +584,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
-                      if (_pickerController.hasClients) {
-                        int index = _pickerController.selectedItem;
-                        String groupID = groupedItemsList[index].first.groupID;
-                        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                        selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
-                        MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-                        _lastSelectedGroupID = groupID;
-                      }
+                      Future.delayed(const Duration(milliseconds: 500), () {
+                        if (_pickerController.hasClients) {
+                          int index = _pickerController.selectedItem;
+                          String groupID = groupedItemsList[index].first.groupID;
+                          int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                          selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
+                          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+                          _lastSelectedGroupID = groupID;
+                        }
+                      });
                     }
+
                     return true;
                   },
                   child: ListWheelScrollView(
@@ -736,7 +740,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                   fit: BoxFit.scaleDown,
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    '${selectedItem.geocodedCountry ?? 'N/A'}',
+                                    selectedItem.geocodedCountry ?? 'N/A',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       color: Colors.black,
@@ -751,7 +755,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                   fit: BoxFit.scaleDown,
                                   alignment: Alignment.centerLeft,
                                   child: Text(
-                                    '${selectedItem.geocodedCity ?? ''}',
+                                    selectedItem.geocodedCity ?? '',
                                     style: const TextStyle(
                                       fontSize: 16,
                                       color: Colors.black,
@@ -790,7 +794,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                         top: 0,
                         right: 0,
                         child: IconButton(
-                          icon: Icon(Icons.close),
+                          icon: const Icon(Icons.close),
                           onPressed: () {
                             // ここでボタンの動作を定義します
                           },
@@ -883,14 +887,24 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     } else {
       _jumpToTopKey.currentState?.moveButton();
     }
+
+    // String groupID = groupedItemsList[currentIndex].first.groupID;
+    // int selectedItemIndex = ref.read(chatNotifierProvider).selectedItemsMap[groupID] ?? 0;
+    // selectedItemNotifier.value = groupedItemsList[currentIndex][selectedItemIndex];
+    // MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+    // _lastSelectedGroupID = groupID;
   }
 
   Widget buildFlagWidget(String countryCode) {
     return Container(
-      padding: const EdgeInsets.all(1),
+      // padding: const EdgeInsets.all(0),
       decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(1),
+        // color: Colors.black.withOpacity(1),
         shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black, // アウトラインの色
+          width: 2.0, // アウトラインの太さ
+        ),
       ),
       child: ClipOval(
         child: Flag.fromString(
@@ -991,20 +1005,20 @@ class BubblePainter extends CustomPainter {
       ..color = Colors.white
       ..style = PaintingStyle.fill;
 
-    final borderRadius = 10.0;
-    final arrowSize = 7.0;
+    const borderRadius = 10.0;
+    const arrowSize = 7.0;
 
     final path = Path()
       ..moveTo(borderRadius, 0)
       ..lineTo(size.width - borderRadius, 0)
       ..arcToPoint(
         Offset(size.width, borderRadius),
-        radius: Radius.circular(borderRadius),
+        radius: const Radius.circular(borderRadius),
       )
       ..lineTo(size.width, size.height - borderRadius - arrowSize)
       ..arcToPoint(
         Offset(size.width - borderRadius, size.height - arrowSize),
-        radius: Radius.circular(borderRadius),
+        radius: const Radius.circular(borderRadius),
       )
       ..lineTo(size.width / 2 + arrowSize * 0.5, size.height - arrowSize)
       ..lineTo(size.width / 2, size.height)
@@ -1012,12 +1026,12 @@ class BubblePainter extends CustomPainter {
       ..lineTo(borderRadius, size.height - arrowSize)
       ..arcToPoint(
         Offset(0, size.height - borderRadius - arrowSize),
-        radius: Radius.circular(borderRadius),
+        radius: const Radius.circular(borderRadius),
       )
       ..lineTo(0, borderRadius)
       ..arcToPoint(
-        Offset(borderRadius, 0),
-        radius: Radius.circular(borderRadius),
+        const Offset(borderRadius, 0),
+        radius: const Radius.circular(borderRadius),
       )
       ..close();
 

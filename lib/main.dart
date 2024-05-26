@@ -621,8 +621,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
     // 疑似的な位置情報を生成
     Position fakePosition = Position(
-      latitude: 28.462898373204474,
-      longitude: 77.37800790383884,
+      latitude: 37.76486445816393,
+      longitude: -122.45051079519227,
       timestamp: DateTime.now(), // 現在時刻を設定
       accuracy: 0, // 精度を適宜設定
       altitude: 0, // 標高を適宜設定
@@ -651,8 +651,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
       // SharedPreferencesに国コード、住所、緯度経度を保存
       final SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setString('countryCode', countryCode ?? 'Unknown');
-      await prefs.setString('city', city ?? 'Unknown');
-      await prefs.setString('country', country ?? 'Unknown');
+      // await prefs.setString('city', city ?? 'Unknown');
+      // await prefs.setString('country', country ?? 'Unknown');
       await prefs.setDouble('latitude', position.latitude);
       await prefs.setDouble('longitude', position.longitude);
       debugPrint('Country Code, city, country, and location saved to SharedPreferences');

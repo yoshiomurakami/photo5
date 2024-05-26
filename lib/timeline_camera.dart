@@ -234,10 +234,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     }
   }
 
+
+
+
+
   Future<void> _convertImage(String imgPath, String thumbPath, int timestamp, String randomStr) async {
+
+
+    // 疑似的な位置情報を生成
+    Position fakePosition = Position(
+      latitude: 37.76486445816393,
+      longitude: -122.45051079519227,
+      timestamp: DateTime.now(), // 現在時刻を設定
+      accuracy: 0, // 精度を適宜設定
+      altitude: 0, // 標高を適宜設定
+      heading: 0, // 向きを適宜設定
+      speed: 0, // 速度を適宜設定
+      speedAccuracy: 0, // 速度精度を適宜設定
+    );
 
     // Fetch the user's current location.
     Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -677,35 +695,35 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                             ),
 
                             Positioned(
-                          bottom: 20,
-                          right: 20,
-                          child: ElevatedButton(
-                            onPressed: () async {  // Make the handler asynchronous
-                              if (_imagePath != null) {
-                                var imgFile = File(_imagePath!);
-                                if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
-                                  await imgFile.delete();
-                                }
-                                _imagePath = null;
-                              }
+                              bottom: 20,
+                              right: 20,
+                              child: ElevatedButton(
+                                onPressed: () async {  // Make the handler asynchronous
+                                  if (_imagePath != null) {
+                                    var imgFile = File(_imagePath!);
+                                    if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
+                                      await imgFile.delete();
+                                    }
+                                    _imagePath = null;
+                                  }
 
-                              if (_thumbnailPath != null) {
-                                var thumbFile = File(_thumbnailPath!);
-                                if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
-                                  await thumbFile.delete();
-                                }
-                                _thumbnailPath = null;
-                              }
+                                  if (_thumbnailPath != null) {
+                                    var thumbFile = File(_thumbnailPath!);
+                                    if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
+                                      await thumbFile.delete();
+                                    }
+                                    _thumbnailPath = null;
+                                  }
 
-                              setState(() {
-                                _showImage = false;  // Reset the flag when the button is pressed
-                              });
-                            },
-                            child: const Text('Back'),
-                          ),
-                        )
-                      ],
-                    ),
+                                  setState(() {
+                                    _showImage = false;  // Reset the flag when the button is pressed
+                                  });
+                                },
+                                child: const Text('Back'),
+                              ),
+                            )
+                          ],
+                        ),
                   )
                       : const SizedBox(),
                   if (userShootingListCount >= 1)

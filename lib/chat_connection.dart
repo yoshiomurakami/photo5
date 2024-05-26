@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 // import 'dart:math';
 import 'package:socket_io_client/socket_io_client.dart' as io;
-import 'package:geocoding/geocoding.dart';
+// import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
 // import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -1133,28 +1133,28 @@ class ChatNotifier extends ChangeNotifier {
     }
   }
 
-  void addPostedPhoto(PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum) {
+  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum) {
 
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
       debugPrint("onNewPhoto=$data");
 
-      try {
-        double latitude = data['lat'];
-        double longitude = data['lng'];
-
-        // 地名情報の取得
-        List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
-
-        if (placemarks.isNotEmpty) {
-          Placemark place = placemarks.first;
-
-          // 受信データ配列に地名情報を追加
-          data['geocodedCity'] = place.locality ?? "Unknown";
-          data['geocodedCountry'] = place.country ?? "Unknown";
-
-          // 更新された配列情報を出力
-          debugPrint("Updated Data with Geocoding=$data");
+      // try {
+      //   double latitude = data['lat'];
+      //   double longitude = data['lng'];
+      //
+      //   // 地名情報の取得
+      //   List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
+      //
+      //   if (placemarks.isNotEmpty) {
+      //     Placemark place = placemarks.first;
+      //
+      //     // 受信データ配列に地名情報を追加
+      //     data['geocodedCity'] = place.administrativeArea ?? "Unknown";
+      //     data['geocodedCountry'] = place.country ?? "Unknown";
+      //
+      //     // 更新された配列情報を出力
+      //     debugPrint("Updated Data with Geocoding=$data");
 
           TimelineItem newItem = TimelineItem.fromJson(data);
           debugPrint("maked_TimelineItem newItem=$newItem");
@@ -1179,8 +1179,21 @@ class ChatNotifier extends ChangeNotifier {
             // notifyListeners(); // 更新を通知
             // 遅延してpickerControllerの位置を更新
             // Future.delayed(Duration(milliseconds: 50), () {
-            //   pickerController.jumpToItem(currentSelection + 1);
-            //   notifyListeners(); // 更新を通知
+              // currentIndexが2以下の場合のみ、次のアイテムへジャンプ
+              int currentIndex = pickerController.selectedItem;
+              if (currentIndex >= 1) {
+                pickerController.jumpToItem(currentIndex + 4);
+                double offset = (currentIndex + 1) * size.width*0.2; // itemHeightは各アイテムの高さまたは幅です。
+                pickerController.animateTo(
+                    offset,
+                    duration: const Duration(milliseconds: 10), // スクロールにかかる時間
+                    curve: Curves.easeInOut // スクロールの動き（加速度）
+                );
+              }
+
+
+
+            // notifyListeners(); // 更新を通知
             // });
           } else {
           // groupIDが一致する既存のアイテムが見つかった場合
@@ -1194,22 +1207,26 @@ class ChatNotifier extends ChangeNotifier {
           // notifyListeners();
         }
 
-          shiftSelectedItemsMap(timelineItems);
           notifyListeners();
+          shiftSelectedItemsMap(timelineItems);
+
+          //ここで更新するのではなく、
 
 
-        } else {
-          debugPrint("Geocoding returned no results.");
-        }
-      } catch (e) {
-        debugPrint("Error in geocoding: $e");
-      }
+      //   } else {
+      //     debugPrint("Geocoding returned no results.");
+      //   }
+      // } catch (e) {
+      //   debugPrint("Error in geocoding: $e");
+      // }
     },onReceived: () {
       debugPrint("新しい写真が受信されました！");
 
 
     });
   }
+
+
 
   void shiftSelectedItemsMap(List<TimelineItem> timelineItems) {
     Map<String, int> newMap = {};
@@ -1234,6 +1251,8 @@ final chatNotifierProvider = ChangeNotifierProvider<ChatNotifier>((ref) {
 class CameraHelper {
   // cameraDataはMap<String, dynamic>型で、groupIDとtimestampを含む
   static void openCamera(BuildContext context, CameraDescription cameraDescription, Map<String, dynamic> cameraData) {
+    int shootingRoomCount = cameraData['shootingRoomCount'] ?? 0; // shootingRoomCountがnullの場合は0を代入
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1241,7 +1260,7 @@ class CameraHelper {
           camera: cameraDescription,
           groupID: cameraData['groupID'],
           takePictureStartTime: cameraData['timestamp'],
-          shootingRoomCount: cameraData['shootingRoomCount'],
+          shootingRoomCount: shootingRoomCount,
         ),
       ),
     );
