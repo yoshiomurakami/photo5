@@ -896,9 +896,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   Widget buildFlagWidget(String countryCode) {
     return Container(
-      // padding: const EdgeInsets.all(0),
       decoration: BoxDecoration(
-        // color: Colors.black.withOpacity(1),
+        color: Colors.white, // 背景を白で設定
         shape: BoxShape.circle,
         border: Border.all(
           color: Colors.black, // アウトラインの色
@@ -906,16 +905,23 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         ),
       ),
       child: ClipOval(
-        child: Flag.fromString(
-          countryCode,
+        child: Container(
+          color: Colors.white, // ここも白で塗りつぶし
           height: 30,
           width: 30,
-          fit: BoxFit.cover,
-          flagSize: FlagSize.size_1x1,
+          child: Flag.fromString(
+            countryCode,
+            height: 30,
+            width: 30,
+            fit: BoxFit.cover,
+            flagSize: FlagSize.size_1x1,
+          ),
         ),
       ),
     );
   }
+
+
 
 
   Future<void> _initializeCamera() async {
