@@ -1182,7 +1182,9 @@ class ChatNotifier extends ChangeNotifier {
               // currentIndexが2以下の場合のみ、次のアイテムへジャンプ
               int currentIndex = pickerController.selectedItem;
               if (currentIndex >= 1) {
-                pickerController.jumpToItem(currentIndex + 4);
+                pickerController.jumpToItem(currentIndex + 5);
+                // shiftSelectedItemsMap(timelineItems);
+                // updateSelectedItemsMap(newItem.groupID);
                 double offset = (currentIndex + 1) * size.width*0.2; // itemHeightは各アイテムの高さまたは幅です。
                 pickerController.animateTo(
                     offset,
@@ -1208,7 +1210,7 @@ class ChatNotifier extends ChangeNotifier {
         }
 
           notifyListeners();
-          shiftSelectedItemsMap(timelineItems);
+          // shiftSelectedItemsMap(timelineItems);
 
           //ここで更新するのではなく、
 

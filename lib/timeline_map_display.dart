@@ -532,7 +532,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _pickerController.addListener(_scrollListener);
     final chatNotifier = ref.read(chatNotifierProvider);
     chatNotifier.addPostedPhoto(widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
-
     _initializeCamera();
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
@@ -584,7 +583,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
-                      Future.delayed(const Duration(milliseconds: 500), () {
+                      Future.delayed(const Duration(milliseconds: 10), () {
                         if (_pickerController.hasClients) {
                           int index = _pickerController.selectedItem;
                           String groupID = groupedItemsList[index].first.groupID;
@@ -888,11 +887,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       _jumpToTopKey.currentState?.moveButton();
     }
 
-    // String groupID = groupedItemsList[currentIndex].first.groupID;
-    // int selectedItemIndex = ref.read(chatNotifierProvider).selectedItemsMap[groupID] ?? 0;
-    // selectedItemNotifier.value = groupedItemsList[currentIndex][selectedItemIndex];
-    // MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-    // _lastSelectedGroupID = groupID;
+    String groupID = groupedItemsList[currentIndex].first.groupID;
+    int selectedItemIndex = ref.read(chatNotifierProvider).selectedItemsMap[groupID] ?? 0;
+    selectedItemNotifier.value = groupedItemsList[currentIndex][selectedItemIndex];
+    MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+    _lastSelectedGroupID = groupID;
   }
 
   Widget buildFlagWidget(String countryCode) {
