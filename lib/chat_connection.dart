@@ -597,6 +597,40 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
     });
 
+      chatConnection.on('new_photo', (data) {
+        Map<String, dynamic> dataMap = jsonDecode(data);
+        String userID = dataMap['userID'];
+        String country = dataMap['country'];
+
+        debugPrint("new_photo data: $data");
+        // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
+        // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
+        bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
+        String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
+        String commonMsg = 'res_sayhello';
+        if (l10n != null) {
+          String msg = l10n.resSayHello;
+          var newWidget = _createConnectionWidget(
+              context,
+              // 'US',
+              // 'ybJIBfGC',
+              country,
+              userID,
+              0, 0,
+              msg,
+              commonMsg,
+              isRightAligned,
+              uniqueKey
+          );
+          _connectionWidgetsMap[userID] = ConnectionWidgetData(
+              widget: newWidget, isRightAligned: isRightAligned);
+        }
+        notifyListeners();
+      });
+
+
+
+
     chatConnection.on('receive_res_hellow', (data) {
       String userID = data['userID'];
       debugPrint("Received receive_res_hellow data: $data");

@@ -254,8 +254,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -483,14 +483,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         // int sequenceNumber = responseBody['photo']['sequenceNumber'];
 
         // ここで新しい写真情報を取得し、chatConnectionを使用して送信
+// アップロードが成功した後の応答処理
         Map<String, dynamic> newPhotoInfo = {
           '_id': responseBody['photo']['_id'],
-          'sequenceNumber': responseBody['photo']['sequenceNumber'],
+          'sequenceNumber': responseBody['photo']['sequenceNumber'].toString(),
           'createdAt': responseBody['photo']['createdAt'],
           'userID': responseBody['photo']['userID'],
           'country': responseBody['photo']['country'],
-          'lat': double.parse(responseBody['photo']['lat']),
-          'lng': double.parse(responseBody['photo']['lng']),
+          'lat': double.parse(responseBody['photo']['lat'] ?? '0'),
+          'lng': double.parse(responseBody['photo']['lng'] ?? '0'),
           'imageFilename': responseBody['photo']['imageFilename'],
           'thumbnailFilename': responseBody['photo']['thumbnailFilename'],
           'localtime': responseBody['photo']['localtime'],
@@ -500,6 +501,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           'statement': responseBody['photo']['statement'],
         };
         chatConnection.sendNewPhotoInfo(newPhotoInfo);
+
 
         return newPhotoInfo;
       } else {
