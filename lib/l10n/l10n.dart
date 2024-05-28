@@ -272,6 +272,12 @@ abstract class L10n {
   /// In en, this message translates to:
   /// **'Shot together!📸'**
   String get shotTogether;
+
+  /// No description provided for @newPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'check new photo!'**
+  String get newPhoto;
 }
 
 class _L10nDelegate extends LocalizationsDelegate<L10n> {

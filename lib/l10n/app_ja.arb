@@ -28,5 +28,6 @@
   "sayHello": "こんにちは！長い文章はどこまで表示されるのかテスト。ここまでで３５文字。",
   "resSayHello": "よろしく！",
   "sayGoodbye": "またね！",
-  "shotTogether": "一緒に撮ろう！\uD83D\uDCF8"
+  "shotTogether": "一緒に撮ろう！\uD83D\uDCF8",
+  "newPhoto": "撮ったよ！"
 }

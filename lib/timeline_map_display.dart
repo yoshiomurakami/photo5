@@ -668,6 +668,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                       _waitForGroupIdAndTimestamp().then((cameraData) {
                         if (cameraData != null) {
                           _openCamera(_cameras![0], cameraData);
+                          debugPrint("cameraData['shootingRoomCount'] = $cameraData");
                         } else {
                           debugPrint("Failed to get the group ID and timestamp.");
                         }

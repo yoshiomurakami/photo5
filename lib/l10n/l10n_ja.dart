@@ -93,4 +93,7 @@ class L10nJa extends L10n {
 
   @override
   String get shotTogether => '一緒に撮ろう！📸';
+
+  @override
+  String get newPhoto => '撮ったよ！';
 }

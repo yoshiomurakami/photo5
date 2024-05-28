@@ -607,13 +607,11 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
-        String commonMsg = 'res_sayhello';
+        String commonMsg = 'new_photo';
         if (l10n != null) {
-          String msg = l10n.resSayHello;
+          String msg = l10n.newPhoto;
           var newWidget = _createConnectionWidget(
               context,
-              // 'US',
-              // 'ybJIBfGC',
               country,
               userID,
               0, 0,
@@ -968,11 +966,15 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             right: isRightAligned ? 5 : 0,
           ),
           child: GestureDetector(
-            onTap: commonMsg == 'shotTogether' ? () async {
+            onTap: commonMsg == 'new_photo' ? () async {
+              // ここに新しい写真に関連する処理を記述します
+              debugPrint("New photo message tapped.");
+
+            }: commonMsg == 'shotTogether' ? () async {
               List<CameraDescription> cameras = await availableCameras();
-              if (cameras.isNotEmpty) {
+              if (cameras != null && cameras.isNotEmpty) {
                 chatConnection.emitEvent("enter_shooting_room");
-                await _waitForGroupIdAndTimestamp().then((cameraData) {
+                _waitForGroupIdAndTimestamp().then((cameraData) {
                   if (cameraData != null) {
                     CameraHelper.openCamera(context, cameras.first, cameraData);
                   } else {
@@ -1054,9 +1056,10 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       if (data is Map<String, dynamic>) {
         String groupID = data['groupID'];
         int timestamp = data['timestamp'];
+        int shootingRoomCount = data['shootingRoomCount'];
 
         // groupIDとtimestampをCompleterを通じて返す
-        completer.complete({'groupID': groupID, 'timestamp': timestamp});
+        completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
 
         // イベントリスナーを解除
         chatConnection.off('assign_group_id');

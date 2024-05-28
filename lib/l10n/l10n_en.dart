@@ -93,4 +93,7 @@ class L10nEn extends L10n {
 
   @override
   String get shotTogether => 'Shot together!📸';
+
+  @override
+  String get newPhoto => 'check new photo!';
 }
