@@ -390,6 +390,22 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     _loadCurrentUserID();
   }
 
+
+  VoidCallback? onPhotoTapCallback;
+
+  // コールバック関数を設定するメソッド
+  void setOnPhotoTapCallback(VoidCallback callback) {
+    onPhotoTapCallback = callback;
+  }
+
+  // イベントがトリガーされたときにコールバックを呼び出すメソッド
+  void handlePhotoTap() {
+    if (onPhotoTapCallback != null) {
+      onPhotoTapCallback!();
+    }
+  }
+
+
   // リストを更新するメソッド
   void updateLocations(List<dynamic> newLocations) {
     existingUserLocations = newLocations;
@@ -532,7 +548,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           debugPrint("tranced msgA = $msg");
           var newWidget = _createConnectionWidget(
               context, '', data['userID'], chatLat, chatLng, msg, commonMsg, isRightAligned,
-              uniqueKey);
+              uniqueKey, this); // thisを渡して、現在のインスタンスを参照させる
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
@@ -560,7 +576,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           var newWidget = _createConnectionWidget(
               context, data['countryCode'], data['userID'], chatLat, chatLng, msg, commonMsg,
               isRightAligned,
-              uniqueKey);
+              uniqueKey, this);
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
@@ -583,7 +599,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           var newWidget = _createConnectionWidget(
               context, data['countryCode'], data['userID'], chatLat, chatLng, msg, commonMsg,
               isRightAligned,
-              uniqueKey); // countryCode を _createConnectionWidget に渡す
+              uniqueKey, this); // countryCode を _createConnectionWidget に渡す
           _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
@@ -618,7 +634,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               msg,
               commonMsg,
               isRightAligned,
-              uniqueKey
+              uniqueKey, this
           );
           _connectionWidgetsMap[userID] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
@@ -642,7 +658,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         var newWidget = _createConnectionWidget(
             context, data['countryCode'], data['userID'], 0, 0, msg, commonMsg,
             isRightAligned,
-            uniqueKey); // countryCode を _createConnectionWidget に渡す
+            uniqueKey, this); // countryCode を _createConnectionWidget に渡す
         _connectionWidgetsMap[userID] = ConnectionWidgetData(
             widget: newWidget, isRightAligned: isRightAligned);
       }
@@ -676,7 +692,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                 msg,
                 commonMsg,
                 isRightAligned,
-                uniqueKey);
+                uniqueKey, this);
             debugPrint("data['countryCode'] =${data['countryCode']}");
             String uniqueUserID = '${userID}_camera';
             _connectionWidgetsMap[uniqueUserID] = ConnectionWidgetData(
@@ -751,7 +767,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
 
 
-  Widget _createConnectionWidget(context, String countryCode, String userID, double lat, double lng, String msg, String commonMsg, bool isRightAligned, String uniqueKey) {
+  Widget _createConnectionWidget(context, String countryCode, String userID, double lat, double lng, String msg, String commonMsg, bool isRightAligned, String uniqueKey, ConnectionWidgetsManager connectionWidgetsManager) {
     var l10n = L10n.of(context);
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor = commonMsg == 'shotTogether' ? const Color(0xFFFFCC4D) : Colors.white;
@@ -884,7 +900,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
           if (l10n != null && commonMsg == 'sayhello') {
             // String msg = l10n.res_sayHello;
             commonMsg = 'res_sayhello';
-            var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, lat, lng, msg, commonMsg, isRightAligned, ''); // countryCode を _createConnectionWidget に渡す
+            var rewriteWidget = _createConnectionWidget(context, countryCode, countryCode, lat, lng, msg, commonMsg, isRightAligned, '', this); // countryCode を _createConnectionWidget に渡す
             _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(widget: rewriteWidget, isRightAligned: false);
           }
           if (l10n != null && commonMsg == 'res_sayhello') {
@@ -893,7 +909,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             String msg = l10n.resSayHello;
             var newWidget = _createConnectionWidget(
                 context, countryCode, currentUserID, lat, lng, msg, commonMsg, true,
-                ''); // countryCode を _createConnectionWidget に渡す
+                '', this); // countryCode を _createConnectionWidget に渡す
             _connectionWidgetsMap[newUniquekey] =
                 ConnectionWidgetData(widget: newWidget, isRightAligned: true);
           }
@@ -969,6 +985,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
             onTap: commonMsg == 'new_photo' ? () async {
               // ここに新しい写真に関連する処理を記述します
               debugPrint("New photo message tapped.");
+
+              // ConnectionWidgetsManagerのhandlePhotoTapを呼び出して、スクロール処理をトリガー
+              connectionWidgetsManager.handlePhotoTap();
 
             }: commonMsg == 'shotTogether' ? () async {
               List<CameraDescription> cameras = await availableCameras();
@@ -1217,18 +1236,21 @@ class ChatNotifier extends ChangeNotifier {
             // 遅延してpickerControllerの位置を更新
             // Future.delayed(Duration(milliseconds: 50), () {
               // currentIndexが2以下の場合のみ、次のアイテムへジャンプ
-              int currentIndex = pickerController.selectedItem;
-              if (currentIndex >= 1) {
-                pickerController.jumpToItem(currentIndex + 5);
-                // shiftSelectedItemsMap(timelineItems);
-                // updateSelectedItemsMap(newItem.groupID);
-                double offset = (currentIndex + 1) * size.width*0.2; // itemHeightは各アイテムの高さまたは幅です。
-                pickerController.animateTo(
-                    offset,
-                    duration: const Duration(milliseconds: 10), // スクロールにかかる時間
-                    curve: Curves.easeInOut // スクロールの動き（加速度）
-                );
-              }
+            //   int currentIndex = pickerController.selectedItem;
+            // if (currentIndex == 0) {
+            //   notifyListeners();
+            // }
+              // if (currentIndex >= 1) {
+              //   pickerController.jumpToItem(currentIndex + 5);
+              //   // shiftSelectedItemsMap(timelineItems);
+              //   // updateSelectedItemsMap(newItem.groupID);
+              //   double offset = (currentIndex + 1) * size.width*0.2; // itemHeightは各アイテムの高さまたは幅です。
+              //   pickerController.animateTo(
+              //       offset,
+              //       duration: const Duration(milliseconds: 10), // スクロールにかかる時間
+              //       curve: Curves.easeInOut // スクロールの動き（加速度）
+              //   );
+              // }
 
 
 
@@ -1246,7 +1268,7 @@ class ChatNotifier extends ChangeNotifier {
           // notifyListeners();
         }
 
-          notifyListeners();
+          // notifyListeners();
           // shiftSelectedItemsMap(timelineItems);
 
           //ここで更新するのではなく、

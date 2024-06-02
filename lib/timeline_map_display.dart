@@ -536,6 +536,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
     groupKeys = groupedAlbums.keys.toList();
+
+    // ConnectionWidgetsManagerのインスタンスを取得
+    ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
+
+    // コールバックを設定
+    manager.setOnPhotoTapCallback(scrollToTarget);
+
+    _pickerController = FixedExtentScrollController();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_pickerController.hasClients) {
+        _pickerController.jumpToItem(0); // 初期スクロール位置を設定
+      }
+    });
   }
 
   // void _scrollListener() {
@@ -548,6 +561,22 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   //     _lastSelectedGroupID = groupID;
   //   }
   // }
+
+  void scrollToTarget() {
+    if (_pickerController.hasClients) {
+      debugPrint("Callback from new_photo");
+      _pickerController.animateToItem(
+        1, // リストの先頭にスクロール
+        duration: Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      setState(() {
+        showNewListWheelScrollView = false;
+      });
+    } else {
+      debugPrint("ScrollController not attached to any scroll views.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
