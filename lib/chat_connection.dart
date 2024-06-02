@@ -636,7 +636,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               isRightAligned,
               uniqueKey, this
           );
-          _connectionWidgetsMap[userID] = ConnectionWidgetData(
+          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
         }
         notifyListeners();
@@ -995,6 +995,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                 chatConnection.emitEvent("enter_shooting_room");
                 _waitForGroupIdAndTimestamp().then((cameraData) {
                   if (cameraData != null) {
+                    // ConnectionWidgetsManagerのhandlePhotoTapを呼び出して、スクロール処理をトリガー
+                    connectionWidgetsManager.handlePhotoTap();
                     CameraHelper.openCamera(context, cameras.first, cameraData);
                   } else {
                     debugPrint("Failed to get the group ID.");
@@ -1189,8 +1191,7 @@ class ChatNotifier extends ChangeNotifier {
     }
   }
 
-  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum)  async{
-
+  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems, Map<String, int> selectedItemsMap, List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId, VoidCallback toggleTimelineAndAlbum) async {
     // SharedPreferencesからユーザーIDを取得
     final prefs = await SharedPreferences.getInstance();
     final myUserId = prefs.getString('userID');
@@ -1199,67 +1200,41 @@ class ChatNotifier extends ChangeNotifier {
     chatConnection.onNewPhoto((data) async {
       debugPrint("onNewPhoto=$data");
 
-      // try {
-      //   double latitude = data['lat'];
-      //   double longitude = data['lng'];
-      //
-      //   // 地名情報の取得
-      //   List<Placemark> placemarks = await placemarkFromCoordinates(latitude, longitude);
-      //
-      //   if (placemarks.isNotEmpty) {
-      //     Placemark place = placemarks.first;
-      //
-      //     // 受信データ配列に地名情報を追加
-      //     data['geocodedCity'] = place.administrativeArea ?? "Unknown";
-      //     data['geocodedCountry'] = place.country ?? "Unknown";
-      //
-      //     // 更新された配列情報を出力
-      //     debugPrint("Updated Data with Geocoding=$data");
+      TimelineItem newItem = TimelineItem.fromJson(data);
+      debugPrint("maked_TimelineItem newItem=$newItem");
 
-          TimelineItem newItem = TimelineItem.fromJson(data);
-          debugPrint("maked_TimelineItem newItem=$newItem");
+      final timelineItems = ref.read(timelineAddProvider);
 
-          final timelineItems = ref.read(timelineAddProvider);
+      // groupIDが一致する既存のアイテムが存在するか確認
+      bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
 
-          // groupIDが一致する既存のアイテムが存在するか確認
-          bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
+      if (isNewRow) {
+        // 新しいアイテムをリストに追加
+        timelineItems.insert(1, newItem);
 
-          if (isNewRow) {
-
-              // 新しいアイテムをリストに追加
-              timelineItems.insert(1, newItem);
-
-              // 自分が投稿者であればリストを更新
-              if (newItem.userID == myUserId) {
-
-                notifyListeners();
-
-              }
-
-          } else {
-          // groupIDが一致する既存のアイテムが見つかった場合
-          // groupIDが一致する最初のアイテムのインデックスを探す
-          int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
-          if (insertIndex != -1) {
-            // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
-            timelineItems.insert(insertIndex + 1, newItem);
-
-            // 自分が投稿者であればリストを更新
-            if (newItem.userID == myUserId) {
-
-              notifyListeners();
-
-            }
-          }
-          // UIの更新をトリガーする
-          // notifyListeners();
+        // 自分が投稿者であればリストを更新
+        if (newItem.userID == myUserId) {
+          notifyListeners();
         }
+      } else {
+        // groupIDが一致する既存のアイテムが見つかった場合
+        int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
 
+        if (insertIndex != -1) {
+          // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
+          timelineItems.insert(insertIndex + 1, newItem);
 
+          // 自分が投稿者であるか、または同じgroupIDの中に自分のuserIDが含まれているか確認
+          bool containsMyUserId = timelineItems.any((item) => item.groupID == newItem.groupID && item.userID == myUserId);
 
-    },onReceived: () {
+          // 自分が投稿者であれば、または自分のuserIDが含まれている場合にリストを更新
+          if (newItem.userID == myUserId || containsMyUserId) {
+            notifyListeners();
+          }
+        }
+      }
+    }, onReceived: () {
       debugPrint("新しい写真が受信されました！");
-
     });
   }
 

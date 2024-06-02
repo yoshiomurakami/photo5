@@ -529,7 +529,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    _pickerController.addListener(_scrollListener);
+    // _pickerController.addListener(_scrollListener);
     final chatNotifier = ref.read(chatNotifierProvider);
     chatNotifier.addPostedPhoto(widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
     _initializeCamera();
