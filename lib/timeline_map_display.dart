@@ -562,6 +562,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   //   }
   // }
 
+
+
   void scrollToTarget() {
     if (_pickerController.hasClients) {
       debugPrint("Callback from new_photo");

@@ -1189,7 +1189,11 @@ class ChatNotifier extends ChangeNotifier {
     }
   }
 
-  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum) {
+  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems,Map<String, int> selectedItemsMap,List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId,VoidCallback toggleTimelineAndAlbum)  async{
+
+    // SharedPreferencesからユーザーIDを取得
+    final prefs = await SharedPreferences.getInstance();
+    final myUserId = prefs.getString('userID');
 
     chatConnection.connect();
     chatConnection.onNewPhoto((data) async {
@@ -1222,40 +1226,16 @@ class ChatNotifier extends ChangeNotifier {
 
           if (isNewRow) {
 
-            // toggleTimelineAndAlbum();
-            // Future.delayed(Duration(milliseconds: 50), () {
-            //   toggleTimelineAndAlbum();
-            // });
-
               // 新しいアイテムをリストに追加
               timelineItems.insert(1, newItem);
 
-            // selectedItemsMapの参照を適切に更新
-            // shiftSelectedItemsMap(timelineItems);
-            // notifyListeners(); // 更新を通知
-            // 遅延してpickerControllerの位置を更新
-            // Future.delayed(Duration(milliseconds: 50), () {
-              // currentIndexが2以下の場合のみ、次のアイテムへジャンプ
-            //   int currentIndex = pickerController.selectedItem;
-            // if (currentIndex == 0) {
-            //   notifyListeners();
-            // }
-              // if (currentIndex >= 1) {
-              //   pickerController.jumpToItem(currentIndex + 5);
-              //   // shiftSelectedItemsMap(timelineItems);
-              //   // updateSelectedItemsMap(newItem.groupID);
-              //   double offset = (currentIndex + 1) * size.width*0.2; // itemHeightは各アイテムの高さまたは幅です。
-              //   pickerController.animateTo(
-              //       offset,
-              //       duration: const Duration(milliseconds: 10), // スクロールにかかる時間
-              //       curve: Curves.easeInOut // スクロールの動き（加速度）
-              //   );
-              // }
+              // 自分が投稿者であればリストを更新
+              if (newItem.userID == myUserId) {
 
+                notifyListeners();
 
+              }
 
-            // notifyListeners(); // 更新を通知
-            // });
           } else {
           // groupIDが一致する既存のアイテムが見つかった場合
           // groupIDが一致する最初のアイテムのインデックスを探す
@@ -1263,26 +1243,22 @@ class ChatNotifier extends ChangeNotifier {
           if (insertIndex != -1) {
             // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
             timelineItems.insert(insertIndex + 1, newItem);
+
+            // 自分が投稿者であればリストを更新
+            if (newItem.userID == myUserId) {
+
+              notifyListeners();
+
+            }
           }
           // UIの更新をトリガーする
           // notifyListeners();
         }
 
-          // notifyListeners();
-          // shiftSelectedItemsMap(timelineItems);
-
-          //ここで更新するのではなく、
 
 
-      //   } else {
-      //     debugPrint("Geocoding returned no results.");
-      //   }
-      // } catch (e) {
-      //   debugPrint("Error in geocoding: $e");
-      // }
     },onReceived: () {
       debugPrint("新しい写真が受信されました！");
-
 
     });
   }
