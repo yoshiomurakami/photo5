@@ -430,7 +430,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         return user;
       }).toList();
       existingUserLocations = updatedLocations; // 新しいリストで更新
-      notifyListeners();  // ウィジェットの更新をトリガー
+      // notifyListeners();  // ウィジェットの更新をトリガー
       debugPrint("Updated existingUserLocations: ${existingUserLocations.length}");
     });
   }
@@ -619,11 +619,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         String country = dataMap['country'];
 
         debugPrint("new_photo data: $data");
-        // 非同期関数を呼び出して、SharedPreferencesからcountryCodeを取得しウィジェットを更新
-        // updateWidgetWithCountryCode(data['userID'], data['countryCode']);
         bool isRightAligned = currentUserID.isEmpty || userID == currentUserID;
         String uniqueKey = "message_${DateTime.now().millisecondsSinceEpoch}";
         String commonMsg = 'new_photo';
+
+        // キーをuserIDとcommonMsgの組み合わせで作成
+        String mapKey = commonMsg;
+
         if (l10n != null) {
           String msg = l10n.newPhoto;
           var newWidget = _createConnectionWidget(
@@ -636,11 +638,20 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               isRightAligned,
               uniqueKey, this
           );
-          _connectionWidgetsMap[uniqueKey] = ConnectionWidgetData(
+
+          // 既存のウィジェットを削除
+          _connectionWidgetsMap.removeWhere((key, value) => key.startsWith(mapKey));
+
+          // 新しいウィジェットを追加
+          _connectionWidgetsMap[mapKey] = ConnectionWidgetData(
               widget: newWidget, isRightAligned: isRightAligned);
+
+          debugPrint("Updated or added new widget for map key: $mapKey");
         }
         notifyListeners();
       });
+
+
 
 
 
@@ -770,7 +781,13 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   Widget _createConnectionWidget(context, String countryCode, String userID, double lat, double lng, String msg, String commonMsg, bool isRightAligned, String uniqueKey, ConnectionWidgetsManager connectionWidgetsManager) {
     var l10n = L10n.of(context);
     // メッセージ内容に応じて背景色を決定
-    Color backgroundColor = commonMsg == 'shotTogether' ? const Color(0xFFFFCC4D) : Colors.white;
+    Color backgroundColor;
+    if (commonMsg == 'shotTogether' || commonMsg == 'new_photo') {
+      backgroundColor = const Color(0xFFFFCC4D); // 両方の条件に一致する場合の色
+    } else {
+      backgroundColor = Colors.white; // それ以外の場合は白色を適用
+    }
+
 
     Widget tail = Container(
       width: 10,
@@ -991,7 +1008,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
 
             }: commonMsg == 'shotTogether' ? () async {
               List<CameraDescription> cameras = await availableCameras();
-              if (cameras != null && cameras.isNotEmpty) {
+              if (cameras.isNotEmpty) {
                 chatConnection.emitEvent("enter_shooting_room");
                 _waitForGroupIdAndTimestamp().then((cameraData) {
                   if (cameraData != null) {
@@ -1093,9 +1110,9 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     return completer.future;
   }
 
-
-
 }
+
+
 
 // 吹き出しの尾を描画するためのCustomPainterクラス
 // class _BubbleTailPainter extends CustomPainter {
@@ -1187,7 +1204,7 @@ class ChatNotifier extends ChangeNotifier {
     if (!isUpdating) {
       selectedItemsMap = insertIntoSelectedItemsMap(selectedItemsMap, newGroupId);  // 修正箇所
       debugPrint("selectedItemsMap_here = $selectedItemsMap");
-      notifyListeners();
+      // notifyListeners();
     }
   }
 
