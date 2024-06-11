@@ -51,24 +51,25 @@ class AlbumTimeLine {
 
   factory AlbumTimeLine.fromJson(Map<String, dynamic> json) {
     return AlbumTimeLine(
-      key: ValueKey(json['id']),
+      key: ValueKey(json['id'].toString()),
       id: json['id'].toString(),
       systemId: json['systemId'] ?? '', // デフォルト値設定
       sequenceNumber: json['sequenceNumber'] ?? 0, // デフォルト値設定
       createdAt: json['createdAt'] ?? '', // デフォルト値設定
-      imagePath: json['imageFilename'],
-      thumbnailPath: json['thumbnailFilename'],
-      userID: json['userID'],
-      country: json['country'],
-      lat: double.tryParse(json['lat']) ?? 0.0,
-      lng: double.tryParse(json['lng']) ?? 0.0,
-      groupID: json['groupID'],
+      imagePath: json['imageFilename'] ?? '', // デフォルト値を空文字列に設定
+      thumbnailPath: json['thumbnailFilename'] ?? '', // デフォルト値を空文字列に設定
+      userID: json['userID'] ?? '', // デフォルト値を空文字列に設定
+      country: json['country'] ?? '', // デフォルト値を空文字列に設定
+      lat: double.tryParse(json['lat']?.toString() ?? '0.0') ?? 0.0,
+      lng: double.tryParse(json['lng']?.toString() ?? '0.0') ?? 0.0,
+      groupID: json['groupID'] ?? '', // デフォルト値を空文字列に設定
       localtime: json['localtime'] ?? DateTime.now().toString(), // デフォルト値設定
       geocodedCountry: json['geocodedCountry'], // null許容
       geocodedCity: json['geocodedCity'], // null許容
       statement: json['statement'] ?? 0, // デフォルト値設定
     );
   }
+
 }
 
 
@@ -79,18 +80,19 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
 
   final List<Map<String, dynamic>> maps = await (await database).query('images', orderBy: 'groupID DESC');
 
-  // 結果をAlbumTimeLineのリストに変換
-  List<AlbumTimeLine> albumList = List.generate(maps.length, (i) {
-    return AlbumTimeLine.fromJson(maps[i]);
-  });
+  List<AlbumTimeLine> albumList = [];
 
-  // 取得したデータをコンソールに出力
-  for (var album in albumList) {
-    debugPrint("albumlist = ${album.toString()}");
+  for (var map in maps) {
+    AlbumTimeLine album = AlbumTimeLine.fromJson(map);
+    // imagePathが空でないアルバムのみをリストに追加
+    if (album.imagePath.isNotEmpty) {
+      albumList.add(album);
+    }
   }
 
   return albumList;
 }
+
 
 class AlbumTimeLineView extends StatefulWidget {
   final Size size;
@@ -126,16 +128,17 @@ class AlbumTimeLineViewState extends State<AlbumTimeLineView> {
     groupedAlbums = groupAlbumsByGroupId(widget.albumList);
     groupKeys = groupedAlbums.keys.toList();
     selectedIndexes = {}; // 空のMapで初期化
-    // lastSelectedAlbumGroupIDからインデックスを計算
-    int initialIndex = groupKeys.indexOf(widget.lastSelectedAlbumGroupID);
-    if (initialIndex == -1) {
-      initialIndex = 0; // もし見つからない場合は、初期インデックスを0に設定
+    // 最新のアイテムをデフォルトとして設定
+    int initialIndex = 0;  // 最新のアイテム（リストの末尾）
+
+    // lastSelectedAlbumGroupIDが有効な場合、そのインデックスを使用
+    if (groupKeys.contains(widget.lastSelectedAlbumGroupID)) {
+      initialIndex = groupKeys.indexOf(widget.lastSelectedAlbumGroupID);
     }
     _scrollController = FixedExtentScrollController(initialItem: initialIndex);
 
     List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[initialIndex]]!;
     int selectedItemIndex = selectedAlbumIndexes[groupKeys[initialIndex]] ?? 0;
-    // ref.read(selectedAlbumIndexesProvider.notifier).state[groupKeys[initialIndex]] = selectedItemIndex;
     AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
     debugPrint("MapUpdateService = $selectedItem");
     MapUpdateService.updateMapLocation(selectedItem);
@@ -166,7 +169,7 @@ class AlbumTimeLineViewState extends State<AlbumTimeLineView> {
               AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
               debugPrint("selectedItemIndexBB = $selectedItemIndex");
               MapUpdateService.updateMapLocation(selectedItem);
-              // updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
+              updateMapToSelectedAlbumItem(selectedGroup, selectedItemIndex);
             }
             return true;
           },
@@ -245,7 +248,6 @@ class AlbumTimeLineViewState extends State<AlbumTimeLineView> {
 
 
   void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
-    debugPrint("Updating map location for album index: $albumIndex");
     if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
       AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
       debugPrint("selectedAlbumItem = $selectedAlbumItem");

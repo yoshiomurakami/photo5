@@ -19,12 +19,14 @@ import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // import 'package:flutter_hooks/flutter_hooks.dart';
 import 'chat_connection.dart';
-// import 'timeline_providers.dart';
+import 'timeline_providers.dart';
 import 'dart:convert';
 
 final cameraButtonKey = GlobalKey();
 
 class CameraScreen extends ConsumerStatefulWidget {
+  static const String routeName = '/camera';
+
   final CameraDescription camera;
   final String groupID;
   final int takePictureStartTime;
@@ -76,7 +78,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   final ChatConnection chatConnection = ChatConnection()..connect();
 
   late final void Function(Map<String, dynamic>) eventHandler;
-  
+
+  late StreamSubscription _photoEventSubscription;
+
   //タイマーシャッターを組み込んだinitstate
   @override
   void initState() {
@@ -89,7 +93,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     _initializeControllerFuture = _controller.initialize().then((_) {
       setState(() {  // setStateを使用してUIの更新をトリガー
         now = DateTime.now().millisecondsSinceEpoch;
-        triggerTime = widget.takePictureStartTime + 20000;  // デバイスAのタイムスタンプから10秒後
+        triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
         delay = triggerTime - now;  // 残り時間を計算
         if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
         remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
@@ -130,6 +134,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     WidgetsBinding.instance.addObserver(this);
 
+    _photoEventSubscription = eventBus.stream.listen((data) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
+        );
+        // ここでdataを使用して追加の処理を行う
+        debugPrint("Received photo data: $data");
+      }
+    });
 
   }
 
@@ -138,12 +151,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   @override
   void dispose() {
-    _controller.dispose();
-    countdownTimer.cancel();
-    WidgetsBinding.instance.removeObserver(this);  // Observerを削除
+    // _controllerが初期化されている場合のみdisposeを呼び出す
     if (_controller.value.isInitialized) {
       _controller.dispose();
     }
+    countdownTimer.cancel();
+    WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     super.dispose();
   }
 
@@ -155,6 +168,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       // アプリがバックグラウンドに移行したり、終了しようとしている場合
       _leaveShootingRoom();
     }
+    _photoEventSubscription.cancel();
   }
 
   void _leaveShootingRoom() {
@@ -227,8 +241,33 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         _conversionCompleted = false;
       });
 
-      // Call _convertImage() to convert image and thumbnail to webp format in the background
-      _convertImage(imgPath, thumbPath, int.parse(_timestamp), randomStr);
+      // 画像の変換後、自動的にアップロードを実行
+      await _convertImage(imgPath, thumbPath, int.parse(_timestamp), randomStr);
+
+      if (_conversionCompleted && _uploadImagePath != null && _uploadThumbnailPath != null) {
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        String userID = prefs.getString('userID') ?? "";
+
+        // 自動アップロード
+        await _progressUpload(
+          _uploadImagePath!,
+          _uploadThumbnailPath!,
+          userID,
+          _localTimestamp,
+          _imageCountry ?? '',
+          _imageLat ?? '',
+          _imageLng ?? '',
+          widget.groupID,
+          _geocodedCountry,
+          _geocodedCity,
+        );
+
+        // アップロード後に画面を閉じる
+        if (mounted) {
+          chatConnection.emitEvent("leave_shooting_room");
+          // Navigator.pop(context);
+        }
+      }
     } catch (e) {
       debugPrint("$e");
     }
@@ -338,69 +377,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     debugPrint("groupID = $groupID");
   }
 
-// _saveImage メソッド
-  Future<void> _saveImage(String imagePath, String thumbnailPath, Map<String, dynamic> newPhotoInfo) async {
-    final paths = await _saveFiles(imagePath, thumbnailPath);
-    await _saveToDatabase(paths, newPhotoInfo);
-  }
-
-  Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
-    final directory = await getApplicationDocumentsDirectory();
-
-    //Create new directories for images and thumbnails.
-    final imageDir = Directory('${directory.path}/uploadImage/');
-    final thumbnailDir = Directory('${directory.path}/uploadThumb/');
-
-    // Check if the directories exist. If not, create them.
-    if (!await imageDir.exists()) {
-      await imageDir.create();
-    }
-    if (!await thumbnailDir.exists()) {
-      await thumbnailDir.create();
-    }
-
-    // Get the file name from the original path.
-    String imageFileName = p.basename(imagePath);
-    String thumbnailFileName = p.basename(thumbnailPath);
-
-    // Copy the image and thumbnail to new directories with the original file name.
-    final File newImageFile = File('${imageDir.path}/$imageFileName');
-    final File newThumbnailFile = File('${thumbnailDir.path}/$thumbnailFileName');
-    await File(imagePath).copy(newImageFile.path);
-    await File(thumbnailPath).copy(newThumbnailFile.path);
-
-    return [newImageFile.path, newThumbnailFile.path]; // return new paths
-  }
-
-
-// _saveToDatabase メソッドで images テーブルに sequenceNumber を保存
-  Future<void> _saveToDatabase(List<String> paths, Map<String, dynamic> newPhotoInfo) async {
-    final db = await openDatabase(
-      p.join(await getDatabasesPath(), 'images_database.db'),
-      version: 1,
-    );
-
-    await db.insert(
-      'images',
-      {
-        'systemId':newPhotoInfo['_id'],
-        'sequenceNumber': newPhotoInfo['sequenceNumber'],
-        'createdAt': newPhotoInfo['createdAt'],
-        'userID': newPhotoInfo['userID'],
-        'country': newPhotoInfo['country'],
-        'lat': newPhotoInfo['lat'],
-        'lng': newPhotoInfo['lng'],
-        'imageFilename': paths[0],
-        'thumbnailFilename': paths[1],
-        'localtime': newPhotoInfo['localtime'],
-        'groupID': newPhotoInfo['groupID'],
-        'geocodedCountry': newPhotoInfo['geocodedCountry'],
-        'geocodedCity': newPhotoInfo['geocodedCity'],
-        'statement': newPhotoInfo['statement'],
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-  }
 
   Future<Map<String, dynamic>> _uploadImage(String imagePath, String thumbnailPath, String groupID) async {
     if (_uploading) return {}; // アップロード中の場合は、無効な値を返す
@@ -518,6 +494,71 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     }
   }
 
+
+// _saveImage メソッド:アップロードしたファイルをデバイスフォルダに保存して、その情報をデバイスDBに保存する
+  Future<void> _saveImage(String imagePath, String thumbnailPath, Map<String, dynamic> newPhotoInfo) async {
+    final paths = await _saveFiles(imagePath, thumbnailPath);
+    await _saveToDatabase(paths, newPhotoInfo);
+  }
+
+  //アップロードしたファイルをデバイスフォルダに保存する。
+  Future<List<String>> _saveFiles(String imagePath, String thumbnailPath) async {
+    final directory = await getApplicationDocumentsDirectory();
+
+    //Create new directories for images and thumbnails.
+    final imageDir = Directory('${directory.path}/uploadImage/');
+    final thumbnailDir = Directory('${directory.path}/uploadThumb/');
+
+    // Check if the directories exist. If not, create them.
+    if (!await imageDir.exists()) {
+      await imageDir.create();
+    }
+    if (!await thumbnailDir.exists()) {
+      await thumbnailDir.create();
+    }
+
+    // Get the file name from the original path.
+    String imageFileName = p.basename(imagePath);
+    String thumbnailFileName = p.basename(thumbnailPath);
+
+    // Copy the image and thumbnail to new directories with the original file name.
+    final File newImageFile = File('${imageDir.path}/$imageFileName');
+    final File newThumbnailFile = File('${thumbnailDir.path}/$thumbnailFileName');
+    await File(imagePath).copy(newImageFile.path);
+    await File(thumbnailPath).copy(newThumbnailFile.path);
+
+    return [newImageFile.path, newThumbnailFile.path]; // return new paths
+  }
+
+// _saveToDatabase メソッドで images テーブルに sequenceNumber を保存
+  Future<void> _saveToDatabase(List<String> paths, Map<String, dynamic> newPhotoInfo) async {
+    final db = await openDatabase(
+      p.join(await getDatabasesPath(), 'images_database.db'),
+      version: 1,
+    );
+
+    await db.insert(
+      'images',
+      {
+        'systemId':newPhotoInfo['_id'],
+        'sequenceNumber': newPhotoInfo['sequenceNumber'],
+        'createdAt': newPhotoInfo['createdAt'],
+        'userID': newPhotoInfo['userID'],
+        'country': newPhotoInfo['country'],
+        'lat': newPhotoInfo['lat'],
+        'lng': newPhotoInfo['lng'],
+        'imageFilename': paths[0],
+        'thumbnailFilename': paths[1],
+        'localtime': newPhotoInfo['localtime'],
+        'groupID': newPhotoInfo['groupID'],
+        'geocodedCountry': newPhotoInfo['geocodedCountry'],
+        'geocodedCity': newPhotoInfo['geocodedCity'],
+        'statement': newPhotoInfo['statement'],
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<bool> _checkConnectivity(BuildContext context) async {
     // ここでは仮に常にtrueを返すようにしていますが、実際には通信状況をチェックして結果を返す必要があります。
     return true;
@@ -552,13 +593,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   @override
   Widget build(BuildContext context) {
-
-
-
     final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
 
-    return Scaffold(
-      body: FutureBuilder<void>(
+    // CurrentScreenを使用して現在の画面名をセットする
+    return CurrentScreen(
+        screenName: CameraScreen.routeName,  // CameraScreenのstatic const routeNameを使用
+        child: Scaffold(
+        body: FutureBuilder<void>(
         future: _initializeControllerFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.done) {
@@ -649,85 +690,107 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       ),
                     ),
                   _showImage && _imagePath != null
+                  //     ? Positioned.fill(
+                  //       child: Stack(
+                  //         children: <Widget>[
+                  //           Positioned.fill(
+                  //             child: Image.file(
+                  //               File(_imagePath!),
+                  //               fit: BoxFit.cover,
+                  //             ),
+                  //           ),
+                  //           Positioned(
+                  //             bottom: 20,
+                  //             left: 20,
+                  //             child: ElevatedButton(
+                  //               onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
+                  //                   ? () async {
+                  //                 if (_uploadImagePath != null && _uploadThumbnailPath != null) {
+                  //                   SharedPreferences prefs = await SharedPreferences.getInstance();
+                  //                   String userID = prefs.getString('userID') ?? "";
+                  //
+                  //                   // call _progressUpload with necessary arguments
+                  //                   await _progressUpload(
+                  //                     _uploadImagePath!,
+                  //                     _uploadThumbnailPath!,
+                  //                     userID,
+                  //                     _localTimestamp,
+                  //                     _imageCountry ?? '',
+                  //                     _imageLat ?? '',
+                  //                     _imageLng ?? '',
+                  //                     widget.groupID,
+                  //                     _geocodedCountry,
+                  //                     _geocodedCity,
+                  //                   );
+                  //
+                  //                   // 送信後、カメラを終了する
+                  //                   // _controller.dispose();
+                  //                   if (mounted) {
+                  //                     _controller.dispose();
+                  //                     chatConnection.emitEvent("leave_shooting_room");
+                  //                     Navigator.pop(context);
+                  //                   }
+                  //                 }
+                  //               }
+                  //                   : null,
+                  //               child: const Text('Send'),  // Enable the button only if the conversion is completed
+                  //             ),
+                  //           ),
+                  //
+                  //           Positioned(
+                  //             bottom: 20,
+                  //             right: 20,
+                  //             child: ElevatedButton(
+                  //               onPressed: () async {  // Make the handler asynchronous
+                  //                 if (_imagePath != null) {
+                  //                   var imgFile = File(_imagePath!);
+                  //                   if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
+                  //                     await imgFile.delete();
+                  //                   }
+                  //                   _imagePath = null;
+                  //                 }
+                  //
+                  //                 if (_thumbnailPath != null) {
+                  //                   var thumbFile = File(_thumbnailPath!);
+                  //                   if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
+                  //                     await thumbFile.delete();
+                  //                   }
+                  //                   _thumbnailPath = null;
+                  //                 }
+                  //
+                  //                 setState(() {
+                  //                   _showImage = false;  // Reset the flag when the button is pressed
+                  //                 });
+                  //               },
+                  //               child: const Text('Back'),
+                  //             ),
+                  //           )
+                  //         ],
+                  //       ),
+                  // )
+                  //     : const SizedBox(),
+
+
+
+
                       ? Positioned.fill(
-                        child: Stack(
-                          children: <Widget>[
-                            Positioned.fill(
-                              child: Image.file(
-                                File(_imagePath!),
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              bottom: 20,
-                              left: 20,
-                              child: ElevatedButton(
-                                onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                                    ? () async {
-                                  if (_uploadImagePath != null && _uploadThumbnailPath != null) {
-                                    SharedPreferences prefs = await SharedPreferences.getInstance();
-                                    String userID = prefs.getString('userID') ?? "";
-
-                                    // call _progressUpload with necessary arguments
-                                    await _progressUpload(
-                                      _uploadImagePath!,
-                                      _uploadThumbnailPath!,
-                                      userID,
-                                      _localTimestamp,
-                                      _imageCountry ?? '',
-                                      _imageLat ?? '',
-                                      _imageLng ?? '',
-                                      widget.groupID,
-                                      _geocodedCountry,
-                                      _geocodedCity,
-                                    );
-
-                                    // 送信後、カメラを終了する
-                                    // _controller.dispose();
-                                    if (mounted) {
-                                      _controller.dispose();
-                                      chatConnection.emitEvent("leave_shooting_room");
-                                      Navigator.pop(context);
-                                    }
-                                  }
-                                }
-                                    : null,
-                                child: const Text('Send'),  // Enable the button only if the conversion is completed
-                              ),
-                            ),
-
-                            Positioned(
-                              bottom: 20,
-                              right: 20,
-                              child: ElevatedButton(
-                                onPressed: () async {  // Make the handler asynchronous
-                                  if (_imagePath != null) {
-                                    var imgFile = File(_imagePath!);
-                                    if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
-                                      await imgFile.delete();
-                                    }
-                                    _imagePath = null;
-                                  }
-
-                                  if (_thumbnailPath != null) {
-                                    var thumbFile = File(_thumbnailPath!);
-                                    if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
-                                      await thumbFile.delete();
-                                    }
-                                    _thumbnailPath = null;
-                                  }
-
-                                  setState(() {
-                                    _showImage = false;  // Reset the flag when the button is pressed
-                                  });
-                                },
-                                child: const Text('Back'),
-                              ),
-                            )
-                          ],
+                    child: Stack(
+                      children: <Widget>[
+                        Positioned.fill(
+                          child: Image.file(
+                            File(_imagePath!),
+                            fit: BoxFit.cover,
+                          ),
                         ),
+                        // 'Send'ボタンと'Back'ボタンを削除
+                      ],
+                    ),
                   )
                       : const SizedBox(),
+
+
+
+
                   if (userShootingListCount >= 1)
                   Positioned(
                     bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
@@ -746,7 +809,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
                           const SizedBox(width: 10),
                           Text(
-                            '$userShootingListCount',
+                            '+$userShootingListCount',
                             style: const TextStyle(
                               color: Colors.black,
                               fontSize: 16,
@@ -767,7 +830,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
             return const Center(child: CircularProgressIndicator());
           }
         },
-      ),
+        ),
+        ),
     );
+  }
+}
+
+class CurrentScreen extends InheritedWidget {
+  final String screenName;
+
+  const CurrentScreen({
+    Key? key,
+    required this.screenName,
+    required Widget child,
+  }) : super(key: key, child: child);
+
+  static CurrentScreen? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<CurrentScreen>();
+  }
+
+  @override
+  bool updateShouldNotify(CurrentScreen oldWidget) {
+    return screenName != oldWidget.screenName;
   }
 }

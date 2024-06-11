@@ -271,3 +271,20 @@ class TotalConnectionsNotifier extends StateNotifier<int> {
 
 // final totalConnectionsProvider = StateProvider<int>((ref) => 0);
 
+// イベントバスの定義
+class EventBus {
+  final _streamController = StreamController.broadcast();
+
+  Stream get stream => _streamController.stream;
+
+  void fireNewPhotoEvent(Map data) {
+    _streamController.add(data);
+  }
+
+  void dispose() {
+    _streamController.close();
+  }
+}
+
+// グローバルにアクセス可能なイベントバスのインスタンス
+final eventBus = EventBus();

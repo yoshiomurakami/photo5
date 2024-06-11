@@ -289,7 +289,7 @@ class ConnectionNumberState extends ConsumerState<ConnectionNumber> {
             children: <Widget>[
               const Text('😀', style: TextStyle(color: Colors.black, fontSize: 16)),
               const SizedBox(width: 10),
-              Text('${manager.totalConnections}', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
+              Text('+${manager.totalConnections}', style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.bold)),
             ],
           ),
         ),
@@ -1208,8 +1208,7 @@ class ChatNotifier extends ChangeNotifier {
     }
   }
 
-  void addPostedPhoto(Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems, Map<String, int> selectedItemsMap, List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId, VoidCallback toggleTimelineAndAlbum) async {
-    // SharedPreferencesからユーザーIDを取得
+  void addPostedPhoto(BuildContext context, Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems, Map<String, int> selectedItemsMap, List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId, VoidCallback toggleTimelineAndAlbum) async {
     final prefs = await SharedPreferences.getInstance();
     final myUserId = prefs.getString('userID');
 
@@ -1222,34 +1221,28 @@ class ChatNotifier extends ChangeNotifier {
 
       final timelineItems = ref.read(timelineAddProvider);
 
-      // groupIDが一致する既存のアイテムが存在するか確認
       bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
 
       if (isNewRow) {
-        // 新しいアイテムをリストに追加
         timelineItems.insert(1, newItem);
-
-        // 自分が投稿者であればリストを更新
         if (newItem.userID == myUserId) {
           notifyListeners();
         }
       } else {
-        // groupIDが一致する既存のアイテムが見つかった場合
         int insertIndex = timelineItems.indexWhere((item) => item.groupID == newItem.groupID);
-
         if (insertIndex != -1) {
-          // 同じgroupIDを持つアイテムが見つかった場合、その位置に新しいアイテムを挿入
           timelineItems.insert(insertIndex + 1, newItem);
-
-          // 自分が投稿者であるか、または同じgroupIDの中に自分のuserIDが含まれているか確認
           bool containsMyUserId = timelineItems.any((item) => item.groupID == newItem.groupID && item.userID == myUserId);
-
-          // 自分が投稿者であれば、または自分のuserIDが含まれている場合にリストを更新
           if (newItem.userID == myUserId || containsMyUserId) {
             notifyListeners();
           }
         }
       }
+
+      // Fire the event with data here inside the callback where 'data' is defined
+      eventBus.fireNewPhotoEvent(data);
+
+
     }, onReceived: () {
       debugPrint("新しい写真が受信されました！");
     });

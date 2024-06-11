@@ -531,7 +531,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _scrollController = FixedExtentScrollController();
     // _pickerController.addListener(_scrollListener);
     final chatNotifier = ref.read(chatNotifierProvider);
-    chatNotifier.addPostedPhoto(widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
+    chatNotifier.addPostedPhoto(context,widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
     _initializeCamera();
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
@@ -566,6 +566,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void scrollToTarget() {
     if (_pickerController.hasClients) {
+
       debugPrint("Callback from new_photo");
       _pickerController.animateToItem(
         1, // リストの先頭にスクロール
@@ -574,6 +575,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       );
       setState(() {
         showNewListWheelScrollView = false;
+        MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
       });
     } else {
       debugPrint("ScrollController not attached to any scroll views.");
@@ -859,6 +861,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   void updateLastSelectedAlbumGroupID(String newGroupID) {
     setState(() {
       _lastSelectedAlbumGroupID = newGroupID;
+      debugPrint("_lastSelectedAlbumGroupID = $_lastSelectedAlbumGroupID");
     });
   }
 
