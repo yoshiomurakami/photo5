@@ -81,6 +81,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   late StreamSubscription _photoEventSubscription;
 
+  List<Map<String, dynamic>> thumbnailData = [];
+
+
   //タイマーシャッターを組み込んだinitstate
   @override
   void initState() {
@@ -139,10 +142,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
         );
-        // ここでdataを使用して追加の処理を行う
         debugPrint("Received photo data: $data");
+
+        // サムネイルデータをリストに追加
+        setState(() {
+          thumbnailData.add(data);
+        });
       }
     });
+
 
   }
 
@@ -588,249 +596,279 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     });
   }
 
+  Widget buildThumbnail(String thumbnailFilename, Size screenSize) {
+    final thumbnailUrl = "https://photo5.world/$thumbnailFilename";
+    final thumbnailSize = screenSize.width * 0.2; // 画面幅の20%
+    final borderRadius = screenSize.width * 0.04; // 角丸の半径
+
+    return Align(
+      alignment: Alignment(0.0, 0.5), // 横は中央、縦はbottomの25%位置
+      child: Container(
+        width: thumbnailSize,
+        height: thumbnailSize,
+        decoration: BoxDecoration(
+          image: DecorationImage(
+            image: NetworkImage(thumbnailUrl),
+            fit: BoxFit.cover,
+          ),
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              spreadRadius: 1,
+              blurRadius: 10,
+              offset: Offset(0, 3), // 影の位置調整
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
 
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
     final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
 
     // CurrentScreenを使用して現在の画面名をセットする
     return CurrentScreen(
         screenName: CameraScreen.routeName,  // CameraScreenのstatic const routeNameを使用
         child: Scaffold(
-        body: FutureBuilder<void>(
-        future: _initializeControllerFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.done) {
-            if (_controller.value.isInitialized) {
-              final previewSize = _controller.value.previewSize!;
-              final previewAspectRatio = previewSize.height / previewSize.width;
+          body: FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                if (_controller.value.isInitialized) {
+                  final previewSize = _controller.value.previewSize!;
+                  final previewAspectRatio = previewSize.height / previewSize.width;
 
-              // Calculate the scaling factor
-              double scale = 1.0;
-              if (previewAspectRatio > screenAspectRatio) {
-                scale = previewAspectRatio / screenAspectRatio;
-              } else {
-                scale = screenAspectRatio / previewAspectRatio;
-              }
+                  // Calculate the scaling factor
+                  double scale = 1.0;
+                  if (previewAspectRatio > screenAspectRatio) {
+                    scale = previewAspectRatio / screenAspectRatio;
+                  } else {
+                    scale = screenAspectRatio / previewAspectRatio;
+                  }
 
-              return Stack(
-                children: [
-                  // Camera preview scaled according to the aspect ratio
-                  Center(
-                    child: Transform.scale(
-                      scale: scale,
-                      child: AspectRatio(
-                        aspectRatio: previewAspectRatio,
-                        child: CameraPreview(_controller),
-                      ),
-                    ),
-                  ),
-                  // Time and Delay Info
-                  // Positioned(
-                  //   top: 10,
-                  //   left: 10,
-                  //   child: Container(
-                  //     padding: const EdgeInsets.all(8),
-                  //     color: Colors.black.withOpacity(0.5),
-                  //     child: Text(
-                  //       'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
-                  //       style: const TextStyle(
-                  //         fontSize: 16,
-                  //         color: Colors.white,
-                  //         fontWeight: FontWeight.bold,
-                  //       ),
-                  //     ),
-                  //   ),
-                  // ),
-                  // Countdown Timer in the Center
-                  Center(
-                    child: Container(
-                      width: MediaQuery.of(context).size.width * 0.5,
-                      height: MediaQuery.of(context).size.width * 0.5,
-                      alignment: Alignment.center,
-                      color: Colors.black.withOpacity(0.5),
-                      child: Text(
-                        remainingSeconds > 0 ? '$remainingSeconds' : '',
-                        style: const TextStyle(
-                          fontSize: 48,
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // The controls should be outside the scaled preview
-                  if (!_showImage)  // Only show the buttons if _showImage is false
-                    Positioned.fill(
-                      child: GestureDetector(
-                        onTap: _takePicture,
-                        child: Container(color: Colors.transparent),
-                      ),
-                    ),
-                    Positioned(
-                      top: 50,
-                      left: 0,
-                      child: Row(
-                        children: [
-                          // ElevatedButton(
-                          //   onPressed: _takePicture,
-                          //   child: Text('Take Picture'),
-                          // ),
-                          ElevatedButton(
-                            onPressed: () {
-                              chatConnection.emitEvent("leave_shooting_room");
-                              _navigateBack(context);
-                            },
-                            child: const Text('Back'),
-                          ),
-
-                        ],
-                      ),
-                    ),
-                  _showImage && _imagePath != null
-                  //     ? Positioned.fill(
-                  //       child: Stack(
-                  //         children: <Widget>[
-                  //           Positioned.fill(
-                  //             child: Image.file(
-                  //               File(_imagePath!),
-                  //               fit: BoxFit.cover,
-                  //             ),
-                  //           ),
-                  //           Positioned(
-                  //             bottom: 20,
-                  //             left: 20,
-                  //             child: ElevatedButton(
-                  //               onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                  //                   ? () async {
-                  //                 if (_uploadImagePath != null && _uploadThumbnailPath != null) {
-                  //                   SharedPreferences prefs = await SharedPreferences.getInstance();
-                  //                   String userID = prefs.getString('userID') ?? "";
-                  //
-                  //                   // call _progressUpload with necessary arguments
-                  //                   await _progressUpload(
-                  //                     _uploadImagePath!,
-                  //                     _uploadThumbnailPath!,
-                  //                     userID,
-                  //                     _localTimestamp,
-                  //                     _imageCountry ?? '',
-                  //                     _imageLat ?? '',
-                  //                     _imageLng ?? '',
-                  //                     widget.groupID,
-                  //                     _geocodedCountry,
-                  //                     _geocodedCity,
-                  //                   );
-                  //
-                  //                   // 送信後、カメラを終了する
-                  //                   // _controller.dispose();
-                  //                   if (mounted) {
-                  //                     _controller.dispose();
-                  //                     chatConnection.emitEvent("leave_shooting_room");
-                  //                     Navigator.pop(context);
-                  //                   }
-                  //                 }
-                  //               }
-                  //                   : null,
-                  //               child: const Text('Send'),  // Enable the button only if the conversion is completed
-                  //             ),
-                  //           ),
-                  //
-                  //           Positioned(
-                  //             bottom: 20,
-                  //             right: 20,
-                  //             child: ElevatedButton(
-                  //               onPressed: () async {  // Make the handler asynchronous
-                  //                 if (_imagePath != null) {
-                  //                   var imgFile = File(_imagePath!);
-                  //                   if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
-                  //                     await imgFile.delete();
-                  //                   }
-                  //                   _imagePath = null;
-                  //                 }
-                  //
-                  //                 if (_thumbnailPath != null) {
-                  //                   var thumbFile = File(_thumbnailPath!);
-                  //                   if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
-                  //                     await thumbFile.delete();
-                  //                   }
-                  //                   _thumbnailPath = null;
-                  //                 }
-                  //
-                  //                 setState(() {
-                  //                   _showImage = false;  // Reset the flag when the button is pressed
-                  //                 });
-                  //               },
-                  //               child: const Text('Back'),
-                  //             ),
-                  //           )
-                  //         ],
-                  //       ),
-                  // )
-                  //     : const SizedBox(),
-
-
-
-
-                      ? Positioned.fill(
-                    child: Stack(
-                      children: <Widget>[
-                        Positioned.fill(
-                          child: Image.file(
-                            File(_imagePath!),
-                            fit: BoxFit.cover,
+                  return Stack(
+                    children: [
+                      // Camera preview scaled according to the aspect ratio
+                      Center(
+                        child: Transform.scale(
+                          scale: scale,
+                          child: AspectRatio(
+                            aspectRatio: previewAspectRatio,
+                            child: CameraPreview(_controller),
                           ),
                         ),
-                        // 'Send'ボタンと'Back'ボタンを削除
-                      ],
-                    ),
-                  )
-                      : const SizedBox(),
-
-
-
-
-                  if (userShootingListCount >= 1)
-                  Positioned(
-                    bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
-                    left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
-                    height: MediaQuery.of(context).size.height * 0.04,
-                    child: Container(
-                      padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.black, width: 1.5),
-                        borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
-                          const SizedBox(width: 10),
-                          Text(
-                            '+$userShootingListCount',
+                      // Time and Delay Info
+                      // Positioned(
+                      //   top: 10,
+                      //   left: 10,
+                      //   child: Container(
+                      //     padding: const EdgeInsets.all(8),
+                      //     color: Colors.black.withOpacity(0.5),
+                      //     child: Text(
+                      //       'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
+                      //       style: const TextStyle(
+                      //         fontSize: 16,
+                      //         color: Colors.white,
+                      //         fontWeight: FontWeight.bold,
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      // Countdown Timer in the Center
+                      Center(
+                        child: Container(
+                          width: MediaQuery.of(context).size.width * 0.5,
+                          height: MediaQuery.of(context).size.width * 0.5,
+                          alignment: Alignment.center,
+                          color: Colors.black.withOpacity(0.5),
+                          child: Text(
+                            remainingSeconds > 0 ? '$remainingSeconds' : '',
                             style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 16,
+                              fontSize: 48,
+                              color: Colors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                        ],
+                        ),
                       ),
-                    ),
-                  )
+                      // The controls should be outside the scaled preview
+                      if (!_showImage)  // Only show the buttons if _showImage is false
+                        Positioned.fill(
+                          child: GestureDetector(
+                            onTap: _takePicture,
+                            child: Container(color: Colors.transparent),
+                          ),
+                        ),
+                      Positioned(
+                        top: 50,
+                        left: 0,
+                        child: Row(
+                          children: [
+                            // ElevatedButton(
+                            //   onPressed: _takePicture,
+                            //   child: Text('Take Picture'),
+                            // ),
+                            ElevatedButton(
+                              onPressed: () {
+                                chatConnection.emitEvent("leave_shooting_room");
+                                _navigateBack(context);
+                              },
+                              child: const Text('Back'),
+                            ),
 
-                ],
-              );
-            } else {
-              return const SizedBox.shrink();
-            }
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
-        ),
+                          ],
+                        ),
+                      ),
+                      _showImage && _imagePath != null
+                      //     ? Positioned.fill(
+                      //       child: Stack(
+                      //         children: <Widget>[
+                      //           Positioned.fill(
+                      //             child: Image.file(
+                      //               File(_imagePath!),
+                      //               fit: BoxFit.cover,
+                      //             ),
+                      //           ),
+                      //           Positioned(
+                      //             bottom: 20,
+                      //             left: 20,
+                      //             child: ElevatedButton(
+                      //               onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
+                      //                   ? () async {
+                      //                 if (_uploadImagePath != null && _uploadThumbnailPath != null) {
+                      //                   SharedPreferences prefs = await SharedPreferences.getInstance();
+                      //                   String userID = prefs.getString('userID') ?? "";
+                      //
+                      //                   // call _progressUpload with necessary arguments
+                      //                   await _progressUpload(
+                      //                     _uploadImagePath!,
+                      //                     _uploadThumbnailPath!,
+                      //                     userID,
+                      //                     _localTimestamp,
+                      //                     _imageCountry ?? '',
+                      //                     _imageLat ?? '',
+                      //                     _imageLng ?? '',
+                      //                     widget.groupID,
+                      //                     _geocodedCountry,
+                      //                     _geocodedCity,
+                      //                   );
+                      //
+                      //                   // 送信後、カメラを終了する
+                      //                   // _controller.dispose();
+                      //                   if (mounted) {
+                      //                     _controller.dispose();
+                      //                     chatConnection.emitEvent("leave_shooting_room");
+                      //                     Navigator.pop(context);
+                      //                   }
+                      //                 }
+                      //               }
+                      //                   : null,
+                      //               child: const Text('Send'),  // Enable the button only if the conversion is completed
+                      //             ),
+                      //           ),
+                      //
+                      //           Positioned(
+                      //             bottom: 20,
+                      //             right: 20,
+                      //             child: ElevatedButton(
+                      //               onPressed: () async {  // Make the handler asynchronous
+                      //                 if (_imagePath != null) {
+                      //                   var imgFile = File(_imagePath!);
+                      //                   if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
+                      //                     await imgFile.delete();
+                      //                   }
+                      //                   _imagePath = null;
+                      //                 }
+                      //
+                      //                 if (_thumbnailPath != null) {
+                      //                   var thumbFile = File(_thumbnailPath!);
+                      //                   if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
+                      //                     await thumbFile.delete();
+                      //                   }
+                      //                   _thumbnailPath = null;
+                      //                 }
+                      //
+                      //                 setState(() {
+                      //                   _showImage = false;  // Reset the flag when the button is pressed
+                      //                 });
+                      //               },
+                      //               child: const Text('Back'),
+                      //             ),
+                      //           )
+                      //         ],
+                      //       ),
+                      // )
+                      //     : const SizedBox(),
+
+
+
+
+                          ? Positioned.fill(
+                        child: Stack(
+                          children: <Widget>[
+                            Positioned.fill(
+                              child: Image.file(
+                                File(_imagePath!),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            // 'Send'ボタンと'Back'ボタンを削除
+                            ...thumbnailData.map((data) => buildThumbnail(data['thumbnailFilename'], screenSize)).toList(),
+                          ],
+                        ),
+                      )
+                          : const SizedBox(),
+
+
+
+
+                      if (userShootingListCount >= 1)
+                        Positioned(
+                          bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
+                          left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
+                          height: MediaQuery.of(context).size.height * 0.04,
+                          child: Container(
+                            padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(color: Colors.black, width: 1.5),
+                              borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
+                                const SizedBox(width: 10),
+                                Text(
+                                  '+$userShootingListCount',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+
+                    ],
+                  );
+                } else {
+                  return const SizedBox.shrink();
+                }
+              } else {
+                return const Center(child: CircularProgressIndicator());
+              }
+            },
+          ),
         ),
     );
   }
