@@ -600,9 +600,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     final thumbnailUrl = "https://photo5.world/$thumbnailFilename";
     final thumbnailSize = screenSize.width * 0.2; // 画面幅の20%
     final borderRadius = screenSize.width * 0.04; // 角丸の半径
+    final Margin = screenSize.width * 0.02; // 画面幅の2%をマージンとして設定
 
-    return Align(
-      alignment: Alignment(0.0, 0.5), // 横は中央、縦はbottomの25%位置
+    return Padding(
+      padding: EdgeInsets.only(right: Margin,left: Margin), // 右側にのみマージンを設定
       child: Container(
         width: thumbnailSize,
         height: thumbnailSize,
@@ -624,6 +625,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       ),
     );
   }
+
+
 
 
 
@@ -819,8 +822,27 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            // 'Send'ボタンと'Back'ボタンを削除
-                            ...thumbnailData.map((data) => buildThumbnail(data['thumbnailFilename'], screenSize)).toList(),
+                            Positioned(
+                              bottom: MediaQuery.of(context).size.height * 0.25, // 画面の下から25%の位置に配置
+                              left: 0,
+                              right: 0,
+                              child: Center(
+                                child: Container(
+                                  height: screenSize.width * 0.2, // サムネイル表示領域の高さ
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: List.generate(thumbnailData.length, (index) {
+                                          return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
+                                        }),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       )
