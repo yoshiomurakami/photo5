@@ -83,6 +83,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> thumbnailData = [];
 
+  bool _showEmoji = false;  // 絵文字表示の制御用フラグ
+  Offset _emojiPosition = Offset(0, 0);  // 絵文字の位置
+
+  List<Offset> emojiPositions = []; // 絵文字の位置を保持するリスト
+
 
   //タイマーシャッターを組み込んだinitstate
   @override
@@ -157,14 +162,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
   void setupSocketListeners() {
-    // Socket接続を確立するロジックはここに追加
-
     socket?.on('receive_tap_message', (data) {
       debugPrint('get!! receive_tap_message');
       debugPrint('Message: ${data['message']} from ${data['fromUserID']}');
-      // ここに受け取ったデータに基づいて他の処理を追加
+      // 絵文字表示のためのランダム位置を設定
+      final screenSize = MediaQuery.of(context).size;
+      final double x = math.Random().nextDouble() * screenSize.width;
+      final double y = math.Random().nextDouble() * (screenSize.height * 0.5);  // 画面の上半分でランダム
+
+      setState(() {
+        emojiPositions.add(Offset(x, y));  // 新しい位置をリストに追加
+      });
     });
   }
+
 
   @override
   void dispose() {
@@ -610,10 +621,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     final thumbnailUrl = "https://photo5.world/$thumbnailFilename";
     final thumbnailSize = screenSize.width * 0.2; // 画面幅の20%
     final borderRadius = screenSize.width * 0.04; // 角丸の半径
-    final Margin = screenSize.width * 0.02; // 画面幅の2%をマージンとして設定
+    final margin = screenSize.width * 0.02; // 画面幅の2%をマージンとして設定
 
     return Padding(
-      padding: EdgeInsets.only(right: Margin,left: Margin), // 右側にのみマージンを設定
+      padding: EdgeInsets.only(right: margin,left: margin), // 右側にのみマージンを設定
       child: Container(
         width: thumbnailSize,
         height: thumbnailSize,
@@ -628,7 +639,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
               color: Colors.black.withOpacity(0.3),
               spreadRadius: 1,
               blurRadius: 10,
-              offset: Offset(0, 3), // 影の位置調整
+              offset: const Offset(0, 3), // 影の位置調整
             ),
           ],
         ),
@@ -747,89 +758,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         ),
                       ),
                       _showImage && _imagePath != null
-                      //     ? Positioned.fill(
-                      //       child: Stack(
-                      //         children: <Widget>[
-                      //           Positioned.fill(
-                      //             child: Image.file(
-                      //               File(_imagePath!),
-                      //               fit: BoxFit.cover,
-                      //             ),
-                      //           ),
-                      //           Positioned(
-                      //             bottom: 20,
-                      //             left: 20,
-                      //             child: ElevatedButton(
-                      //               onPressed: (_conversionCompleted && _locationAvailable && !_uploading)
-                      //                   ? () async {
-                      //                 if (_uploadImagePath != null && _uploadThumbnailPath != null) {
-                      //                   SharedPreferences prefs = await SharedPreferences.getInstance();
-                      //                   String userID = prefs.getString('userID') ?? "";
-                      //
-                      //                   // call _progressUpload with necessary arguments
-                      //                   await _progressUpload(
-                      //                     _uploadImagePath!,
-                      //                     _uploadThumbnailPath!,
-                      //                     userID,
-                      //                     _localTimestamp,
-                      //                     _imageCountry ?? '',
-                      //                     _imageLat ?? '',
-                      //                     _imageLng ?? '',
-                      //                     widget.groupID,
-                      //                     _geocodedCountry,
-                      //                     _geocodedCity,
-                      //                   );
-                      //
-                      //                   // 送信後、カメラを終了する
-                      //                   // _controller.dispose();
-                      //                   if (mounted) {
-                      //                     _controller.dispose();
-                      //                     chatConnection.emitEvent("leave_shooting_room");
-                      //                     Navigator.pop(context);
-                      //                   }
-                      //                 }
-                      //               }
-                      //                   : null,
-                      //               child: const Text('Send'),  // Enable the button only if the conversion is completed
-                      //             ),
-                      //           ),
-                      //
-                      //           Positioned(
-                      //             bottom: 20,
-                      //             right: 20,
-                      //             child: ElevatedButton(
-                      //               onPressed: () async {  // Make the handler asynchronous
-                      //                 if (_imagePath != null) {
-                      //                   var imgFile = File(_imagePath!);
-                      //                   if (await imgFile.exists()) {  // Check if the file exists before trying to delete it
-                      //                     await imgFile.delete();
-                      //                   }
-                      //                   _imagePath = null;
-                      //                 }
-                      //
-                      //                 if (_thumbnailPath != null) {
-                      //                   var thumbFile = File(_thumbnailPath!);
-                      //                   if (await thumbFile.exists()) {  // Check if the file exists before trying to delete it
-                      //                     await thumbFile.delete();
-                      //                   }
-                      //                   _thumbnailPath = null;
-                      //                 }
-                      //
-                      //                 setState(() {
-                      //                   _showImage = false;  // Reset the flag when the button is pressed
-                      //                 });
-                      //               },
-                      //               child: const Text('Back'),
-                      //             ),
-                      //           )
-                      //         ],
-                      //       ),
-                      // )
-                      //     : const SizedBox(),
-
-
-
-
                       ? Positioned.fill(
                         child: Stack(
                           children: <Widget>[
@@ -845,7 +773,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 left: 0,
                                 right: 0,
                                 child: Center(
-                                  child: Container(
+                                  child: SizedBox(
                                     height: screenSize.width * 0.2, // サムネイル表示領域の高さ
                                     child: SingleChildScrollView(
                                       scrollDirection: Axis.horizontal,
@@ -876,9 +804,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                       border: Border.all(color: Colors.black, width: 2),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Center(
+                                    child: const Center(
                                       child: Text(
-                                        "✋",
+                                        "\u{1F590}",
                                         style: TextStyle(
                                           fontSize: 24,
                                           color: Colors.black,
@@ -889,6 +817,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 ),
                               )
                             ],
+                            // if (_showEmoji)  // 絵文字表示条件
+                              for (var position in emojiPositions)  // 絵文字の位置リストをループ
+                                Positioned(
+                                  left: position.dx,
+                                  top: position.dy,
+                                  child: Container(
+                                    width: screenSize.width * 0.2,
+                                    height: screenSize.width * 0.2,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.yellow,
+                                    ),
+                                    child: Center(
+                                      child: Text("\u{1F590}", style: TextStyle(fontSize: 24)),
+                                    ),
+                                  ),
+                                ),
                           ],
                         ),
                       )

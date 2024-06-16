@@ -570,7 +570,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       debugPrint("Callback from new_photo");
       _pickerController.animateToItem(
         1, // リストの先頭にスクロール
-        duration: Duration(milliseconds: 500),
+        duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
       setState(() {
