@@ -146,6 +146,10 @@ class ChatConnection {
     });
   }
 
+  void sendTapMessageToServer(List<Map<String, dynamic>> thumbnailData) {
+    socket?.emit('send_tap_message', jsonEncode(thumbnailData));
+    debugPrint('send_tap_message');
+  }
   // void listenToRoomCount(BuildContext context) {
   //   socket?.on('room_count', (data) {
   //     debugPrint('Number of users in "shooting" room: ${data['count']}');
@@ -1111,6 +1115,8 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   }
 
 }
+
+
 
 
 

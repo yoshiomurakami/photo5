@@ -139,10 +139,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     _photoEventSubscription = eventBus.stream.listen((data) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
-        );
-        debugPrint("Received photo data: $data");
+        // ScaffoldMessenger.of(context).showSnackBar(
+        //     SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
+        // );
+        // debugPrint("Received photo data: $data");
 
         // サムネイルデータをリストに追加
         setState(() {
@@ -151,11 +151,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     });
 
-
+    // Socketイベントリスナーを設定
+    setupSocketListeners();
   }
 
 
+  void setupSocketListeners() {
+    // Socket接続を確立するロジックはここに追加
 
+    socket?.on('receive_tap_message', (data) {
+      debugPrint('get!! receive_tap_message');
+      debugPrint('Message: ${data['message']} from ${data['fromUserID']}');
+      // ここに受け取ったデータに基づいて他の処理を追加
+    });
+  }
 
   @override
   void dispose() {
@@ -165,6 +174,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     }
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
+    // socket?.disconnect();
     super.dispose();
   }
 
@@ -627,7 +637,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
 
-
+  // void sendTapMessageToServer(List<dynamic> thumbnailData) {
+  //   // for (var photoInfo in thumbnailData) {
+  //   //   chatConnection.emitEvent('send_tap_message', {
+  //   //     'userID': photoInfo['userID'],
+  //   //     'groupID': photoInfo['groupID']
+  //   //   });
+  //   // }
+  // }
 
 
   @override
@@ -813,7 +830,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
 
-                          ? Positioned.fill(
+                      ? Positioned.fill(
                         child: Stack(
                           children: <Widget>[
                             Positioned.fill(
@@ -822,30 +839,60 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            Positioned(
-                              bottom: MediaQuery.of(context).size.height * 0.25, // 画面の下から25%の位置に配置
-                              left: 0,
-                              right: 0,
-                              child: Center(
-                                child: Container(
-                                  height: screenSize.width * 0.2, // サムネイル表示領域の高さ
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Center(
-                                      child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
-                                        children: List.generate(thumbnailData.length, (index) {
-                                          return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
-                                        }),
+                            if (thumbnailData.isNotEmpty) ...[
+                              Positioned(
+                                bottom: MediaQuery.of(context).size.height * 0.25, // 画面の下から25%の位置に配置
+                                left: 0,
+                                right: 0,
+                                child: Center(
+                                  child: Container(
+                                    height: screenSize.width * 0.2, // サムネイル表示領域の高さ
+                                    child: SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: Center(
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: List.generate(thumbnailData.length, (index) {
+                                            return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
+                                          }),
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
+                              Positioned(
+                                bottom: MediaQuery.of(context).size.height * 0.1,
+                                left: MediaQuery.of(context).size.width * 0.4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    chatConnection.sendTapMessageToServer(thumbnailData);
+                                  },
+                                  child: Container(
+                                    width: screenSize.width * 0.2,
+                                    height: screenSize.width * 0.2,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFFFCC4D),
+                                      border: Border.all(color: Colors.black, width: 2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        "✋",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            ],
                           ],
                         ),
                       )
+
                           : const SizedBox(),
 
 
@@ -913,4 +960,6 @@ class CurrentScreen extends InheritedWidget {
   bool updateShouldNotify(CurrentScreen oldWidget) {
     return screenName != oldWidget.screenName;
   }
+
 }
+
