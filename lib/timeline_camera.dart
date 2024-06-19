@@ -206,9 +206,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     _photoEventSubscription = eventBus.stream.listen((data) async {
       debugPrint("_photoEventSubscription = $data");
       if (mounted && data['userID'] != myUserID) {
-        setState(() {
-          thumbnailData.add(data);
-        });
+        // thumbnailDataが空の場合、または同じgroupIDがリスト内に存在する場合にのみ追加
+        if (thumbnailData.isEmpty || thumbnailData.any((item) => item['groupID'] == data['groupID'])) {
+          setState(() {
+            thumbnailData.add(data);
+          });
+        }
 
         String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
         String imageName = data['imageFilename'];
@@ -463,8 +466,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -914,22 +917,24 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 left: 0,
                                 right: 0,
                                 child: Center(
-                                  child: SizedBox(
-                                    height: screenSize.width * 0.2, // サムネイル表示領域の高さ
+                                  child: ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxHeight: MediaQuery.of(context).size.height * 0.75, // 最大高さを25%に制限
+                                    ),
                                     child: SingleChildScrollView(
-                                      scrollDirection: Axis.horizontal,
-                                      child: Center(
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: List.generate(thumbnailData.length, (index) {
-                                            return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
-                                          }),
-                                        ),
+                                      child: Wrap(
+                                        alignment: WrapAlignment.center,
+                                        spacing: 8.0, // 横のスペース
+                                        runSpacing: 8.0, // 縦のスペース
+                                        children: List.generate(thumbnailData.length, (index) {
+                                          return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
+                                        }),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
+
                               Positioned(
                                 bottom: MediaQuery.of(context).size.height * 0.1,
                                 left: MediaQuery.of(context).size.width * 0.4,
