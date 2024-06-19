@@ -25,7 +25,7 @@
   "permissionErrorDialogTitle": "Permission error",
   "permissionErrorDialogText": "Permission is needed.",
   "permissionErrorDialogButton": "Retry",
-  "sayHello": "Hello! A test to see how far a long sentence can be displayed. 35 characters so far.",
+  "sayHello": "Hello!",
   "resSayHello": "What’s up?",
   "sayGoodbye": "see you!",
   "shotTogether": "Shot together!\uD83D\uDCF8",

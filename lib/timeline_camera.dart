@@ -83,9 +83,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   List<Map<String, dynamic>> thumbnailData = [];
 
-  bool _showEmoji = false;  // 絵文字表示の制御用フラグ
-  Offset _emojiPosition = Offset(0, 0);  // 絵文字の位置
-
   List<Offset> emojiPositions = []; // 絵文字の位置を保持するリスト
 
 
@@ -93,38 +90,47 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    userShootingListCount = widget.shootingRoomCount - 1;
-    _controller = CameraController(
-      widget.camera,
-      ResolutionPreset.high,
-    );
-    _initializeControllerFuture = _controller.initialize().then((_) {
-      setState(() {  // setStateを使用してUIの更新をトリガー
-        now = DateTime.now().millisecondsSinceEpoch;
-        triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
-        delay = triggerTime - now;  // 残り時間を計算
-        if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
-        remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
-        if (remainingSeconds > 30) remainingSeconds = 10; // 11秒以上にならないように制限
-      });
+    // userShootingListCount = widget.shootingRoomCount - 1;
+    // _controller = CameraController(
+    //   widget.camera,
+    //   ResolutionPreset.high,
+    // );
+    // _initializeControllerFuture = _controller.initialize().then((_) {
+    //   setState(() {  // setStateを使用してUIの更新をトリガー
+    //     now = DateTime.now().millisecondsSinceEpoch;
+    //     triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
+    //     delay = triggerTime - now;  // 残り時間を計算
+    //     if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
+    //     remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
+    //     if (remainingSeconds > 30) remainingSeconds = 10; // 11秒以上にならないように制限
+    //   });
+    //
+    //   // カウントダウンタイマーのセットアップ
+    //   countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    //     if (remainingSeconds > 1) {
+    //       setState(() {
+    //         remainingSeconds--;
+    //       });
+    //     } else {
+    //       timer.cancel();
+    //     }
+    //   });
+    //
+    //   Future.delayed(Duration(milliseconds: delay), () async {
+    //     if (mounted && remainingSeconds > 0) {
+    //       await _takePicture();
+    //     }
+    //   });
+    // });
 
-      // カウントダウンタイマーのセットアップ
-      countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-        if (remainingSeconds > 1) {
-          setState(() {
-            remainingSeconds--;
-          });
-        } else {
-          timer.cancel();
-        }
-      });
 
-      Future.delayed(Duration(milliseconds: delay), () async {
-        if (mounted && remainingSeconds > 0) {
-          await _takePicture();
-        }
-      });
-    });
+
+
+    setupCamera();
+    setupSocketListeners();
+    setupEventBusListener();
+
+
 
     _showImage = false;
 
@@ -142,22 +148,121 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     WidgetsBinding.instance.addObserver(this);
 
-    _photoEventSubscription = eventBus.stream.listen((data) {
-      if (mounted) {
-        // ScaffoldMessenger.of(context).showSnackBar(
-        //     SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
-        // );
-        // debugPrint("Received photo data: $data");
+    // _photoEventSubscription = eventBus.stream.listen((data) {
+    //   if (mounted) {
+    //     // ScaffoldMessenger.of(context).showSnackBar(
+    //     //     SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
+    //     // );
+    //     // debugPrint("Received photo data: $data");
+    //
+    //     // サムネイルデータをリストに追加
+    //     setState(() {
+    //       thumbnailData.add(data);
+    //     });
+    //   }
+    // });
 
-        // サムネイルデータをリストに追加
+    // Socketイベントリスナーを設定
+    // setupSocketListeners();
+  }
+
+  void setupCamera() {
+    userShootingListCount = widget.shootingRoomCount - 1;
+    _controller = CameraController(widget.camera, ResolutionPreset.high);
+    _initializeControllerFuture = _controller.initialize().then((_) {
+      if (mounted) {
         setState(() {
-          thumbnailData.add(data);
+          now = DateTime.now().millisecondsSinceEpoch;
+          triggerTime = widget.takePictureStartTime + 10000;
+          delay = triggerTime - now;
+          if (delay < 0) delay = 0;
+          remainingSeconds = (delay / 1000).ceil();
+          if (remainingSeconds > 30) remainingSeconds = 10;
+        });
+
+        countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+          if (mounted && remainingSeconds > 1) {
+            setState(() {
+              remainingSeconds--;
+            });
+          } else {
+            timer.cancel();
+          }
+        });
+
+        Future.delayed(Duration(milliseconds: delay), () async {
+          if (mounted && remainingSeconds > 0) {
+            await _takePicture();
+          }
         });
       }
     });
+  }
 
-    // Socketイベントリスナーを設定
-    setupSocketListeners();
+  void setupEventBusListener() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String myUserID = prefs.getString('userID') ?? "";
+
+    _photoEventSubscription = eventBus.stream.listen((data) async {
+      debugPrint("_photoEventSubscription = $data");
+      if (mounted && data['userID'] != myUserID) {
+        setState(() {
+          thumbnailData.add(data);
+        });
+
+        String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
+        String imageName = data['imageFilename'];
+
+        await saveOtherUserImage(imageUrl, imageName);
+
+        Map<String, dynamic> photoInfo = {
+          'systemId': data['_id'],
+          'sequenceNumber': data['sequenceNumber'],
+          'createdAt': data['createdAt'],
+          'userID': data['userID'],
+          'country': data['country'],
+          'lat': data['lat'],
+          'lng': data['lng'],
+          'imageFilename': p.join('/data/user/0/com.unknwnphtgrphrs.photo5/app_flutter/uploadImage', imageName),
+          'thumbnailFilename': p.join('/data/user/0/com.unknwnphtgrphrs.photo5/app_flutter/uploadThumb', imageName.replaceFirst('_photo.webp', '_thumb.webp')),
+          'localtime': data['localtime'],
+          'groupID': data['groupID'],
+          'geocodedCountry': data['geocodedCountry'],
+          'geocodedCity': data['geocodedCity'],
+          'statement': data['statement']
+        };
+
+        await insertImageData(photoInfo);
+      }
+    });
+  }
+
+
+  Future<void> insertImageData(Map<String, dynamic> photoData) async {
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, 'images_database.db');
+    final database = await openDatabase(path);
+
+    await database.insert(
+        'images',
+        {
+          'systemId': photoData['systemId'], // 修正されたカラム名
+          'sequenceNumber': photoData['sequenceNumber'],
+          'createdAt': photoData['createdAt'],
+          'userID': photoData['userID'],
+          'country': photoData['country'],
+          'lat': photoData['lat'],
+          'lng': photoData['lng'],
+          'imageFilename': photoData['imageFilename'],
+          'thumbnailFilename': photoData['thumbnailFilename'],
+          'localtime': photoData['localtime'],
+          'groupID': photoData['groupID'],
+          'geocodedCountry': photoData['geocodedCountry'],
+          'geocodedCity': photoData['geocodedCity'],
+          'statement': photoData['statement']
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace
+    );
   }
 
 
@@ -168,12 +273,46 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       // 絵文字表示のためのランダム位置を設定
       final screenSize = MediaQuery.of(context).size;
       final double x = math.Random().nextDouble() * screenSize.width;
-      final double y = math.Random().nextDouble() * (screenSize.height * 0.5);  // 画面の上半分でランダム
+      final double y = math.Random().nextDouble() * (screenSize.height * 0.5); // 画面の上半分でランダム
 
       setState(() {
         emojiPositions.add(Offset(x, y));  // 新しい位置をリストに追加
       });
     });
+  }
+
+
+  Future<void> saveOtherUserImage(String imageUrl, String imageName) async {
+    try {
+      // サーバーから画像をダウンロード
+      var photoResponse = await http.get(Uri.parse(imageUrl));
+      var thumbResponse = await http.get(Uri.parse(imageUrl.replaceAll('_photo.webp', '_thumb.webp')));
+
+      if (photoResponse.statusCode == 200 && thumbResponse.statusCode == 200) {
+        // アプリケーションのドキュメントディレクトリを取得
+        final Directory appDir = await getApplicationDocumentsDirectory();
+
+        // 写真とサムネイルのディレクトリパス
+        final String imageDirectoryPath = p.join(appDir.path, 'uploadImage');
+        final String thumbDirectoryPath = p.join(appDir.path, 'uploadThumb');
+
+        // ディレクトリが存在するか確認し、なければ作成
+        await Directory(imageDirectoryPath).create(recursive: true);
+        await Directory(thumbDirectoryPath).create(recursive: true);
+
+        // 写真とサムネイルのフルファイルパスを構築
+        final String photoFilePath = p.join(imageDirectoryPath, imageName);
+        final String thumbFilePath = p.join(thumbDirectoryPath, imageName.replaceFirst('_photo.webp', '_thumb.webp'));
+
+        // ファイルとして保存
+        await File(photoFilePath).writeAsBytes(photoResponse.bodyBytes);
+        await File(thumbFilePath).writeAsBytes(thumbResponse.bodyBytes);
+      } else {
+        print("Failed to download image or thumbnail.");
+      }
+    } catch (e) {
+      print("Error saving image: $e");
+    }
   }
 
 
@@ -186,6 +325,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     // socket?.disconnect();
+    _photoEventSubscription?.cancel();
+    socket?.off('receive_tap_message');
     super.dispose();
   }
 
@@ -322,8 +463,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -800,7 +941,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                     width: screenSize.width * 0.2,
                                     height: screenSize.width * 0.2,
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFFFFCC4D),
+                                      // color: const Color(0xFFFFCC4D),
+                                      color: Colors.white,
                                       border: Border.all(color: Colors.black, width: 2),
                                       shape: BoxShape.circle,
                                     ),
@@ -808,7 +950,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                       child: Text(
                                         "\u{1F590}",
                                         style: TextStyle(
-                                          fontSize: 24,
+                                          fontSize: 36,
                                           color: Colors.black,
                                         ),
                                       ),
@@ -819,18 +961,41 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                             ],
                             // if (_showEmoji)  // 絵文字表示条件
                               for (var position in emojiPositions)  // 絵文字の位置リストをループ
+                                // Positioned(
+                                //   left: position.dx,
+                                //   top: position.dy,
+                                //   child: Container(
+                                //     width: screenSize.width * 0.2,
+                                //     height: screenSize.width * 0.2,
+                                //     decoration: BoxDecoration(
+                                //       // color: const Color(0xFFFFCC4D),
+                                //       color: Colors.white,
+                                //       border: Border.all(color: Colors.black, width: 2),
+                                //       shape: BoxShape.circle,
+                                //     ),
+                                //     child: Center(
+                                //       child: Text("\u{1F590}", style: TextStyle(fontSize: 36)),
+                                //     ),
+                                //   ),
+                                // ),
                                 Positioned(
                                   left: position.dx,
                                   top: position.dy,
-                                  child: Container(
-                                    width: screenSize.width * 0.2,
-                                    height: screenSize.width * 0.2,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Colors.yellow,
-                                    ),
-                                    child: Center(
-                                      child: Text("\u{1F590}", style: TextStyle(fontSize: 24)),
+                                  child: IntrinsicWidth(
+                                    // stepWidth: screenSize.width * 0.2,
+                                    // stepHeight: screenSize.width * 0.1,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), // テキストの周囲に余白を追加
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        border: Border.all(color: Colors.black, width: 2),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        "いいね！",
+                                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
                                 ),

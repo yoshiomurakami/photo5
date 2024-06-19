@@ -83,7 +83,7 @@ class L10nEn extends L10n {
   String get permissionErrorDialogButton => 'Retry';
 
   @override
-  String get sayHello => 'Hello! A test to see how far a long sentence can be displayed. 35 characters so far.';
+  String get sayHello => 'Hello!';
 
   @override
   String get resSayHello => 'What’s up?';

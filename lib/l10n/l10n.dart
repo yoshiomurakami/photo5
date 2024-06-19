@@ -252,7 +252,7 @@ abstract class L10n {
   /// No description provided for @sayHello.
   ///
   /// In en, this message translates to:
-  /// **'Hello! A test to see how far a long sentence can be displayed. 35 characters so far.'**
+  /// **'Hello!'**
   String get sayHello;
 
   /// No description provided for @resSayHello.

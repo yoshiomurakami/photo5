@@ -25,7 +25,7 @@
   "permissionErrorDialogTitle": "確認",
   "permissionErrorDialogText": "許可が必要です",
   "permissionErrorDialogButton": "もう一度",
-  "sayHello": "こんにちは！長い文章はどこまで表示されるのかテスト。ここまでで３５文字。",
+  "sayHello": "こんにちは！",
   "resSayHello": "よろしく！",
   "sayGoodbye": "またね！",
   "shotTogether": "一緒に撮ろう！\uD83D\uDCF8",

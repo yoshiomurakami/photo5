@@ -83,7 +83,7 @@ class L10nJa extends L10n {
   String get permissionErrorDialogButton => 'もう一度';
 
   @override
-  String get sayHello => 'こんにちは！長い文章はどこまで表示されるのかテスト。ここまでで３５文字。';
+  String get sayHello => 'こんにちは！';
 
   @override
   String get resSayHello => 'よろしく！';
