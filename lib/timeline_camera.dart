@@ -216,7 +216,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
         String imageName = data['imageFilename'];
 
-        await saveOtherUserImage(imageUrl, imageName);
+        // 保存処理が成功した後に _imagePath を更新
+        bool saved = await saveOtherUserImage(imageUrl, imageName);
+        debugPrint("Saved status: $saved");  // 保存の成功状態を確認するデバッグ出力
+        if (saved) {
+          setState(() {
+            _imagePath = p.join('/data/user/0/com.unknwnphtgrphrs.photo5/app_flutter/uploadImage', imageName);
+            debugPrint("_imagePath = $_imagePath");  // _imagePathが更新されたか確認するデバッグ出力
+          });
+        }
 
         Map<String, dynamic> photoInfo = {
           'systemId': data['_id'],
@@ -285,7 +293,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
 
-  Future<void> saveOtherUserImage(String imageUrl, String imageName) async {
+  Future<bool> saveOtherUserImage(String imageUrl, String imageName) async {
     try {
       // サーバーから画像をダウンロード
       var photoResponse = await http.get(Uri.parse(imageUrl));
@@ -310,12 +318,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         // ファイルとして保存
         await File(photoFilePath).writeAsBytes(photoResponse.bodyBytes);
         await File(thumbFilePath).writeAsBytes(thumbResponse.bodyBytes);
-      } else {
-        print("Failed to download image or thumbnail.");
+
+        return true; // 保存成功
       }
     } catch (e) {
       print("Error saving image: $e");
     }
+    return false; // 保存失敗
   }
 
 
@@ -466,8 +475,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -875,12 +884,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       ),
                       // The controls should be outside the scaled preview
                       if (!_showImage)  // Only show the buttons if _showImage is false
-                        Positioned.fill(
-                          child: GestureDetector(
-                            onTap: _takePicture,
-                            child: Container(color: Colors.transparent),
-                          ),
-                        ),
+                        //画面タップでシャッター
+                        // Positioned.fill(
+                        //   child: GestureDetector(
+                        //     onTap: _takePicture,
+                        //     child: Container(color: Colors.transparent),
+                        //   ),
+                        // ),
                       Positioned(
                         top: 50,
                         left: 0,
