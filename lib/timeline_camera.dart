@@ -45,7 +45,8 @@ class CameraScreen extends ConsumerStatefulWidget {
 }
 
 
-class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBindingObserver {
+class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBindingObserver, SingleTickerProviderStateMixin {
+
   late CameraController _controller;
   late Future<void> _initializeControllerFuture;
   late bool _showImage;
@@ -84,6 +85,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   List<Map<String, dynamic>> thumbnailData = [];
 
   List<Offset> emojiPositions = []; // 絵文字の位置を保持するリスト
+
+  late AnimationController _animationController;
+  late Animation<double> _animationFade;
+  late Animation<double> _animationMove;
+  bool _showLikeAnimation = false;
+
 
 
   //タイマーシャッターを組み込んだinitstate
@@ -164,6 +171,36 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     // Socketイベントリスナーを設定
     // setupSocketListeners();
+
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        setState(() {
+          _showLikeAnimation = false;  // アニメーション終了時に非表示にする
+        });
+      }
+    });
+
+    _animationFade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    ));
+
+    // ボタンの上部から画面の上部へ移動
+    _animationMove = Tween(
+        begin: 50.0,  // ボタンの中心から開始
+        end: 100.0  // 画面の上端に向けて移動
+    ).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut,  // 自然な動きに見えるようにeaseOutを使用
+      ),
+    );
+
   }
 
   void setupCamera() {
@@ -207,11 +244,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       debugPrint("_photoEventSubscription = $data");
       if (mounted && data['userID'] != myUserID) {
         // thumbnailDataが空の場合、または同じgroupIDがリスト内に存在する場合にのみ追加
-        if (thumbnailData.isEmpty || thumbnailData.any((item) => item['groupID'] == data['groupID'])) {
+        // if (thumbnailData.isEmpty || thumbnailData.any((item) => item['groupID'] == data['groupID'])) {
+        // if (thumbnailData.isEmpty) {
           setState(() {
             thumbnailData.add(data);
           });
-        }
+        // }
 
         String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
         String imageName = data['imageFilename'];
@@ -339,6 +377,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     // socket?.disconnect();
     _photoEventSubscription?.cancel();
     socket?.off('receive_tap_message');
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -444,7 +483,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           _geocodedCity,
         );
 
-        // アップロード後に画面を閉じる
+        // アップロード後にleave_shooting_room
         if (mounted) {
           chatConnection.emitEvent("leave_shooting_room");
           // Navigator.pop(context);
@@ -475,8 +514,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -770,35 +809,46 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     });
   }
 
-  Widget buildThumbnail(String thumbnailFilename, Size screenSize) {
-    final thumbnailUrl = "https://photo5.world/$thumbnailFilename";
+  Widget buildThumbnail(Map<String, dynamic> thumbnailData, Size screenSize) {
+    final thumbnailUrl = "https://photo5.world/${thumbnailData['thumbnailFilename']}";
+    final String imagePath = "/data/user/0/com.unknwnphtgrphrs.photo5/app_flutter/uploadImage/${thumbnailData['imageFilename']}";
+
     final thumbnailSize = screenSize.width * 0.2; // 画面幅の20%
     final borderRadius = screenSize.width * 0.04; // 角丸の半径
     final margin = screenSize.width * 0.02; // 画面幅の2%をマージンとして設定
 
-    return Padding(
-      padding: EdgeInsets.only(right: margin,left: margin), // 右側にのみマージンを設定
-      child: Container(
-        width: thumbnailSize,
-        height: thumbnailSize,
-        decoration: BoxDecoration(
-          image: DecorationImage(
-            image: NetworkImage(thumbnailUrl),
-            fit: BoxFit.cover,
-          ),
-          borderRadius: BorderRadius.circular(borderRadius),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, 3), // 影の位置調整
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _imagePath = imagePath;  // タップされたサムネイルのフルサイズ画像パスを設定
+          debugPrint("Updated _imagePath to: $_imagePath");
+        });
+      },
+      child: Padding(
+        padding: EdgeInsets.only(right: margin, left: margin),
+        child: Container(
+          width: thumbnailSize,
+          height: thumbnailSize,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: NetworkImage(thumbnailUrl),
+              fit: BoxFit.cover,
             ),
-          ],
+            borderRadius: BorderRadius.circular(borderRadius),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
+
 
 
   // void sendTapMessageToServer(List<dynamic> thumbnailData) {
@@ -839,15 +889,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                   return Stack(
                     children: [
                       // Camera preview scaled according to the aspect ratio
-                      Center(
-                        child: Transform.scale(
-                          scale: scale,
-                          child: AspectRatio(
-                            aspectRatio: previewAspectRatio,
-                            child: CameraPreview(_controller),
+                      if (!_showImage)  // カメラプレビューを表示する条件
+                        Center(
+                          child: Transform.scale(
+                            scale: scale,
+                            child: AspectRatio(
+                              aspectRatio: previewAspectRatio,
+                              child: CameraPreview(_controller),
+                            ),
                           ),
                         ),
-                      ),
+
+                      // _showImageがtrueの場合、全画面の白い背景を表示
+                      if (_showImage)
+                        Positioned.fill(
+                          child: Container(color: Colors.white),
+                        ),
                       // Time and Delay Info
                       // Positioned(
                       //   top: 10,
@@ -866,24 +923,25 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       //   ),
                       // ),
                       // Countdown Timer in the Center
-                      Center(
-                        child: Container(
-                          width: MediaQuery.of(context).size.width * 0.5,
-                          height: MediaQuery.of(context).size.width * 0.5,
-                          alignment: Alignment.center,
-                          color: Colors.black.withOpacity(0.5),
-                          child: Text(
-                            remainingSeconds > 0 ? '$remainingSeconds' : '',
-                            style: const TextStyle(
-                              fontSize: 48,
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+                      if (!_showImage)
+                        Center(
+                          child: Container(
+                            width: MediaQuery.of(context).size.width * 0.5,
+                            height: MediaQuery.of(context).size.width * 0.5,
+                            alignment: Alignment.center,
+                            color: Colors.black.withOpacity(0.5),
+                            child: Text(
+                              remainingSeconds > 0 ? '$remainingSeconds' : '',
+                              style: const TextStyle(
+                                fontSize: 48,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       // The controls should be outside the scaled preview
-                      if (!_showImage)  // Only show the buttons if _showImage is false
+                      if (_showImage)  // Only show the buttons if _showImage is false
                         //画面タップでシャッター
                         // Positioned.fill(
                         //   child: GestureDetector(
@@ -891,26 +949,26 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         //     child: Container(color: Colors.transparent),
                         //   ),
                         // ),
-                      Positioned(
-                        top: 50,
-                        left: 0,
-                        child: Row(
-                          children: [
-                            // ElevatedButton(
-                            //   onPressed: _takePicture,
-                            //   child: Text('Take Picture'),
-                            // ),
-                            ElevatedButton(
-                              onPressed: () {
-                                chatConnection.emitEvent("leave_shooting_room");
-                                _navigateBack(context);
-                              },
-                              child: const Text('Back'),
-                            ),
-
-                          ],
-                        ),
-                      ),
+                      // Positioned(
+                      //   top: 50,
+                      //   left: 0,
+                      //   child: Row(
+                      //     children: [
+                      //       // ElevatedButton(
+                      //       //   onPressed: _takePicture,
+                      //       //   child: Text('Take Picture'),
+                      //       // ),
+                      //       ElevatedButton(
+                      //         onPressed: () {
+                      //           chatConnection.emitEvent("leave_shooting_room");
+                      //           _navigateBack(context);
+                      //         },
+                      //         child: const Text('Back'),
+                      //       ),
+                      //
+                      //     ],
+                      //   ),
+                      // ),
                       _showImage && _imagePath != null
                       ? Positioned.fill(
                         child: Stack(
@@ -921,7 +979,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 fit: BoxFit.cover,
                               ),
                             ),
-                            if (thumbnailData.isNotEmpty) ...[
+                            if (thumbnailData.length >= 2) ...[
                               Positioned(
                                 bottom: MediaQuery.of(context).size.height * 0.25, // 画面の下から25%の位置に配置
                                 left: 0,
@@ -929,7 +987,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                 child: Center(
                                   child: ConstrainedBox(
                                     constraints: BoxConstraints(
-                                      maxHeight: MediaQuery.of(context).size.height * 0.75, // 最大高さを25%に制限
+                                      maxHeight: MediaQuery.of(context).size.height * 0.75, // 最大高さを75%に制限
                                     ),
                                     child: SingleChildScrollView(
                                       child: Wrap(
@@ -937,43 +995,101 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                         spacing: 8.0, // 横のスペース
                                         runSpacing: 8.0, // 縦のスペース
                                         children: List.generate(thumbnailData.length, (index) {
-                                          return buildThumbnail(thumbnailData[index]['thumbnailFilename'], screenSize);
+                                          return buildThumbnail(thumbnailData[index] as Map<String, dynamic>, screenSize);
                                         }),
                                       ),
                                     ),
                                   ),
                                 ),
                               ),
-
+                            ],
+                            if (thumbnailData.isNotEmpty)
                               Positioned(
-                                bottom: MediaQuery.of(context).size.height * 0.1,
+                                bottom: MediaQuery.of(context).size.height * 0.1 + screenSize.width * 0.2,
                                 left: MediaQuery.of(context).size.width * 0.4,
                                 child: GestureDetector(
                                   onTap: () {
                                     chatConnection.sendTapMessageToServer(thumbnailData);
+                                    setState(() {
+                                      _showLikeAnimation = true;  // アニメーションを表示する
+                                    });
+                                    _animationController.forward(from: 0.0);
                                   },
-                                  child: Container(
-                                    width: screenSize.width * 0.2,
-                                    height: screenSize.width * 0.2,
-                                    decoration: BoxDecoration(
-                                      // color: const Color(0xFFFFCC4D),
-                                      color: Colors.white,
-                                      border: Border.all(color: Colors.black, width: 2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Center(
-                                      child: Text(
-                                        "\u{1F590}",
-                                        style: TextStyle(
-                                          fontSize: 36,
-                                          color: Colors.black,
+
+                                  child: Stack(
+                                    clipBehavior: Clip.none,  // アニメーションが外にはみ出しても表示されるように設定
+                                    alignment: Alignment.bottomCenter,
+                                    children: [
+                                      Container(
+                                        width: screenSize.width * 0.2,
+                                        height: screenSize.width * 0.2,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          border: Border.all(color: Colors.black, width: 2),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Center(
+                                          child: Text(
+                                            "\u{1F590}",
+                                            style: TextStyle(
+                                              fontSize: 36,
+                                              color: Colors.black,
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
+                                      if (_showLikeAnimation)  // この条件に基づいてアニメーションを表示
+                                      AnimatedBuilder(
+                                        animation: _animationController,
+                                        builder: (context, child) {
+                                          return Positioned(
+                                            bottom: _animationMove.value,
+                                            child: Opacity(
+                                              opacity: _animationFade.value,
+                                              child: IntrinsicWidth(
+                                                child: Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    border: Border.all(color: Colors.black, width: 2),
+                                                    borderRadius: BorderRadius.circular(20),
+                                                  ),
+                                                  child: const Text(
+                                                    "いいね！",
+                                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              )
-                            ],
+                              ),
+
+
+                              Positioned(
+                                top: 50,
+                                left: 0,
+                                child: Row(
+                                  children: [
+                                    // ElevatedButton(
+                                    //   onPressed: _takePicture,
+                                    //   child: Text('Take Picture'),
+                                    // ),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        // chatConnection.emitEvent("leave_shooting_room");
+                                        _navigateBack(context);
+                                      },
+                                      child: const Text('Back'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
                             // if (_showEmoji)  // 絵文字表示条件
                               for (var position in emojiPositions)  // 絵文字の位置リストをループ
                                 // Positioned(
@@ -1006,7 +1122,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                         border: Border.all(color: Colors.black, width: 2),
                                         borderRadius: BorderRadius.circular(20),
                                       ),
-                                      child: Text(
+                                      child: const Text(
                                         "いいね！",
                                         style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                                         textAlign: TextAlign.center,
