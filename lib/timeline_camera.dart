@@ -91,6 +91,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   late Animation<double> _animationMove;
   bool _showLikeAnimation = false;
 
+  late Animation<double> _scaleAnimation; // スケールアニメーション用の変数を追加
+
 
 
   //タイマーシャッターを組み込んだinitstate
@@ -185,10 +187,17 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     });
 
-    _animationFade = Tween(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    ));
+    _animationFade = TweenSequence([
+      TweenSequenceItem(
+        tween: Tween(begin: 0.0, end: 1.0).chain(CurveTween(curve: Curves.easeIn)),
+        weight: 50.0, // アニメーションの全体の中でこのTweenが占める割合
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 0.0).chain(CurveTween(curve: Curves.easeOut)),
+        weight: 50.0, // アニメーションの残りの部分
+      ),
+    ]).animate(_animationController);
+
 
     // ボタンの上部から画面の上部へ移動
     _animationMove = Tween(
@@ -200,6 +209,22 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         curve: Curves.easeOut,  // 自然な動きに見えるようにeaseOutを使用
       ),
     );
+
+
+
+
+
+    // スケールアニメーションの定義
+    _scaleAnimation = Tween<double>(begin: 2.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOut, // イーズアウトカーブでスムーズに縮小
+      ),
+    );
+
+    _animationController.forward(); // アニメーションの開始
+
+
 
   }
 
@@ -242,14 +267,20 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     _photoEventSubscription = eventBus.stream.listen((data) async {
       debugPrint("_photoEventSubscription = $data");
-      if (mounted && data['userID'] != myUserID) {
+      if (mounted) {
+      // if (mounted && data['userID'] != myUserID) {
         // thumbnailDataが空の場合、または同じgroupIDがリスト内に存在する場合にのみ追加
         // if (thumbnailData.isEmpty || thumbnailData.any((item) => item['groupID'] == data['groupID'])) {
         // if (thumbnailData.isEmpty) {
+        if (data['userID'] != myUserID) {
+          setState(() {
+            thumbnailData.insert(0, data);
+          });
+        }else{
           setState(() {
             thumbnailData.add(data);
           });
-        // }
+      }
 
         String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
         String imageName = data['imageFilename'];
@@ -257,7 +288,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         // 保存処理が成功した後に _imagePath を更新
         bool saved = await saveOtherUserImage(imageUrl, imageName);
         debugPrint("Saved status: $saved");  // 保存の成功状態を確認するデバッグ出力
-        if (saved) {
+        if (saved && data['userID'] != myUserID) {
           setState(() {
             _imagePath = p.join('/data/user/0/com.unknwnphtgrphrs.photo5/app_flutter/uploadImage', imageName);
             debugPrint("_imagePath = $_imagePath");  // _imagePathが更新されたか確認するデバッグ出力
@@ -281,7 +312,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           'statement': data['statement']
         };
 
-        await insertImageData(photoInfo);
+        if (data['userID'] != myUserID) {
+          await insertImageData(photoInfo);
+        }
       }
     });
   }
@@ -1005,7 +1038,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                             ],
                             if (thumbnailData.isNotEmpty)
                               Positioned(
-                                bottom: MediaQuery.of(context).size.height * 0.1 + screenSize.width * 0.2,
+                                bottom: MediaQuery.of(context).size.height * 0.1,
                                 left: MediaQuery.of(context).size.width * 0.4,
                                 child: GestureDetector(
                                   onTap: () {
@@ -1056,7 +1089,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                                   ),
                                                   child: const Text(
                                                     "いいね！",
-                                                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                                                   ),
                                                 ),
                                               ),

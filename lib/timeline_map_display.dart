@@ -566,7 +566,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void scrollToTarget() {
     if (_pickerController.hasClients) {
-
       debugPrint("Callback from new_photo");
       _pickerController.animateToItem(
         1, // リストの先頭にスクロール
@@ -575,12 +574,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       );
       setState(() {
         showNewListWheelScrollView = false;
-        MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+        if (selectedItemNotifier.value != null) { // Nullチェックを追加
+          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+        } else {
+          debugPrint("selectedItem is null");
+        }
       });
     } else {
       debugPrint("ScrollController not attached to any scroll views.");
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
