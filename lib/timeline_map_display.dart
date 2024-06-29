@@ -598,7 +598,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         updateGroupedItemsList(items, chatNotifier);
 
         return Stack(
-          children: <Widget>[
+          children: [
             GoogleMap(
               onMapCreated: MapController.instance.onMapCreated,
               initialCameraPosition: CameraPosition(
@@ -730,6 +730,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075),
             ),
+            if (!showNewListWheelScrollView)
             ValueListenableBuilder<TimelineItem?>(
               valueListenable: selectedItemNotifier,
               builder: (context, selectedItem, child) {

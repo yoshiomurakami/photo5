@@ -786,7 +786,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     var l10n = L10n.of(context);
     // メッセージ内容に応じて背景色を決定
     Color backgroundColor;
-    if (commonMsg == 'shotTogether' || commonMsg == 'new_photo') {
+    if (commonMsg == 'shotTogether' || commonMsg == 'new_photo' || commonMsg == 'sayhello') {
       backgroundColor = const Color(0xFFFFCC4D); // 両方の条件に一致する場合の色
     } else {
       backgroundColor = Colors.white; // それ以外の場合は白色を適用
@@ -1037,7 +1037,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                   decoration: BoxDecoration(
                     color: backgroundColor,
-                    borderRadius: BorderRadius.circular(15),
+                    borderRadius: BorderRadius.circular(25),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.2),
