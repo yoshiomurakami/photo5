@@ -63,7 +63,12 @@ class ChatConnection {
     socket = io.io('https://photo5.world', <String, dynamic>{
       'transports': ['websocket'],
       'path': '/api/socketio/',
-      'autoConnect': true,
+      'autoConnect': true,              // 自動的に接続を開始
+      'reconnection': true,             // 自動再接続を有効にする
+      'reconnectionAttempts': 10,       // 再接続試行回数
+      'reconnectionDelay': 1000,        // 再接続試行までの遅延時間 (ミリ秒)
+      'reconnectionDelayMax': 5000,     // 最大遅延時間 (ミリ秒)
+      'timeout': 20000,                 // 接続タイムアウト時間 (ミリ秒)
       'query': {
         'userID': userID, // ここでuserIDをサーバーに送信
         'countryCode': countryCode, // 国コードをサーバーに送信
