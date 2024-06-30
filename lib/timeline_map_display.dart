@@ -639,10 +639,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     itemExtent: MediaQuery.of(context).size.width * 0.2,
                     diameterRatio: 1.25,
                     onSelectedItemChanged: (int index) async {
-                      if (index + 1 == groupedItemsList.length) {
+                      if (index + 1 == groupKeys.length) {
                         await ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
-                      String lastSelectedGroupID = groupedItemsList[index].first.groupID;
+                      String lastSelectedGroupID = groupKeys[index];
                       _lastSelectedIndexes[lastSelectedGroupID] = index;
                     },
                     physics: const FixedExtentScrollPhysics(),
@@ -663,10 +663,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             centralRowIndex: centralRowIndex,
                             chatNotifier: chatNotifier,
                             onHorizontalIndexChanged: (int newIndex) {
-                              selectedItemsMap[groupID] = newIndex;
-                              selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                              if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                selectedItemsMap[groupID] = newIndex;
+                                selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                              }
                             },
                           ),
+
                         );
                       },
                     ),
