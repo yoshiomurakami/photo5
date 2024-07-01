@@ -10,6 +10,10 @@ final selectedAlbumIndexesProvider = StateProvider<Map<String, int>>((ref) {
   return {}; // 初期状態
 });
 
+final albumDataProvider = FutureProvider<List<AlbumTimeLine>>((ref) async {
+  return await fetchAlbumDataFromDB();
+});
+
 Map<String, int> selectedAlbumIndexes = {};
 
 class AlbumTimeLine {
@@ -121,12 +125,10 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   @override
   void initState() {
     super.initState();
-    groupedAlbums = groupAlbumsByGroupId(widget.albumList);
-    groupKeys = groupedAlbums.keys.toList();
+    groupedAlbums = {};
+    groupKeys = [];
     selectedIndexes = {};
-    int initialIndex = groupKeys.contains(widget.lastSelectedAlbumGroupID) ? groupKeys.indexOf(widget.lastSelectedAlbumGroupID) : 0;
-    _scrollController = FixedExtentScrollController(initialItem: initialIndex);
-    selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[initialIndex]]?[selectedIndexes[groupKeys[initialIndex]] ?? 0];
+    _scrollController = FixedExtentScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _restoreScrollPosition();
     });
@@ -164,198 +166,212 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
         selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]?[savedItemIndex];
         debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
         isRestoringPosition = false; // 復元が完了したらfalseに設定
+        if (selectedAlbumItemNotifier.value != null) {
+          MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
+        }
       });
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
-    for (var groupID in groupKeys) {
-      selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_$groupID'] ?? 0;
-    }
+    final albumDataAsyncValue = ref.watch(albumDataProvider);
 
-    return WillPopScope(
-      onWillPop: () async {
-        _saveScrollPosition();
-        return true;
-      },
-      child: AnimatedOpacity(
-        opacity: isRestoringPosition ? 0 : 1,
-        duration: Duration(milliseconds: 300),
-        child: Stack(
-          children: <Widget>[
-            NotificationListener<ScrollNotification>(
-              onNotification: (ScrollNotification notification) {
-                if (notification is ScrollEndNotification) {
-                  int index = _scrollController.selectedItem;
-                  List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
-                  int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
-                  ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                    state[widget.lastSelectedAlbumGroupID] = index;
-                    state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
-                    debugPrint('Updated group index: $index, item index: $selectedItemIndex');
-                    return state;
-                  });
-                  AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
-                  selectedAlbumItemNotifier.value = selectedItem;
-                  MapUpdateService.updateMapLocation(selectedItem);
-                }
-                return true;
-              },
-              child: ListWheelScrollView.useDelegate(
-                controller: _scrollController,
-                itemExtent: MediaQuery.of(context).size.width * 0.2,
-                diameterRatio: 1.25,
-                physics: const FixedExtentScrollPhysics(),
-                onSelectedItemChanged: (int index) {
-                  setState(() {
-                    centralRowIndex = index;
-                    selectedIndexes[groupKeys[index]] = selectedAlbumIndexes['itemIndex_${groupKeys[index]}'] ?? 0;
-                  });
-                },
-                childDelegate: ListWheelChildBuilderDelegate(
-                  builder: (context, index) {
-                    return GestureDetector(
-                      onTap: () {
-                        selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[index]]![selectedIndexes[groupKeys[index]] ?? 0];
+    return albumDataAsyncValue.when(
+      data: (albumList) {
+        groupedAlbums = groupAlbumsByGroupId(albumList);
+        groupKeys = groupedAlbums.keys.toList();
+        final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
+        for (var groupID in groupKeys) {
+          selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_$groupID'] ?? 0;
+        }
+
+        return WillPopScope(
+          onWillPop: () async {
+            _saveScrollPosition();
+            return true;
+          },
+          child: AnimatedOpacity(
+            opacity: isRestoringPosition ? 0 : 1,
+            duration: Duration(milliseconds: 300),
+            child: Stack(
+              children: <Widget>[
+                NotificationListener<ScrollNotification>(
+                  onNotification: (ScrollNotification notification) {
+                    if (notification is ScrollEndNotification) {
+                      int index = _scrollController.selectedItem;
+                      List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
+                      int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
+                      ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                        state[widget.lastSelectedAlbumGroupID] = index;
+                        state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
+                        debugPrint('Updated group index: $index, item index: $selectedItemIndex');
+                        return state;
+                      });
+                      AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
+                      selectedAlbumItemNotifier.value = selectedItem;
+                      MapUpdateService.updateMapLocation(selectedItem);
+                    }
+                    return true;
+                  },
+                  child: ListWheelScrollView.useDelegate(
+                    controller: _scrollController,
+                    itemExtent: MediaQuery.of(context).size.width * 0.2,
+                    diameterRatio: 1.25,
+                    physics: const FixedExtentScrollPhysics(),
+                    onSelectedItemChanged: (int index) {
+                      setState(() {
+                        centralRowIndex = index;
+                        selectedIndexes[groupKeys[index]] = selectedAlbumIndexes['itemIndex_${groupKeys[index]}'] ?? 0;
+                      });
+                    },
+                    childDelegate: ListWheelChildBuilderDelegate(
+                      builder: (context, index) {
+                        return GestureDetector(
+                          onTap: () {
+                            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[index]]![selectedIndexes[groupKeys[index]] ?? 0];
+                          },
+                          child: HorizontalAlbumGroup(
+                            albumsInGroup: groupedAlbums[groupKeys[index]]!,
+                            size: MediaQuery.of(context).size,
+                            currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
+                            onHorizontalIndexChanged: (newIndex) {
+                              setState(() {
+                                selectedIndexes[groupKeys[index]] = newIndex;
+                                ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                                  state['itemIndex_${groupKeys[index]}'] = newIndex;
+                                  debugPrint('Updated horizontal index for group ${groupKeys[index]}: $newIndex');
+                                  return state;
+                                });
+                              });
+                            },
+                          ),
+                        );
                       },
-                      child: HorizontalAlbumGroup(
-                        albumsInGroup: groupedAlbums[groupKeys[index]]!,
-                        size: MediaQuery.of(context).size,
-                        currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
-                        onHorizontalIndexChanged: (newIndex) {
-                          setState(() {
-                            selectedIndexes[groupKeys[index]] = newIndex;
-                            ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                              state['itemIndex_${groupKeys[index]}'] = newIndex;
-                              debugPrint('Updated horizontal index for group ${groupKeys[index]}: $newIndex');
-                              return state;
-                            });
-                          });
-                        },
+                      childCount: groupedAlbums.length,
+                    ),
+                  ),
+                ),
+                ValueListenableBuilder<AlbumTimeLine?>(
+                  valueListenable: selectedAlbumItemNotifier,
+                  builder: (context, selectedItem, child) {
+                    if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+                      return const SizedBox();
+                    }
+
+                    final timeParts = selectedItem.localtime.split(' ');
+
+                    return Positioned(
+                      bottom: widget.size.height * 0.3 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
+                      left: widget.size.width * 0.33,
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          CustomPaint(
+                            painter: BubblePainter(),
+                            child: Container(
+                              width: widget.size.width * 0.7,
+                              padding: const EdgeInsets.all(15),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    height: 20, // 固定の高さを設定
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        timeParts[4], // 時間：分だけを表示
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  SizedBox(
+                                    height: 20, // 固定の高さを設定
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        selectedItem.geocodedCountry ?? 'N/A',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    height: 20, // 固定の高さを設定
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        selectedItem.geocodedCity ?? '',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.black,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                  SizedBox(
+                                    height: 20, // 固定の高さを設定
+                                    child: FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      alignment: Alignment.centerLeft,
+                                      child: Text(
+                                        '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          color: Colors.grey,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 5),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Positioned(
+                            top: -15, // 上部に半分ほど重ねる
+                            left: (widget.size.width * 0.7) / 2 - 15, // ウィジェットの中央に配置
+                            child: buildFlagWidget(selectedItem.country),
+                          ),
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: IconButton(
+                              icon: Icon(Icons.close, color: Colors.white),
+                              onPressed: () {
+                                selectedAlbumItemNotifier.value = null; // 詳細情報ウィジェットを閉じる
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                     );
                   },
-                  childCount: groupedAlbums.length,
                 ),
-              ),
+              ],
             ),
-            ValueListenableBuilder<AlbumTimeLine?>(
-              valueListenable: selectedAlbumItemNotifier,
-              builder: (context, selectedItem, child) {
-                if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
-                  return const SizedBox();
-                }
-
-                final timeParts = selectedItem.localtime.split(' ');
-
-                return Positioned(
-                  bottom: widget.size.height * 0.3 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
-                  left: widget.size.width * 0.33,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CustomPaint(
-                        painter: BubblePainter(),
-                        child: Container(
-                          width: widget.size.width * 0.7,
-                          padding: const EdgeInsets.all(15),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    timeParts[4], // 時間：分だけを表示
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    selectedItem.geocodedCountry ?? 'N/A',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    selectedItem.geocodedCity ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: -15, // 上部に半分ほど重ねる
-                        left: (widget.size.width * 0.7) / 2 - 15, // ウィジェットの中央に配置
-                        child: buildFlagWidget(selectedItem.country),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: IconButton(
-                          icon: Icon(Icons.close, color: Colors.white),
-                          onPressed: () {
-                            selectedAlbumItemNotifier.value = null; // 詳細情報ウィジェットを閉じる
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+      loading: () => Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(child: Text('Error: $error')),
     );
   }
+
 
   void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
     if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
@@ -468,27 +484,27 @@ Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums
 
 Widget buildFlagWidget(String countryCode) {
   return Container(
-    decoration: BoxDecoration(
-      color: Colors.white, // 背景を白で設定
-      shape: BoxShape.circle,
-      border: Border.all(
-        color: Colors.black, // アウトラインの色
-        width: 2.0, // アウトラインの太さ
-      ),
-    ),
-    child: ClipOval(
-      child: Container(
-        color: Colors.white, // ここも白で塗りつぶし
-        height: 30,
-        width: 30,
-        child: Flag.fromString(
-          countryCode,
-          height: 30,
-          width: 30,
-          fit: BoxFit.cover,
-          flagSize: FlagSize.size_1x1,
+      decoration: BoxDecoration(
+        color: Colors.white, // 背景を白で設定
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: Colors.black, // アウトラインの色
+          width: 2.0, // アウトラインの太さ
         ),
       ),
-    ),
+      child: ClipOval(
+        child: Container(
+          color: Colors.white, // ここも白で塗りつぶし
+          height: 30,
+          width: 30,
+          child: Flag.fromString(
+            countryCode,
+            height: 30,
+            width: 30,
+            fit: BoxFit.cover,
+            flagSize: FlagSize.size_1x1,
+          ),
+        ),
+      ),
   );
 }
