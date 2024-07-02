@@ -620,15 +620,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
-                      Future.delayed(const Duration(milliseconds: 10), () {
-                        if (_pickerController.hasClients) {
-                          int index = _pickerController.selectedItem;
+                      Future.delayed(const Duration(milliseconds: 10), () {                        if (_pickerController.hasClients && groupedItemsList.isNotEmpty) {
+                        int index = _pickerController.selectedItem;
+                        if (index >= 0 && index < groupedItemsList.length) {
                           String groupID = groupedItemsList[index].first.groupID;
                           int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                          selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
-                          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-                          _lastSelectedGroupID = groupID;
+                          if (selectedItemIndex >= 0 && selectedItemIndex < groupedItemsList[index].length) {
+                            selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
+                            MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+                            _lastSelectedGroupID = groupID;
+                          }
                         }
+                      }
                       });
                     }
 
@@ -642,8 +645,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                       if (index + 1 == groupKeys.length) {
                         await ref.read(timelineAddProvider.notifier).addMoreItems();
                       }
-                      String lastSelectedGroupID = groupKeys[index];
-                      _lastSelectedIndexes[lastSelectedGroupID] = index;
+                      if (index >= 0 && index < groupKeys.length) {
+                        String lastSelectedGroupID = groupKeys[index];
+                        _lastSelectedIndexes[lastSelectedGroupID] = index;
+                      }
                     },
                     physics: const FixedExtentScrollPhysics(),
                     children: List<Widget>.generate(
@@ -678,8 +683,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               ),
             if (showNewListWheelScrollView && _albumList.isNotEmpty)
               Positioned(
-                top: widget.size.height * 0.2,
-                bottom: widget.size.height * 0.2,
+                top: widget.size.height * 0.3,
+                bottom: widget.size.height * 0.3,
                 left: widget.size.width * -0.18,
                 right: widget.size.width * -0.18,
                 child: AlbumTimeLineView(

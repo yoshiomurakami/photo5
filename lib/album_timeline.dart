@@ -160,18 +160,38 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     final savedGroupIndex = ref.read(selectedAlbumIndexesProvider)[widget.lastSelectedAlbumGroupID] ?? 0;
     final savedItemIndex = ref.read(selectedAlbumIndexesProvider)['itemIndex_${widget.lastSelectedAlbumGroupID}'] ?? 0;
     debugPrint('Attempting to restore group index: $savedGroupIndex, item index: $savedItemIndex');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _scrollController.jumpToItem(savedGroupIndex);
-      setState(() {
-        selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]?[savedItemIndex];
-        debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
-        isRestoringPosition = false; // 復元が完了したらfalseに設定
-        if (selectedAlbumItemNotifier.value != null) {
-          MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
+
+    // if (groupKeys.isNotEmpty && groupedAlbums.isNotEmpty) {
+      final isValidGroupIndex = savedGroupIndex >= 0 && savedGroupIndex < groupKeys.length;
+      final isValidItemIndex = isValidGroupIndex && savedItemIndex >= 0 && savedItemIndex < (groupedAlbums[groupKeys[savedGroupIndex]]?.length ?? 0);
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (isValidGroupIndex) {
+          _scrollController.jumpToItem(savedGroupIndex);
+        } else {
+          _scrollController.jumpToItem(0); // デフォルト値
         }
+
+        setState(() {
+          if (isValidItemIndex) {
+            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]?[savedItemIndex];
+          } else if (groupedAlbums[groupKeys[savedGroupIndex]] != null && groupedAlbums[groupKeys[savedGroupIndex]]!.isNotEmpty) {
+            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]!.first;
+          }
+          debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
+          isRestoringPosition = false; // 復元が完了したらfalseに設定
+          if (selectedAlbumItemNotifier.value != null) {
+            MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
+          }
+        });
       });
-    });
+    // } else {
+    //   setState(() {
+    //     isRestoringPosition = false; // データがない場合でも復元処理を終了
+    //   });
+    // }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -262,7 +282,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                     final timeParts = selectedItem.localtime.split(' ');
 
                     return Positioned(
-                      bottom: widget.size.height * 0.3 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
+                      bottom: widget.size.height * 0.2 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
                       left: widget.size.width * 0.33,
                       child: Stack(
                         clipBehavior: Clip.none,
