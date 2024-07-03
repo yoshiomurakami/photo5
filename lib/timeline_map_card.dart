@@ -205,17 +205,64 @@ class TimelineCardState extends State<TimelineCard> {
     currentSelectedItem = widget.currentIndex;
   }
 
+  void _showFullSizeImage(BuildContext context, String imageUrl) {
+    String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.all(10),
+          child: FutureBuilder<File>(
+            future: _getCachedImage(imageFilename),
+            builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+              if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                return LayoutBuilder(
+                  builder: (context, constraints) {
+                    return Image.file(
+                      snapshot.data!,
+                      fit: BoxFit.contain,
+                      width: constraints.maxWidth * 0.9,
+                      height: constraints.maxHeight * 0.9,
+                    );
+                  },
+                );
+              } else {
+                return Center(
+                  child: CircularProgressIndicator(),
+                );
+              }
+            },
+          ),
+        );
+      },
+    );
+  }
+
+
+  Future<ImageInfo> _getImageInfo(String imageUrl) async {
+    final Completer<ImageInfo> completer = Completer();
+    final ImageStream stream = NetworkImage(imageUrl).resolve(ImageConfiguration.empty);
+    final ImageStreamListener listener = ImageStreamListener((ImageInfo info, bool _) {
+      completer.complete(info);
+    });
+    stream.addListener(listener);
+    return completer.future;
+  }
+
 
 
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      // onTap: () {
-      //   if (widget.onTapCallback != null) {
-      //     widget.onTapCallback!(widget.item);
-      //   }
-      // },
+      onTap: () {
+        if (widget.onTapCallback != null) {
+          widget.onTapCallback!(widget.item);
+        }
+        _showFullSizeImage(context, 'https://photo5.world/${widget.item.imageFilename}');
+      },
       child: Align(
         alignment: Alignment.center,
         child: Container(
@@ -230,20 +277,20 @@ class TimelineCardState extends State<TimelineCard> {
             child: widget.item.systemId == "shootbutton"
                 ? Stack(
               children: <Widget>[
-                Align(
+                  Align(
                   alignment: Alignment.center,
-                  child: SizedBox(
+                    child: SizedBox(
                     width: MediaQuery.of(context).size.width * 0.18,
                     height: MediaQuery.of(context).size.width * 0.18,
-                    child: FloatingActionButton(
+                      child: FloatingActionButton(
                       backgroundColor: const Color(0xFFFFCC4D),
                       foregroundColor: Colors.black,
                       elevation: 0,
                       shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
                       // onPressed: widget.onCameraButtonPressed,
                       onPressed: () {  },
-                      child: const Center(
-                        child: Text(
+                        child: const Center(
+                          child: Text(
                           '\u{1F4F8}',
                           textAlign: TextAlign.center,
                           style: TextStyle(
@@ -326,14 +373,15 @@ Widget _imageContainer(double size, Widget child) {
   );
 }
 
-Future<File> _getCachedImage(String thumbnailFilename) async {
+Future<File> _getCachedImage(String filename) async {
   String cacheDirPath = (await getTemporaryDirectory()).path;
-  File cachedImage = File('$cacheDirPath/$thumbnailFilename');
+  File cachedImage = File('$cacheDirPath/$filename');
 
   if (!cachedImage.existsSync()) {
     // ネットワークから画像をダウンロードし、キャッシュに保存
     try {
-      var response = await http.get(Uri.parse('https://photo5.world/$thumbnailFilename'));
+      var url = 'https://photo5.world/$filename';
+      var response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         await cachedImage.writeAsBytes(response.bodyBytes);
       }

@@ -620,18 +620,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
-                      Future.delayed(const Duration(milliseconds: 10), () {                        if (_pickerController.hasClients && groupedItemsList.isNotEmpty) {
-                        int index = _pickerController.selectedItem;
-                        if (index >= 0 && index < groupedItemsList.length) {
-                          String groupID = groupedItemsList[index].first.groupID;
-                          int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-                          if (selectedItemIndex >= 0 && selectedItemIndex < groupedItemsList[index].length) {
-                            selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
-                            MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-                            _lastSelectedGroupID = groupID;
+                      Future.delayed(const Duration(milliseconds: 10), () {
+                        if (_pickerController.hasClients && groupedItemsList.isNotEmpty) {
+                          int index = _pickerController.selectedItem;
+                          if (index >= 0 && index < groupedItemsList.length) {
+                            String groupID = groupedItemsList[index].first.groupID;
+                            int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+                            if (selectedItemIndex >= 0 && selectedItemIndex < groupedItemsList[index].length) {
+                              selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
+                              MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+                              _lastSelectedGroupID = groupID;
+                            }
                           }
                         }
-                      }
                       });
                     }
 
@@ -674,7 +675,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                               }
                             },
                           ),
-
                         );
                       },
                     ),

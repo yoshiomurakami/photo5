@@ -215,6 +215,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
             opacity: isRestoringPosition ? 0 : 1,
             duration: Duration(milliseconds: 300),
             child: Stack(
+              clipBehavior: Clip.none, // これを追加
               children: <Widget>[
                 NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
