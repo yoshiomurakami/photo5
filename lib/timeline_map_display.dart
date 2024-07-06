@@ -525,14 +525,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   String _lastSelectedAlbumGroupID = '';
   ValueNotifier<TimelineItem?> selectedItemNotifier = ValueNotifier<TimelineItem?>(null); // ValueNotifierを使用して再描画を最小限にする
 
+  ValueNotifier<bool> isScrollingNotifier = ValueNotifier<bool>(false); // ValueNotifierでスクロール状態を管理
+
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    // _pickerController.addListener(_scrollListener);
+    debugPrint("Listener added to _pickerController"); // リスナー追加の確認
     final chatNotifier = ref.read(chatNotifierProvider);
-    chatNotifier.addPostedPhoto(context,widget.size,widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
+    chatNotifier.addPostedPhoto(context, widget.size, widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
     _initializeCamera();
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
@@ -544,7 +547,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     // コールバックを設定
     manager.setOnPhotoTapCallback(scrollToTarget);
 
-    _pickerController = FixedExtentScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_pickerController.hasClients) {
         _pickerController.jumpToItem(0); // 初期スクロール位置を設定
@@ -552,40 +554,32 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
-  // void _scrollListener() {
-  //   if (_pickerController.hasClients) {
-  //     int index = _pickerController.selectedItem;
-  //     String groupID = groupedItemsList[index].first.groupID;
-  //     int selectedItemIndex = ref.read(chatNotifierProvider).selectedItemsMap[groupID] ?? 0;
-  //     selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
-  //     MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-  //     _lastSelectedGroupID = groupID;
-  //   }
-  // }
+  @override
+  void dispose() {
+    _pickerController.dispose();
+    // リスナーの解除処理
+    chatConnection.removeListeners();
+    _scrollController.dispose();
+    _controller.dispose();
+    _debounce?.cancel();
+    isScrollingNotifier.dispose(); // ValueNotifierの破棄
+    super.dispose();
+  }
 
-
-
-  void scrollToTarget() {
-    if (_pickerController.hasClients) {
-      debugPrint("Callback from new_photo");
-      _pickerController.animateToItem(
-        1, // リストの先頭にスクロール
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-      setState(() {
-        showNewListWheelScrollView = false;
-        if (selectedItemNotifier.value != null) { // Nullチェックを追加
-          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-        } else {
-          debugPrint("selectedItem is null");
-        }
-      });
-    } else {
-      debugPrint("ScrollController not attached to any scroll views.");
+  void _onScrollStarted() {
+    if (!isScrollingNotifier.value) {
+      isScrollingNotifier.value = true;
+      debugPrint("isScrolling = true;");
     }
   }
 
+  void _onScrollEnded() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 200), () {
+      isScrollingNotifier.value = false;
+      debugPrint("isScrolling = false;");
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -622,7 +616,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 right: widget.size.width * -0.18,
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
-                    if (notification is ScrollEndNotification) {
+                    if (notification is ScrollStartNotification) {
+                      _onScrollStarted();
+                    } else if (notification is ScrollEndNotification) {
+                      _onScrollEnded();
                       Future.delayed(const Duration(milliseconds: 10), () {
                         if (_pickerController.hasClients && groupedItemsList.isNotEmpty) {
                           int index = _pickerController.selectedItem;
@@ -638,7 +635,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                         }
                       });
                     }
-
                     return true;
                   },
                   child: ListWheelScrollView(
@@ -745,136 +741,104 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075),
             ),
             if (!showNewListWheelScrollView)
-            ValueListenableBuilder<TimelineItem?>(
-              valueListenable: selectedItemNotifier,
-              builder: (context, selectedItem, child) {
-                if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
-                  return const SizedBox();
-                }
+              ValueListenableBuilder<bool>(
+                valueListenable: isScrollingNotifier,
+                builder: (context, isScrolling, child) {
+                  if (!isScrolling) {
+                    return ValueListenableBuilder<TimelineItem?>(
+                      valueListenable: selectedItemNotifier,
+                      builder: (context, selectedItem, child) {
+                        if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+                          return const SizedBox();
+                        }
 
-                // localtimeを分割して必要な部分を取得
-                final timeParts = selectedItem.localtime.split(' ');
+                        final timeParts = selectedItem.localtime.split(' ');
 
-                return Positioned(
-                  bottom: widget.size.height * 0.5 + widget.size.width * 0.1 + 5, // ウィジェットの高さの半分上方向に移動
-                  left: widget.size.width * 0.15,
-                  right: widget.size.width * 0.15,
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      CustomPaint(
-                        painter: BubblePainter(),
-                        child: Container(
-                          width: double.infinity, // ウィジェットの横幅を固定
-                          padding: const EdgeInsets.all(15),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    timeParts[4], // 時間：分だけを表示
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.bold,
+                        if (selectedItemsMap.containsKey(selectedItem.groupID) &&
+                            selectedItemsMap[selectedItem.groupID]! >= 0 &&
+                            selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
+                          return Positioned(
+                            bottom: widget.size.height * 0.5 + widget.size.width * 0.1 + 5,
+                            left: widget.size.width * 0.15,
+                            right: widget.size.width * 0.15,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Align(
+                                  alignment: Alignment.center,
+                                  child: CustomPaint(
+                                    painter: BubblePainter(),
+                                    child: Container(
+                                      constraints: BoxConstraints(
+                                        maxWidth: widget.size.width * 0.7,
+                                      ),
+                                      padding: const EdgeInsets.all(15),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          const SizedBox(height: 5),
+                                          Text(
+                                            '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
+                                            style: const TextStyle(
+                                              fontSize: 16,
+                                              color: Colors.black,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 5),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(height: 5),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    selectedItem.geocodedCountry ?? 'N/A',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                Positioned(
+                                  top: -10,
+                                  left: 0,
+                                  right: 0,
+                                  child: Align(
+                                    alignment: Alignment.topCenter,
+                                    child: buildFlagWidget(selectedItem.country),
                                   ),
                                 ),
-                              ),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    selectedItem.geocodedCity ?? '',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.black,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                              SizedBox(
-                                height: 20, // 固定の高さを設定
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '${timeParts[0]} ${timeParts[1]} ${timeParts[2]} ${timeParts[3]}',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 5),
-                            ],
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        top: -15, // 上部に半分ほど重ねる
-                        left: (widget.size.width * 0.7) / 2 - 15, // ウィジェットの中央に配置
-                        child: buildFlagWidget(selectedItem.country),
-                      ),
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            // ここでボタンの動作を定義します
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          return const SizedBox();
+                        }
+                      },
+                    );
+                  } else {
+                    return const SizedBox();
+                  }
+                },
+              ),
           ],
         );
       },
     );
   }
 
-
-
-
-  @override
-  void dispose() {
-    _pickerController.dispose();
-    // リスナーの解除処理
-    chatConnection.removeListeners();
-    _pickerController.removeListener(_scrollListener);
-    _scrollController.dispose();
-    _controller.dispose();
-    super.dispose();
+  void scrollToTarget() {
+    if (_pickerController.hasClients) {
+      debugPrint("Callback from new_photo");
+      _pickerController.animateToItem(
+        1, // リストの先頭にスクロール
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOut,
+      );
+      setState(() {
+        showNewListWheelScrollView = false;
+        if (selectedItemNotifier.value != null) { // Nullチェックを追加
+          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+        } else {
+          debugPrint("selectedItem is null");
+        }
+      });
+    } else {
+      debugPrint("ScrollController not attached to any scroll views.");
+    }
   }
 
   void updateLastSelectedAlbumGroupID(String newGroupID) {
@@ -885,39 +849,34 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void toggleTimelineAndAlbum() {
-
     setState(() {
       showNewListWheelScrollView = !showNewListWheelScrollView;
       // updateMapBasedOnCurrentSelection(); // マップの位置を更新する
     });
 
-      if (!showNewListWheelScrollView) {
-        // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
-        int targetIndex = groupedItemsList.indexWhere((list) =>
-            list.any((item) => item.groupID == _lastSelectedGroupID));
-        // 対象のアイテムが見つかった場合
-        if (targetIndex != -1) {
-          // スクロールビューを更新して指定されたアイテムにスクロールする
-          _pickerController = FixedExtentScrollController(initialItem: targetIndex);
+    if (!showNewListWheelScrollView) {
+      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
+      int targetIndex = groupedItemsList.indexWhere((list) =>
+          list.any((item) => item.groupID == _lastSelectedGroupID));
+      // 対象のアイテムが見つかった場合
+      if (targetIndex != -1) {
+        // スクロールビューを更新して指定されたアイテムにスクロールする
+        _pickerController = FixedExtentScrollController(initialItem: targetIndex);
 
-          // マップ移動
-          final chatNotifier = ref.watch(chatNotifierProvider);
-          final selectedItemsMap = chatNotifier.selectedItemsMap;
-          String groupID = groupedItemsList[targetIndex].first.groupID;
-          int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
-          TimelineItem selectedItem = groupedItemsList[targetIndex][selectedItemIndex];
-          MapUpdateService.updateMapLocation(selectedItem);
-        }
+        // マップ移動
+        final chatNotifier = ref.watch(chatNotifierProvider);
+        final selectedItemsMap = chatNotifier.selectedItemsMap;
+        String groupID = groupedItemsList[targetIndex].first.groupID;
+        int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
+        TimelineItem selectedItem = groupedItemsList[targetIndex][selectedItemIndex];
+        MapUpdateService.updateMapLocation(selectedItem);
       }
+    }
 
-      if (showNewListWheelScrollView) {
-        // setState(() {
-        //   _albumList = [];
-        // });
-        _loadAlbumData();
-      }
+    if (showNewListWheelScrollView) {
+      _loadAlbumData();
+    }
   }
-
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
@@ -927,25 +886,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         chatNotifier.selectedItemsMap[groupID] = 0;
       }
     }
-  }
-
-
-  void _scrollListener() {
-    // 現在選択されているアイテムのインデックスを取得
-    int currentIndex = _pickerController.selectedItem;
-
-    // カメラボタン（先頭のアイテム）が選択されているかどうかを確認
-    if (currentIndex == 0) {
-      _jumpToTopKey.currentState?.centerButton();
-    } else {
-      _jumpToTopKey.currentState?.moveButton();
-    }
-
-    String groupID = groupedItemsList[currentIndex].first.groupID;
-    int selectedItemIndex = ref.read(chatNotifierProvider).selectedItemsMap[groupID] ?? 0;
-    selectedItemNotifier.value = groupedItemsList[currentIndex][selectedItemIndex];
-    MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
-    _lastSelectedGroupID = groupID;
   }
 
   Widget buildFlagWidget(String countryCode) {
@@ -961,12 +901,12 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       child: ClipOval(
         child: Container(
           color: Colors.white, // ここも白で塗りつぶし
-          height: 30,
-          width: 30,
+          height: 20,
+          width: 20,
           child: Flag.fromString(
             countryCode,
-            height: 30,
-            width: 30,
+            height: 20,
+            width: 20,
             fit: BoxFit.cover,
             flagSize: FlagSize.size_1x1,
           ),
@@ -974,9 +914,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       ),
     );
   }
-
-
-
 
   Future<void> _initializeCamera() async {
     _cameras = await availableCameras();
@@ -999,7 +936,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     );
   }
 
-
   // このメソッドはサーバーからcurrentShootingGroupIDを待つ
   Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
     Completer<Map<String, dynamic>?> completer = Completer();
@@ -1013,7 +949,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         debugPrint("timestamp in map Display = $timestamp");
 
         // groupIDとtimestampをCompleterを通じて返す
-        completer.complete({'groupID': groupID, 'timestamp': timestamp,'shootingRoomCount': shootingRoomCount});
+        completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
 
         // イベントリスナーを解除
         chatConnection.off('assign_group_id');
@@ -1025,7 +961,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     return completer.future;
   }
-
 
   List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
     // groupIDをキーとして持つマップを作成
@@ -1044,7 +979,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void _loadAlbumData() async {
-
     // アルバムデータを非同期で取得し、状態を更新
     List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
 
@@ -1056,6 +990,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 }
+
 
 class BubblePainter extends CustomPainter {
   @override
