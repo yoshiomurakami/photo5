@@ -520,6 +520,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   final Map<String, int> _lastSelectedIndexes = {};
   late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
+  late List<String> groupAlbumKeys;
   late List<String> groupKeys;
   String _lastSelectedAlbumGroupID = '';
   ValueNotifier<TimelineItem?> selectedItemNotifier = ValueNotifier<TimelineItem?>(null); // ValueNotifierを使用して再描画を最小限にする
@@ -535,7 +536,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _initializeCamera();
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
-    groupKeys = groupedAlbums.keys.toList();
+    groupAlbumKeys = groupedAlbums.keys.toList();
 
     // ConnectionWidgetsManagerのインスタンスを取得
     ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
@@ -597,6 +598,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         MapController.instance.setInitialLocation(groupedItemsList);
         updateGroupedItemsList(items, chatNotifier);
 
+        groupKeys = groupedItemsList.map((itemList) => itemList.first.groupID).toList();
+
         return Stack(
           children: [
             GoogleMap(
@@ -645,11 +648,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     onSelectedItemChanged: (int index) async {
                       if (index + 1 == groupKeys.length) {
                         await ref.read(timelineAddProvider.notifier).addMoreItems();
+                        debugPrint("onSelectedItemChanged_A");
                       }
                       if (index >= 0 && index < groupKeys.length) {
                         String lastSelectedGroupID = groupKeys[index];
                         _lastSelectedIndexes[lastSelectedGroupID] = index;
+                        debugPrint("onSelectedItemChanged_B");
                       }
+                      debugPrint("onSelectedItemChanged_C + $index + groupKeys.length =${groupKeys.length} + groupKeys = $groupKeys");
                     },
                     physics: const FixedExtentScrollPhysics(),
                     children: List<Widget>.generate(
@@ -1033,7 +1039,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       }
     }
     // マップの値をリストとして返す
-    // debugPrint("groupedMapAAA = $groupedMap");
+    debugPrint("groupedMapAAA = $groupedMap");
     return groupedMap.values.toList();
   }
 

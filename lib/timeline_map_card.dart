@@ -208,37 +208,64 @@ class TimelineCardState extends State<TimelineCard> {
   void _showFullSizeImage(BuildContext context, String imageUrl) {
     String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
 
-    showDialog(
+    showGeneralDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
+        return Scaffold(
           backgroundColor: Colors.transparent,
-          insetPadding: EdgeInsets.all(10),
-          child: FutureBuilder<File>(
-            future: _getCachedImage(imageFilename),
-            builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-              if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                return LayoutBuilder(
-                  builder: (context, constraints) {
-                    return Image.file(
-                      snapshot.data!,
-                      fit: BoxFit.contain,
-                      width: constraints.maxWidth * 0.9,
-                      height: constraints.maxHeight * 0.9,
-                    );
-                  },
-                );
-              } else {
-                return Center(
-                  child: CircularProgressIndicator(),
-                );
-              }
-            },
+          body: Center(
+            child: FutureBuilder<File>(
+              future: _getCachedImage(imageFilename),
+              builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      double maxWidth = constraints.maxWidth;
+                      double maxHeight = constraints.maxHeight;
+                      return Center(
+                        child: ClipRRect(
+                          // borderRadius: BorderRadius.circular(20), // 角丸の半径を指定
+                          child: Image.file(
+                            snapshot.data!,
+                            fit: BoxFit.cover,
+                            width: maxWidth,
+                            height: maxHeight,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+              },
+            ),
           ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+          child: child,
         );
       },
     );
   }
+
+
+
+
+
+
+
+
+
+
 
 
   Future<ImageInfo> _getImageInfo(String imageUrl) async {
@@ -304,16 +331,11 @@ class TimelineCardState extends State<TimelineCard> {
                 ),
               ],
             )
-                : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: <Widget>[
-                    _buildImageWidget(context, widget.item.thumbnailFilename),
-                  ],
+                : _buildImageWidget(context, widget.item.thumbnailFilename),
             ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
 
@@ -321,23 +343,25 @@ class TimelineCardState extends State<TimelineCard> {
 Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
   double imageSize = MediaQuery.of(context).size.width * 0.2;
 
-  // 画像の読み込みが始まる前にグレーのサムネイルを表示
   return FutureBuilder<File>(
     future: _getCachedImage(thumbnailFilename),
     builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
       if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
-        // フェードイン効果で画像を表示
-        return _imageContainer(
-          imageSize,
-          FadeInImage(
-            placeholder: const AssetImage('assets/placeholder_thumb.png'),
-            image: FileImage(snapshot.data!),
-            fit: BoxFit.cover,
-            fadeInDuration: const Duration(milliseconds: 300),
-          ),
+        return Stack(
+          children: [
+            _imageContainer(imageSize, _buildGreyThumbnail(imageSize)),
+            _imageContainer(
+              imageSize,
+              FadeInImage(
+                placeholder: const AssetImage('assets/placeholder_thumb_transparent.png'),
+                image: FileImage(snapshot.data!),
+                fit: BoxFit.cover,
+                fadeInDuration: const Duration(milliseconds: 300),
+              ),
+            ),
+          ],
         );
       } else {
-        // ロード中の表示（グレーのサムネイル）
         return _imageContainer(imageSize, _buildGreyThumbnail(imageSize));
       }
     },
@@ -345,15 +369,12 @@ Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
 }
 
 Widget _buildGreyThumbnail(double size) {
-  return Opacity(
-    opacity: 0,  // 透明度を50%に設定
-    child: Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.grey,
-        borderRadius: BorderRadius.circular(size * 0.1),
-      ),
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: Colors.grey.withOpacity(0.5),  // 半透明に設定
+      borderRadius: BorderRadius.circular(size * 0.1),
     ),
   );
 }

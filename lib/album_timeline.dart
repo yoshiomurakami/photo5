@@ -116,7 +116,7 @@ class AlbumTimeLineView extends ConsumerStatefulWidget {
 class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   late FixedExtentScrollController _scrollController;
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
-  late List<String> groupKeys;
+  late List<String> groupAlbumKeys;
   int centralRowIndex = 0;
   late Map<String, int> selectedIndexes; // 追加
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
@@ -126,7 +126,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   void initState() {
     super.initState();
     groupedAlbums = {};
-    groupKeys = [];
+    groupAlbumKeys = [];
     selectedIndexes = {};
     _scrollController = FixedExtentScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -146,7 +146,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   void _saveScrollPosition() {
     if (_scrollController.hasClients) {
       int groupIndex = _scrollController.selectedItem;
-      int itemIndex = selectedIndexes[groupKeys[groupIndex]] ?? 0;
+      int itemIndex = selectedIndexes[groupAlbumKeys[groupIndex]] ?? 0;
       ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
         state[widget.lastSelectedAlbumGroupID] = groupIndex;
         state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = itemIndex;
@@ -162,8 +162,8 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     debugPrint('Attempting to restore group index: $savedGroupIndex, item index: $savedItemIndex');
 
     // if (groupKeys.isNotEmpty && groupedAlbums.isNotEmpty) {
-      final isValidGroupIndex = savedGroupIndex >= 0 && savedGroupIndex < groupKeys.length;
-      final isValidItemIndex = isValidGroupIndex && savedItemIndex >= 0 && savedItemIndex < (groupedAlbums[groupKeys[savedGroupIndex]]?.length ?? 0);
+      final isValidGroupIndex = savedGroupIndex >= 0 && savedGroupIndex < groupAlbumKeys.length;
+      final isValidItemIndex = isValidGroupIndex && savedItemIndex >= 0 && savedItemIndex < (groupedAlbums[groupAlbumKeys[savedGroupIndex]]?.length ?? 0);
 
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (isValidGroupIndex) {
@@ -174,9 +174,9 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
 
         setState(() {
           if (isValidItemIndex) {
-            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]?[savedItemIndex];
-          } else if (groupedAlbums[groupKeys[savedGroupIndex]] != null && groupedAlbums[groupKeys[savedGroupIndex]]!.isNotEmpty) {
-            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[savedGroupIndex]]!.first;
+            selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]?[savedItemIndex];
+          } else if (groupedAlbums[groupAlbumKeys[savedGroupIndex]] != null && groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.isNotEmpty) {
+            selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.first;
           }
           debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
           isRestoringPosition = false; // 復元が完了したらfalseに設定
@@ -200,9 +200,9 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     return albumDataAsyncValue.when(
       data: (albumList) {
         groupedAlbums = groupAlbumsByGroupId(albumList);
-        groupKeys = groupedAlbums.keys.toList();
+        groupAlbumKeys = groupedAlbums.keys.toList();
         final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
-        for (var groupID in groupKeys) {
+        for (var groupID in groupAlbumKeys) {
           selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_$groupID'] ?? 0;
         }
 
@@ -221,8 +221,8 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollEndNotification) {
                       int index = _scrollController.selectedItem;
-                      List<AlbumTimeLine> selectedGroup = groupedAlbums[groupKeys[index]]!;
-                      int selectedItemIndex = selectedIndexes[groupKeys[index]] ?? 0;
+                      List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
+                      int selectedItemIndex = selectedIndexes[groupAlbumKeys[index]] ?? 0;
                       ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
                         state[widget.lastSelectedAlbumGroupID] = index;
                         state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
@@ -243,25 +243,25 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                     onSelectedItemChanged: (int index) {
                       setState(() {
                         centralRowIndex = index;
-                        selectedIndexes[groupKeys[index]] = selectedAlbumIndexes['itemIndex_${groupKeys[index]}'] ?? 0;
+                        selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
                       });
                     },
                     childDelegate: ListWheelChildBuilderDelegate(
                       builder: (context, index) {
                         return GestureDetector(
                           onTap: () {
-                            selectedAlbumItemNotifier.value = groupedAlbums[groupKeys[index]]![selectedIndexes[groupKeys[index]] ?? 0];
+                            selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[index]]![selectedIndexes[groupAlbumKeys[index]] ?? 0];
                           },
                           child: HorizontalAlbumGroup(
-                            albumsInGroup: groupedAlbums[groupKeys[index]]!,
+                            albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
                             size: MediaQuery.of(context).size,
-                            currentIndex: selectedIndexes[groupKeys[index]] ?? 0,
+                            currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
                             onHorizontalIndexChanged: (newIndex) {
                               setState(() {
-                                selectedIndexes[groupKeys[index]] = newIndex;
+                                selectedIndexes[groupAlbumKeys[index]] = newIndex;
                                 ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                                  state['itemIndex_${groupKeys[index]}'] = newIndex;
-                                  debugPrint('Updated horizontal index for group ${groupKeys[index]}: $newIndex');
+                                  state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
+                                  debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
                                   return state;
                                 });
                               });
