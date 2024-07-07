@@ -239,7 +239,7 @@ class TimelineCardState extends State<TimelineCard> {
                     },
                   );
                 } else {
-                  return Center(
+                  return const Center(
                     child: CircularProgressIndicator(),
                   );
                 }
@@ -257,30 +257,6 @@ class TimelineCardState extends State<TimelineCard> {
     );
   }
 
-
-
-
-
-
-
-
-
-
-
-
-  Future<ImageInfo> _getImageInfo(String imageUrl) async {
-    final Completer<ImageInfo> completer = Completer();
-    final ImageStream stream = NetworkImage(imageUrl).resolve(ImageConfiguration.empty);
-    final ImageStreamListener listener = ImageStreamListener((ImageInfo info, bool _) {
-      completer.complete(info);
-    });
-    stream.addListener(listener);
-    return completer.future;
-  }
-
-
-
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -288,7 +264,7 @@ class TimelineCardState extends State<TimelineCard> {
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(widget.item);
         }
-        _showFullSizeImage(context, 'https://photo5.world/${widget.item.imageFilename}');
+        // _showFullSizeImage(context, 'https://photo5.world/${widget.item.imageFilename}');
       },
       child: Align(
         alignment: Alignment.center,
@@ -405,14 +381,39 @@ Future<File> _getCachedImage(String filename) async {
       var response = await http.get(Uri.parse(url));
       if (response.statusCode == 200) {
         await cachedImage.writeAsBytes(response.bodyBytes);
+      } else {
+        throw Exception('Failed to load image: ${response.statusCode}');
       }
     } catch (e) {
       // エラーハンドリング
       debugPrint('Image download error: $e');
+      // リトライ処理
+      return await _retryFetchImage(filename);
     }
   }
   return cachedImage;
 }
+
+Future<File> _retryFetchImage(String filename) async {
+  String cacheDirPath = (await getTemporaryDirectory()).path;
+  File cachedImage = File('$cacheDirPath/$filename');
+
+  try {
+    var url = 'https://photo5.world/$filename';
+    var response = await http.get(Uri.parse(url));
+    if (response.statusCode == 200) {
+      await cachedImage.writeAsBytes(response.bodyBytes);
+    } else {
+      throw Exception('Failed to load image on retry: ${response.statusCode}');
+    }
+  } catch (e) {
+    // リトライのエラーハンドリング
+    debugPrint('Image retry download error: $e');
+  }
+
+  return cachedImage;
+}
+
 
 
 
