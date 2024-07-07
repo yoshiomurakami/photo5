@@ -205,57 +205,57 @@ class TimelineCardState extends State<TimelineCard> {
     currentSelectedItem = widget.currentIndex;
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl) {
-    String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Center(
-            child: FutureBuilder<File>(
-              future: _getCachedImage(imageFilename),
-              builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      double maxWidth = constraints.maxWidth;
-                      double maxHeight = constraints.maxHeight;
-                      return Center(
-                        child: ClipRRect(
-                          // borderRadius: BorderRadius.circular(20), // 角丸の半径を指定
-                          child: Image.file(
-                            snapshot.data!,
-                            fit: BoxFit.cover,
-                            width: maxWidth,
-                            height: maxHeight,
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              },
-            ),
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-          child: child,
-        );
-      },
-    );
-  }
+  // void _showFullSizeImage(BuildContext context, String imageUrl) {
+  //   String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
+  //
+  //   showGeneralDialog(
+  //     context: context,
+  //     barrierDismissible: true,
+  //     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+  //     transitionDuration: const Duration(milliseconds: 200),
+  //     pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
+  //       return Scaffold(
+  //         backgroundColor: Colors.transparent,
+  //         body: Center(
+  //           child: FutureBuilder<File>(
+  //             future: _getCachedImage(imageFilename),
+  //             builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+  //               if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+  //                 return LayoutBuilder(
+  //                   builder: (context, constraints) {
+  //                     double maxWidth = constraints.maxWidth;
+  //                     double maxHeight = constraints.maxHeight;
+  //                     return Center(
+  //                       child: ClipRRect(
+  //                         // borderRadius: BorderRadius.circular(20), // 角丸の半径を指定
+  //                         child: Image.file(
+  //                           snapshot.data!,
+  //                           fit: BoxFit.cover,
+  //                           width: maxWidth,
+  //                           height: maxHeight,
+  //                         ),
+  //                       ),
+  //                     );
+  //                   },
+  //                 );
+  //               } else {
+  //                 return const Center(
+  //                   child: CircularProgressIndicator(),
+  //                 );
+  //               }
+  //             },
+  //           ),
+  //         ),
+  //       );
+  //     },
+  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
+  //       return FadeTransition(
+  //         opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+  //         child: child,
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
