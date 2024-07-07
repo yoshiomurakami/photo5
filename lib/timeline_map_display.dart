@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
@@ -479,13 +480,17 @@ class ScrollToCenterService {
   static void scrollToCenter(FixedExtentScrollController pickerController, int tappedRowIndex) {
     const Duration duration = Duration(milliseconds: 150);
     const Curve curve = Curves.easeInOut;
-    pickerController.animateToItem(
-      tappedRowIndex,
-      duration: duration,
-      curve: curve,
-    );
+    Future.delayed(const Duration(milliseconds: 150), ()
+    {
+      pickerController.animateToItem(
+        tappedRowIndex,
+        duration: duration,
+        curve: curve,
+      );
+    });
   }
 }
+
 
 
 
@@ -494,8 +499,6 @@ class MapDisplayStateful extends ConsumerStatefulWidget {
   final List<TimelineItem> timelineItems;
   final Size size;
   final PageController pageController;
-
-
 
   const MapDisplayStateful({super.key,
     required this.currentLocation,
@@ -526,35 +529,38 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   late List<String> groupAlbumKeys;
   late List<String> groupKeys;
   String _lastSelectedAlbumGroupID = '';
-  ValueNotifier<TimelineItem?> selectedItemNotifier = ValueNotifier<TimelineItem?>(null); // ValueNotifierを使用して再描画を最小限にする
-
-  ValueNotifier<bool> isScrollingNotifier = ValueNotifier<bool>(false); // ValueNotifierでスクロール状態を管理
-
+  ValueNotifier<TimelineItem?> selectedItemNotifier = ValueNotifier<TimelineItem?>(null);
+  ValueNotifier<bool> isScrollingNotifier = ValueNotifier<bool>(false);
   Timer? _debounce;
-  bool isAlbumDataLoaded = false; // アルバムデータの読み込み状態を管理するフラグ
-
+  bool isAlbumDataLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _scrollController = FixedExtentScrollController();
-    debugPrint("Listener added to _pickerController"); // リスナー追加の確認
+    debugPrint("Listener added to _pickerController");
     final chatNotifier = ref.read(chatNotifierProvider);
-    chatNotifier.addPostedPhoto(context, widget.size, widget.pageController, _pickerController, widget.timelineItems, chatNotifier.selectedItemsMap, groupItemsByGroupId, toggleTimelineAndAlbum);
+    chatNotifier.addPostedPhoto(
+        context,
+        widget.size,
+        widget.pageController,
+        _pickerController,
+        widget.timelineItems,
+        chatNotifier.selectedItemsMap,
+        groupItemsByGroupId,
+        toggleTimelineAndAlbum
+    );
     _initializeCamera();
 
     groupedAlbums = groupAlbumsByGroupId(_albumList);
     groupAlbumKeys = groupedAlbums.keys.toList();
 
-    // ConnectionWidgetsManagerのインスタンスを取得
     ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
-
-    // コールバックを設定
     manager.setOnPhotoTapCallback(scrollToTarget);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_pickerController.hasClients) {
-        _pickerController.jumpToItem(0); // 初期スクロール位置を設定
+        _pickerController.jumpToItem(0);
       }
     });
   }
@@ -562,12 +568,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   @override
   void dispose() {
     _pickerController.dispose();
-    // リスナーの解除処理
     chatConnection.removeListeners();
     _scrollController.dispose();
     _controller.dispose();
     _debounce?.cancel();
-    isScrollingNotifier.dispose(); // ValueNotifierの破棄
+    isScrollingNotifier.dispose();
     super.dispose();
   }
 
@@ -587,7 +592,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void _showFullSizeImage(BuildContext context, String imageUrl) {
-    String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
+    String imageFilename = imageUrl.split('/').last;
 
     showGeneralDialog(
       context: context,
@@ -642,42 +647,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     File cachedImage = File('$cacheDirPath/$filename');
 
     if (!cachedImage.existsSync()) {
-      // ネットワークから画像をダウンロードし、キャッシュに保存
       try {
         var url = 'https://photo5.world/$filename';
         var response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {
           await cachedImage.writeAsBytes(response.bodyBytes);
-        } else {
-          throw Exception('Failed to load image: ${response.statusCode}');
         }
       } catch (e) {
-        // エラーハンドリング
         debugPrint('Image download error: $e');
-        // リトライ処理
-        return await _retryFetchImage(filename);
       }
     }
-    return cachedImage;
-  }
-
-  Future<File> _retryFetchImage(String filename) async {
-    String cacheDirPath = (await getTemporaryDirectory()).path;
-    File cachedImage = File('$cacheDirPath/$filename');
-
-    try {
-      var url = 'https://photo5.world/$filename';
-      var response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        await cachedImage.writeAsBytes(response.bodyBytes);
-      } else {
-        throw Exception('Failed to load image on retry: ${response.statusCode}');
-      }
-    } catch (e) {
-      // リトライのエラーハンドリング
-      debugPrint('Image retry download error: $e');
-    }
-
     return cachedImage;
   }
 
@@ -768,10 +747,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             pickerController: _pickerController,
                             items: items,
                             onTapCallback: (TimelineItem item) {
-                              if (_pickerController.selectedItem == index) {
-                                _showFullSizeImage(context, 'https://photo5.world/${item.imageFilename}');
-                              }
                               ScrollToCenterService.scrollToCenter(_pickerController, index);
+                              // SchedulerBinding.instance.addPostFrameCallback((_) {
+                                if (_pickerController.selectedItem == index) {
+                                  Future.delayed(const Duration(milliseconds: 100), ()
+                                  {
+                                    _showFullSizeImage(
+                                        context, 'https://photo5.world/${item.imageFilename}');
+                                  });
+                                }
+                              // });
+                              // ScrollToCenterService.scrollToCenter(_pickerController, index);
                             },
                             centralRowIndex: centralRowIndex,
                             chatNotifier: chatNotifier,
@@ -925,17 +911,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     );
   }
 
+
   void scrollToTarget() {
     if (_pickerController.hasClients) {
       debugPrint("Callback from new_photo");
       _pickerController.animateToItem(
-        1, // リストの先頭にスクロール
+        1,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
       setState(() {
         showNewListWheelScrollView = false;
-        if (selectedItemNotifier.value != null) { // Nullチェックを追加
+        if (selectedItemNotifier.value != null) {
           MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
         } else {
           debugPrint("selectedItem is null");
@@ -956,19 +943,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   void toggleTimelineAndAlbum() {
     setState(() {
       showNewListWheelScrollView = !showNewListWheelScrollView;
-      // updateMapBasedOnCurrentSelection(); // マップの位置を更新する
     });
 
     if (!showNewListWheelScrollView) {
-      // 現在のリストから、目的のgroupIDを持つアイテムのインデックスを探す
       int targetIndex = groupedItemsList.indexWhere((list) =>
           list.any((item) => item.groupID == _lastSelectedGroupID));
-      // 対象のアイテムが見つかった場合
       if (targetIndex != -1) {
-        // スクロールビューを更新して指定されたアイテムにスクロールする
         _pickerController = FixedExtentScrollController(initialItem: targetIndex);
 
-        // マップ移動
         final chatNotifier = ref.watch(chatNotifierProvider);
         final selectedItemsMap = chatNotifier.selectedItemsMap;
         String groupID = groupedItemsList[targetIndex].first.groupID;
@@ -996,16 +978,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   Widget buildFlagWidget(String countryCode) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white, // 背景を白で設定
+        color: Colors.white,
         shape: BoxShape.circle,
         border: Border.all(
-          color: Colors.black, // アウトラインの色
-          width: 2.0, // アウトラインの太さ
+          color: Colors.black,
+          width: 2.0,
         ),
       ),
       child: ClipOval(
         child: Container(
-          color: Colors.white, // ここも白で塗りつぶし
+          color: Colors.white,
           height: 20,
           width: 20,
           child: Flag.fromString(
@@ -1034,18 +1016,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         builder: (context) => CameraScreen(
           camera: cameraDescription,
           groupID: cameraData['groupID'],
-          takePictureStartTime: cameraData['timestamp'], // CameraScreenにtimestampも渡す
+          takePictureStartTime: cameraData['timestamp'],
           shootingRoomCount: cameraData['shootingRoomCount'],
         ),
       ),
     );
   }
 
-  // このメソッドはサーバーからcurrentShootingGroupIDを待つ
   Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
     Completer<Map<String, dynamic>?> completer = Completer();
 
-    // 'assign_group_id' イベントのリスナーを設定
     chatConnection.on('assign_group_id', (data) {
       if (data is Map<String, dynamic>) {
         String groupID = data['groupID'];
@@ -1053,10 +1033,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         int shootingRoomCount = data['shootingRoomCount'];
         debugPrint("timestamp in map Display = $timestamp");
 
-        // groupIDとtimestampをCompleterを通じて返す
         completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
 
-        // イベントリスナーを解除
         chatConnection.off('assign_group_id');
       } else {
         debugPrint('Received data is not in the expected format');
@@ -1068,7 +1046,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   List<List<TimelineItem>> groupItemsByGroupId(List<TimelineItem> items) {
-    // groupIDをキーとして持つマップを作成
     Map<String, List<TimelineItem>> groupedMap = {};
 
     for (var item in items) {
@@ -1078,22 +1055,24 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         groupedMap[item.groupID] = [item];
       }
     }
-    // マップの値をリストとして返す
     debugPrint("groupedMapAAA = $groupedMap");
     return groupedMap.values.toList();
   }
 
   Future<void> _loadAlbumData() async {
-    // アルバムデータを非同期で取得し、状態を更新
     List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
 
-    // アルバムデータが読み込まれたことを示すフラグを更新
     setState(() {
       _albumList = albumData;
       isAlbumDataLoaded = true;
     });
   }
 }
+
+
+
+
+
 
 class HorizontalGroupedItems extends StatefulWidget {
   final List<TimelineItem> itemsInGroup;
@@ -1128,6 +1107,8 @@ class HorizontalGroupedItems extends StatefulWidget {
 class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   late PageController _scrollController;
   int centralRowIndex = 0;
+  Timer? _tapTimer;
+  bool _isTap = false;
 
   void _onScrollChange() {
     int newIndex = _scrollController.page!.round();
@@ -1178,6 +1159,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   @override
   void dispose() {
     widget.chatNotifier.removeListener(_updateScrollPosition);
+    _tapTimer?.cancel();
     super.dispose();
   }
 
@@ -1189,10 +1171,22 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       itemBuilder: (context, index) {
         return Listener(
           onPointerDown: (event) {
-            debugPrint("onPointerDown = ${_scrollController.page!.round()} , index = $index");
-            if (_scrollController.page!.round() != index) {
-              debugPrint("I want slide!");
-              _scrollController.jumpToPage(index);
+            _isTap = true;
+            _tapTimer = Timer(const Duration(milliseconds: 100), () {
+              _isTap = false;
+            });
+          },
+          onPointerUp: (event) {
+            if (_isTap) {
+              _tapTimer?.cancel();
+              debugPrint("onPointerUp = ${_scrollController.page!.round()} , index = $index");
+              if (_scrollController.page!.round() != index) {
+                _scrollController.animateToPage(
+                  index,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeInOut,
+                );
+              }
             }
           },
           child: GestureDetector(
@@ -1221,6 +1215,8 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     );
   }
 }
+
+
 
 
 
