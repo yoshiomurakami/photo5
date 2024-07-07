@@ -1103,13 +1103,12 @@ class HorizontalGroupedItems extends StatefulWidget {
   final FixedExtentScrollController pickerController;
   final List<TimelineItem> items;
   final void Function(TimelineItem)? onTapCallback;
-  // final VoidCallback? onCameraButtonPressed;
   final ValueChanged<int> onHorizontalIndexChanged;
-  // final Map<String, int> selectedItemsMap;
-  final int centralRowIndex; // 追加
-  final ChatNotifier chatNotifier; // ChatNotifier を追加
+  final int centralRowIndex;
+  final ChatNotifier chatNotifier;
 
-  const HorizontalGroupedItems({super.key,
+  const HorizontalGroupedItems({
+    super.key,
     required this.itemsInGroup,
     required this.size,
     required this.controller,
@@ -1117,11 +1116,9 @@ class HorizontalGroupedItems extends StatefulWidget {
     required this.pickerController,
     required this.items,
     this.onTapCallback,
-    // this.onCameraButtonPressed,
     required this.onHorizontalIndexChanged,
-    // required this.selectedItemsMap,
-    required this.centralRowIndex, // 追加
-    required this.chatNotifier, // ChatNotifier を引数として追加
+    required this.centralRowIndex,
+    required this.chatNotifier,
   });
 
   @override
@@ -1135,7 +1132,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   void _onScrollChange() {
     int newIndex = _scrollController.page!.round();
     String groupID = widget.itemsInGroup.first.groupID;
-    widget.chatNotifier.selectedItemsMap[groupID] = newIndex; // ChatNotifier を使用するように変更
+    widget.chatNotifier.selectedItemsMap[groupID] = newIndex;
     if (widget.currentIndex == widget.centralRowIndex) {
       widget.onHorizontalIndexChanged(newIndex);
     }
@@ -1158,20 +1155,15 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
   void initState() {
     super.initState();
 
-    // groupID を取得
     String groupID = widget.itemsInGroup.first.groupID;
-
-    // selectedItemsMap から現在のグループの最後に選択されたアイテムのインデックスを取得
     int initialPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
 
-    // PageController を初期化。以前のスクロール位置に基づいて initialPage を設定
     _scrollController = PageController(
       initialPage: initialPageIndex,
       viewportFraction: 0.165,
     );
     _scrollController.addListener(_onScrollChange);
 
-    // ChatNotifierからの変更をリッスンし、PageControllerを更新
     widget.chatNotifier.addListener(() {
       String groupID = widget.itemsInGroup.first.groupID;
       int newPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
@@ -1180,13 +1172,11 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       }
     });
 
-    // ChatNotifierが更新されたときに呼ばれるリスナーを追加
     widget.chatNotifier.addListener(_updateScrollPosition);
   }
 
   @override
   void dispose() {
-    // リスナーを削除
     widget.chatNotifier.removeListener(_updateScrollPosition);
     super.dispose();
   }
@@ -1197,24 +1187,33 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       controller: _scrollController,
       itemCount: widget.itemsInGroup.length,
       itemBuilder: (context, index) {
-        return GestureDetector(
-          onTap: () {
-            if (widget.onTapCallback != null) {
-              widget.onTapCallback!(widget.itemsInGroup[index]);
+        return Listener(
+          onPointerDown: (event) {
+            debugPrint("onPointerDown = ${_scrollController.page!.round()} , index = $index");
+            if (_scrollController.page!.round() != index) {
+              debugPrint("I want slide!");
+              _scrollController.jumpToPage(index);
             }
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 0.0),
-            child: TimelineCard(
-              item: widget.itemsInGroup[index],
-              size: widget.size,
-              controller: widget.controller,
-              currentIndex: widget.currentIndex,
-              pickerController: widget.pickerController,
-              items: widget.items,
-              onTapCallback: widget.onTapCallback,
-              // centralRowIndex: widget.centralRowIndex, // 追加
-              // onCameraButtonPressed: widget.onCameraButtonPressed,
+          child: GestureDetector(
+            onTap: () {
+              if (_scrollController.page!.round() == index) {
+                if (widget.onTapCallback != null) {
+                  widget.onTapCallback!(widget.itemsInGroup[index]);
+                }
+              }
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 0.0),
+              child: TimelineCard(
+                item: widget.itemsInGroup[index],
+                size: widget.size,
+                controller: widget.controller,
+                currentIndex: widget.currentIndex,
+                pickerController: widget.pickerController,
+                items: widget.items,
+                onTapCallback: widget.onTapCallback,
+              ),
             ),
           ),
         );
@@ -1222,6 +1221,8 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     );
   }
 }
+
+
 
 // class TimelineCard extends StatefulWidget {
 //   final TimelineItem item;
