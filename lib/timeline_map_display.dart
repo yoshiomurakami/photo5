@@ -599,7 +599,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
           backgroundColor: Colors.transparent,
           body: Center(
             child: FutureBuilder<File>(
-              future: getCachedImage(imageFilename),
+              future: _getCachedImage(imageFilename),
               builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
                 if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
                   return LayoutBuilder(
@@ -637,7 +637,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     );
   }
 
-  Future<File> getCachedImage(String filename) async {
+  Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
     File cachedImage = File('$cacheDirPath/$filename');
 
@@ -648,12 +648,36 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         var response = await http.get(Uri.parse(url));
         if (response.statusCode == 200) {
           await cachedImage.writeAsBytes(response.bodyBytes);
+        } else {
+          throw Exception('Failed to load image: ${response.statusCode}');
         }
       } catch (e) {
         // エラーハンドリング
         debugPrint('Image download error: $e');
+        // リトライ処理
+        return await _retryFetchImage(filename);
       }
     }
+    return cachedImage;
+  }
+
+  Future<File> _retryFetchImage(String filename) async {
+    String cacheDirPath = (await getTemporaryDirectory()).path;
+    File cachedImage = File('$cacheDirPath/$filename');
+
+    try {
+      var url = 'https://photo5.world/$filename';
+      var response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        await cachedImage.writeAsBytes(response.bodyBytes);
+      } else {
+        throw Exception('Failed to load image on retry: ${response.statusCode}');
+      }
+    } catch (e) {
+      // リトライのエラーハンドリング
+      debugPrint('Image retry download error: $e');
+    }
+
     return cachedImage;
   }
 
