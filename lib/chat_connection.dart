@@ -1181,6 +1181,9 @@ Future<String?> getCurrentCountryCode() async {
 }
 
 class ChatNotifier extends ChangeNotifier {
+
+  TimelineItem? lastTappedItem;
+
   final ChatConnection chatConnection;
   // final List<String> _messages = [];
   final ChangeNotifierProviderRef ref;

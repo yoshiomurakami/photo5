@@ -534,6 +534,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   Timer? _debounce;
   bool isAlbumDataLoaded = false;
 
+  TimelineItem? lastTappedItem;
+  bool isDialogShowing = false;
+
   @override
   void initState() {
     super.initState();
@@ -592,6 +595,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void _showFullSizeImage(BuildContext context, String imageUrl) {
+
+    if (isDialogShowing) {
+      return;
+    }
+
+    isDialogShowing = true;
+
     String imageFilename = imageUrl.split('/').last;
 
     showGeneralDialog(
@@ -639,7 +649,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
           child: child,
         );
       },
-    );
+    ).then((_) {
+      // ダイアログが閉じられたときにフラグをリセット
+      isDialogShowing = false;
+    });
   }
 
   Future<File> _getCachedImage(String filename) async {
@@ -658,6 +671,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       }
     }
     return cachedImage;
+  }
+
+  void onThumbnailTap(TimelineItem tappedItem) {
+    if (lastTappedItem == tappedItem) {
+      // 2回連続でタップされた場合
+      _showFullSizeImage(
+          context, 'https://photo5.world/${tappedItem.imageFilename}');
+    } else {
+      // 変数にサムネイルの情報を保持
+      lastTappedItem = tappedItem;
+    }
   }
 
   @override
@@ -748,16 +772,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             items: items,
                             onTapCallback: (TimelineItem item) {
                               ScrollToCenterService.scrollToCenter(_pickerController, index);
-                              // SchedulerBinding.instance.addPostFrameCallback((_) {
-                                if (_pickerController.selectedItem == index) {
-                                  Future.delayed(const Duration(milliseconds: 100), ()
-                                  {
-                                    _showFullSizeImage(
-                                        context, 'https://photo5.world/${item.imageFilename}');
-                                  });
-                                }
-                              // });
-                              // ScrollToCenterService.scrollToCenter(_pickerController, index);
+                              if (_pickerController.selectedItem == index) {
+                                Future.delayed(const Duration(milliseconds: 100), () {
+                                  onThumbnailTap(item);
+                                });
+                              }
                             },
                             centralRowIndex: centralRowIndex,
                             chatNotifier: chatNotifier,
@@ -1186,17 +1205,16 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeInOut,
                 );
+              } else {
+                // タップされたサムネイルの情報を変数に保持
+                final parentState = context.findAncestorStateOfType<MapDisplayState>();
+                if (parentState != null) {
+                  parentState.onThumbnailTap(widget.itemsInGroup[index]);
+                }
               }
             }
           },
           child: GestureDetector(
-            onTap: () {
-              if (_scrollController.page!.round() == index) {
-                if (widget.onTapCallback != null) {
-                  widget.onTapCallback!(widget.itemsInGroup[index]);
-                }
-              }
-            },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 0.0),
               child: TimelineCard(
