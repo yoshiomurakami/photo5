@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import 'package:http/http.dart' as http;
 import 'package:photo5/timeline_map_display.dart';
 import 'package:sqflite/sqflite.dart';
 import 'dart:io';
@@ -372,6 +374,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
 
 
 
+
   void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
     if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
       AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
@@ -410,10 +413,17 @@ class HorizontalAlbumGroup extends StatefulWidget {
 class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
   AlbumTimeLine? _lastTappedAlbum;
+  bool isDialogShowing = false;
+  late Directory imageDir;
+  late Directory thumbnailDir;
+  bool isDirectoriesInitialized = false;
+  Map<String, File> imageCache = {};
+  Map<String, File> thumbnailCache = {};
 
   @override
   void initState() {
     super.initState();
+    _initializeDirectories();
     _pageController = PageController(
       initialPage: widget.currentIndex,
       viewportFraction: 0.165,
@@ -426,14 +436,117 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     });
   }
 
+  Future<void> _initializeDirectories() async {
+    final directory = await getApplicationDocumentsDirectory();
+    imageDir = Directory('${directory.path}/uploadImage/');
+    thumbnailDir = Directory('${directory.path}/uploadThumb/');
+    setState(() {
+      isDirectoriesInitialized = true;
+    });
+
+    await _cacheImages();
+  }
+
+  Future<void> _cacheImages() async {
+    // サムネイル画像のキャッシュ
+    for (var album in widget.albumsInGroup) {
+      String thumbnailFilename = album.thumbnailPath.split('/').last;
+      thumbnailCache[thumbnailFilename] = await _getImageFile(thumbnailFilename, true);
+    }
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
 
+  void _showFullSizeImage(BuildContext context, String imageUrl) {
+    if (isDialogShowing) {
+      return;
+    }
+
+    isDialogShowing = true;
+
+    String imageFilename = imageUrl.split('/').last;
+
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Center(
+            child: FutureBuilder<File>(
+              future: _getImageFile(imageFilename, false),
+              builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      double maxWidth = constraints.maxWidth;
+                      double maxHeight = constraints.maxHeight;
+                      return Center(
+                        child: ClipRRect(
+                          child: Image.file(
+                            snapshot.data!,
+                            fit: BoxFit.cover,
+                            width: maxWidth,
+                            height: maxHeight,
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return const Center(
+                    child: CircularProgressIndicator(),
+                  );
+                }
+              },
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+          child: child,
+        );
+      },
+    ).then((_) {
+      // ダイアログが閉じられたときにフラグをリセット
+      isDialogShowing = false;
+    });
+  }
+
+  Future<File> _getImageFile(String imageFilename, bool isThumbnail) async {
+    final dir = isThumbnail ? thumbnailDir : imageDir;
+    final filePath = '${dir.path}/$imageFilename';
+    final file = File(filePath);
+
+    if (await file.exists()) {
+      return file;
+    } else {
+      // サーバーから画像をダウンロードする処理を追加
+      final url = 'https://yourserver.com/images/$imageFilename'; // サーバーの画像URLを適切に設定
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        await file.writeAsBytes(response.bodyBytes);
+        return file;
+      } else {
+        throw Exception('Failed to load image from server');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!isDirectoriesInitialized) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return PageView.builder(
       controller: _pageController,
       itemCount: widget.albumsInGroup.length,
@@ -445,6 +558,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
 
   Widget _buildAlbumItemWidget(BuildContext context, AlbumTimeLine album, int index) {
     double imageSize = MediaQuery.of(context).size.width * 0.2;
+    String thumbnailFilename = album.thumbnailPath.split('/').last;
 
     return GestureDetector(
       onTap: () {
@@ -454,14 +568,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         }
         if (_lastTappedAlbum == album) {
           // 同じサムネイルが2回連続でタップされた場合、フルサイズ画像を表示
-          showDialog(
-            context: context,
-            builder: (context) {
-              return Dialog(
-                child: Image.file(File(album.imagePath)),
-              );
-            },
-          );
+          _showFullSizeImage(context, album.imagePath);
         } else {
           setState(() {
             _lastTappedAlbum = album;
@@ -477,7 +584,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         height: imageSize,
         decoration: BoxDecoration(
           image: DecorationImage(
-            image: FileImage(File(album.thumbnailPath)),
+            image: FileImage(thumbnailCache[thumbnailFilename]!),
             fit: BoxFit.cover,
           ),
           borderRadius: BorderRadius.circular(widget.size.width * 0.04),
@@ -486,7 +593,6 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     );
   }
 }
-
 
 // アルバムデータのグループ化
 Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums) {
