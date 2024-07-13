@@ -288,3 +288,5 @@ class EventBus {
 
 // グローバルにアクセス可能なイベントバスのインスタンス
 final eventBus = EventBus();
+
+

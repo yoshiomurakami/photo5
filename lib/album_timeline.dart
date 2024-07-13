@@ -6,6 +6,11 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flag/flag.dart';
 
+
+final selectedAlbumItemProvider = StateProvider<AlbumTimeLine?>((ref) {
+  return null; // 初期値はnull
+});
+
 final selectedAlbumIndexesProvider = StateProvider<Map<String, int>>((ref) {
   return {}; // 初期状態
 });
@@ -192,6 +197,25 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     // }
   }
 
+  void showFullSizeImageDialog(AlbumTimeLine album) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          content: Image.file(File(album.imagePath)),
+          actions: <Widget>[
+            TextButton(
+              child: Text('閉じる'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -203,7 +227,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
         groupAlbumKeys = groupedAlbums.keys.toList();
         final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
         for (var groupID in groupAlbumKeys) {
-          selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_$groupID'] ?? 0;
+          selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_${groupID}'] ?? 0;
         }
 
         return WillPopScope(
@@ -215,7 +239,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
             opacity: isRestoringPosition ? 0 : 1,
             duration: Duration(milliseconds: 300),
             child: Stack(
-              clipBehavior: Clip.none, // これを追加
+              clipBehavior: Clip.none,
               children: <Widget>[
                 NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
@@ -249,26 +273,29 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                     },
                     childDelegate: ListWheelChildBuilderDelegate(
                       builder: (context, index) {
-                        return GestureDetector(
-                          // onTap: () {
-                          //   selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[index]]![selectedIndexes[groupAlbumKeys[index]] ?? 0];
-                          //   debugPrint("childDelegate: ListWheelChildBuilderDelegate");
-                          // },
-                          child: HorizontalAlbumGroup(
-                            albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
-                            size: MediaQuery.of(context).size,
-                            currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
-                            onHorizontalIndexChanged: (newIndex) {
-                              setState(() {
-                                selectedIndexes[groupAlbumKeys[index]] = newIndex;
-                                ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                                  state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
-                                  debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
-                                  return state;
-                                });
+                        return HorizontalAlbumGroup(
+                          albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
+                          size: MediaQuery.of(context).size,
+                          currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
+                          onHorizontalIndexChanged: (newIndex) {
+                            setState(() {
+                              selectedIndexes[groupAlbumKeys[index]] = newIndex;
+                              ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                                state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
+                                debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
+                                return state;
                               });
-                            },
-                          ),
+                            });
+                          },
+                          onTapCallback: (album, albumIndex) {
+                            // タップされたサムネイルが中央に表示されるようにスクロール
+                            int groupIndex = groupAlbumKeys.indexOf(album.groupID);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateToItem(groupIndex, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+                            }
+                            // サムネイルの情報を変数に格納
+                            selectedAlbumItemNotifier.value = album;
+                          },
                         );
                       },
                       childCount: groupedAlbums.length,
@@ -344,6 +371,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   }
 
 
+
   void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
     if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
       AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
@@ -359,13 +387,12 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   }
 }
 
-// タイムラインのHorizontalGroupedItemsに対応するアルバム専用ウィジェット
 class HorizontalAlbumGroup extends StatefulWidget {
   final List<AlbumTimeLine> albumsInGroup;
   final Size size;
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
-  final void Function(AlbumTimeLine, int)? onTapCallback; // 型を変更
+  final void Function(AlbumTimeLine, int)? onTapCallback;
 
   const HorizontalAlbumGroup({
     super.key,
@@ -382,6 +409,7 @@ class HorizontalAlbumGroup extends StatefulWidget {
 
 class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
+  AlbumTimeLine? _lastTappedAlbum;
 
   @override
   void initState() {
@@ -424,6 +452,24 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(album, index);
         }
+        if (_lastTappedAlbum == album) {
+          // 同じサムネイルが2回連続でタップされた場合、フルサイズ画像を表示
+          showDialog(
+            context: context,
+            builder: (context) {
+              return Dialog(
+                child: Image.file(File(album.imagePath)),
+              );
+            },
+          );
+        } else {
+          setState(() {
+            _lastTappedAlbum = album;
+          });
+          if (_pageController.hasClients) {
+            _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+          }
+        }
       },
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 5),
@@ -440,6 +486,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     );
   }
 }
+
 
 // アルバムデータのグループ化
 Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums) {
