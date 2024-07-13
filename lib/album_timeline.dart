@@ -168,36 +168,39 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     final savedItemIndex = ref.read(selectedAlbumIndexesProvider)['itemIndex_${widget.lastSelectedAlbumGroupID}'] ?? 0;
     debugPrint('Attempting to restore group index: $savedGroupIndex, item index: $savedItemIndex');
 
-    // if (groupAlbumKeys.isNotEmpty && groupedAlbums.isNotEmpty) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (groupAlbumKeys.isEmpty || groupedAlbums.isEmpty) {
+        setState(() {
+          isRestoringPosition = false;
+          debugPrint("アルバムに写真が存在しません");
+        });
+        return;
+      }
+
       final isValidGroupIndex = savedGroupIndex >= 0 && savedGroupIndex < groupAlbumKeys.length;
       final isValidItemIndex = isValidGroupIndex && savedItemIndex >= 0 && savedItemIndex < (groupedAlbums[groupAlbumKeys[savedGroupIndex]]?.length ?? 0);
 
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (isValidGroupIndex) {
-          _scrollController.jumpToItem(savedGroupIndex);
-        } else {
-          _scrollController.jumpToItem(0); // デフォルト値
-        }
+      if (isValidGroupIndex) {
+        _scrollController.jumpToItem(savedGroupIndex);
+      } else {
+        _scrollController.jumpToItem(0); // デフォルト値
+      }
 
-        setState(() {
-          if (isValidItemIndex) {
-            selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]?[savedItemIndex];
-          } else if (groupedAlbums[groupAlbumKeys[savedGroupIndex]] != null && groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.isNotEmpty) {
-            selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.first;
-          }
-          debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
-          isRestoringPosition = false; // 復元が完了したらfalseに設定
-          if (selectedAlbumItemNotifier.value != null) {
-            MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
-          }
-        });
+      setState(() {
+        if (isValidItemIndex) {
+          selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]?[savedItemIndex];
+        } else if (groupedAlbums[groupAlbumKeys[savedGroupIndex]] != null && groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.isNotEmpty) {
+          selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.first;
+        }
+        debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
+        isRestoringPosition = false; // 復元が完了したらfalseに設定
+        if (selectedAlbumItemNotifier.value != null) {
+          MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
+        }
       });
-    // } else {
-    //   setState(() {
-    //     isRestoringPosition = false; // データがない場合でも復元処理を終了
-    //   });
-    // }
+    });
   }
+
 
   void showFullSizeImageDialog(AlbumTimeLine album) {
     showDialog(
@@ -225,6 +228,11 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
 
     return albumDataAsyncValue.when(
       data: (albumList) {
+        if (albumList.isEmpty) {
+          return Center(
+            child: Text('アルバムに写真が存在しません'),
+          );
+        }
         groupedAlbums = groupAlbumsByGroupId(albumList);
         groupAlbumKeys = groupedAlbums.keys.toList();
         final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
@@ -436,6 +444,12 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     });
   }
 
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
   Future<void> _initializeDirectories() async {
     final directory = await getApplicationDocumentsDirectory();
     imageDir = Directory('${directory.path}/uploadImage/');
@@ -443,22 +457,37 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     setState(() {
       isDirectoriesInitialized = true;
     });
-
     await _cacheImages();
   }
 
   Future<void> _cacheImages() async {
-    // サムネイル画像のキャッシュ
     for (var album in widget.albumsInGroup) {
       String thumbnailFilename = album.thumbnailPath.split('/').last;
       thumbnailCache[thumbnailFilename] = await _getImageFile(thumbnailFilename, true);
     }
   }
 
-  @override
-  void dispose() {
-    _pageController.dispose();
-    super.dispose();
+  Future<File> _getImageFile(String imageFilename, bool isThumbnail) async {
+    final dir = isThumbnail ? thumbnailDir : imageDir;
+    final filePath = '${dir.path}/$imageFilename';  // 修正点: パスのスラッシュを追加
+    final file = File(filePath);
+
+    if (await file.exists()) {
+      return file;
+    } else {
+      try {
+        final url = 'https://photo5.world/$imageFilename';
+        final response = await http.get(Uri.parse(url));
+        if (response.statusCode == 200) {
+          await file.writeAsBytes(response.bodyBytes);
+          return file;
+        } else {
+          throw Exception('Failed to load image from server: ${response.statusCode}');
+        }
+      } catch (e) {
+        throw Exception('Failed to load image from server: $e');
+      }
+    }
   }
 
   void _showFullSizeImage(BuildContext context, String imageUrl) {
@@ -483,22 +512,34 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
               future: _getImageFile(imageFilename, false),
               builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
                 if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                  // 画像データの検証
                   return LayoutBuilder(
                     builder: (context, constraints) {
                       double maxWidth = constraints.maxWidth;
                       double maxHeight = constraints.maxHeight;
-                      return Center(
-                        child: ClipRRect(
-                          child: Image.file(
-                            snapshot.data!,
-                            fit: BoxFit.cover,
-                            width: maxWidth,
-                            height: maxHeight,
+                      try {
+                        return Center(
+                          child: ClipRRect(
+                            child: Image.file(
+                              snapshot.data!,
+                              fit: BoxFit.cover,
+                              width: maxWidth,
+                              height: maxHeight,
+                              errorBuilder: (context, error, stackTrace) {
+                                // ネットワークから再取得
+                                return Image.network('https://photo5.world/$imageFilename');
+                              },
+                            ),
                           ),
-                        ),
-                      );
+                        );
+                      } catch (e) {
+                        // ネットワークから再取得
+                        return Image.network('https://photo5.world/$imageFilename');
+                      }
                     },
                   );
+                } else if (snapshot.hasError) {
+                  return Image.network('https://photo5.world/$imageFilename');
                 } else {
                   return const Center(
                     child: CircularProgressIndicator(),
@@ -516,30 +557,11 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         );
       },
     ).then((_) {
-      // ダイアログが閉じられたときにフラグをリセット
       isDialogShowing = false;
     });
   }
 
-  Future<File> _getImageFile(String imageFilename, bool isThumbnail) async {
-    final dir = isThumbnail ? thumbnailDir : imageDir;
-    final filePath = '${dir.path}/$imageFilename';
-    final file = File(filePath);
 
-    if (await file.exists()) {
-      return file;
-    } else {
-      // サーバーから画像をダウンロードする処理を追加
-      final url = 'https://yourserver.com/images/$imageFilename'; // サーバーの画像URLを適切に設定
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
-        await file.writeAsBytes(response.bodyBytes);
-        return file;
-      } else {
-        throw Exception('Failed to load image from server');
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -562,12 +584,10 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
 
     return GestureDetector(
       onTap: () {
-        debugPrint("Widget _buildAlbumItemWidget");
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(album, index);
         }
         if (_lastTappedAlbum == album) {
-          // 同じサムネイルが2回連続でタップされた場合、フルサイズ画像を表示
           _showFullSizeImage(context, album.imagePath);
         } else {
           setState(() {
@@ -583,16 +603,75 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         width: imageSize,
         height: imageSize,
         decoration: BoxDecoration(
-          image: DecorationImage(
-            image: FileImage(thumbnailCache[thumbnailFilename]!),
-            fit: BoxFit.cover,
-          ),
           borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+        ),
+        child: thumbnailCache.containsKey(thumbnailFilename)
+            ? ClipRRect(
+          borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+          child: Image.file(
+            thumbnailCache[thumbnailFilename]!,
+            fit: BoxFit.cover,
+            width: imageSize,
+            height: imageSize,
+          ),
+        )
+            : FutureBuilder<File>(
+          future: _getImageFile(thumbnailFilename, true),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+              thumbnailCache[thumbnailFilename] = snapshot.data!;
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+                child: Image.file(
+                  snapshot.data!,
+                  fit: BoxFit.cover,
+                  width: imageSize,
+                  height: imageSize,
+                ),
+              );
+            } else if (snapshot.hasError) {
+              return _loadImageFromNetwork(thumbnailFilename, imageSize);
+            } else {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+          },
         ),
       ),
     );
   }
+
+  Widget _loadImageFromNetwork(String imageFilename, double imageSize) {
+    final url = 'https://photo5.world/$imageFilename';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+      child: Image.network(
+        url,
+        fit: BoxFit.cover,
+        width: imageSize,
+        height: imageSize,
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) {
+            return child;
+          }
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+        errorBuilder: (context, error, stackTrace) {
+          return const Center(
+            child: Icon(
+              Icons.error,
+              color: Colors.red,
+            ),
+          );
+        },
+      ),
+    );
+  }
 }
+
 
 // アルバムデータのグループ化
 Map<String, List<AlbumTimeLine>> groupAlbumsByGroupId(List<AlbumTimeLine> albums) {

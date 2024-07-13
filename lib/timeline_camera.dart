@@ -401,19 +401,25 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   @override
   void dispose() {
-    // _controllerが初期化されている場合のみdisposeを呼び出す
-    if (_controller.value.isInitialized) {
-      _controller.dispose();
-    }
+    // 初期化が完了している場合のみdisposeを呼び出す
+    _disposeCameraController();
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
-    // socket?.disconnect();
     _photoEventSubscription?.cancel();
     socket?.off('receive_tap_message');
     _animationController.dispose();
     super.dispose();
   }
 
+  Future<void> _disposeCameraController() async {
+    try {
+      if (_controller.value.isInitialized) {
+        await _controller.dispose();
+      }
+    } catch (e) {
+      debugPrint('Error disposing camera controller: $e');
+    }
+  }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -421,9 +427,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
       // アプリがバックグラウンドに移行したり、終了しようとしている場合
       _leaveShootingRoom();
+      _disposeCameraController();
+    } else if (state == AppLifecycleState.resumed) {
+      // アプリがフォアグラウンドに戻った場合、カメラを再初期化する
+      setupCamera();
     }
-    _photoEventSubscription.cancel();
   }
+
 
   void _leaveShootingRoom() {
     // 'leave_shooting_room' イベントを発行して、サーバー側のルームから離脱する
@@ -547,8 +557,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
