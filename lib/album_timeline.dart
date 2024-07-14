@@ -88,6 +88,7 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
   final database = openDatabase(path);
 
   final List<Map<String, dynamic>> maps = await (await database).query('images', orderBy: 'groupID DESC');
+  debugPrint('Database query fetched: ${maps.length} items');
 
   List<AlbumTimeLine> albumList = [];
 
@@ -99,6 +100,7 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
     }
   }
 
+  debugPrint('Filtered album list: ${albumList.length} items');
   return albumList;
 }
 
@@ -125,15 +127,15 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupAlbumKeys;
   int centralRowIndex = 0;
-  late Map<String, int> selectedIndexes; // 追加
+  late Map<String, int> selectedIndexes;
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
-  bool isRestoringPosition = true; // 追加
+  bool isRestoringPosition = true;
 
   @override
   void initState() {
     super.initState();
-    groupedAlbums = {};
-    groupAlbumKeys = [];
+    groupedAlbums = groupAlbumsByGroupId(widget.albumList);
+    groupAlbumKeys = groupedAlbums.keys.toList();
     selectedIndexes = {};
     _scrollController = FixedExtentScrollController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -142,12 +144,15 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   }
 
   @override
-  void dispose() {
-    if (_scrollController.hasClients) {
-      _saveScrollPosition();
+  void didUpdateWidget(covariant AlbumTimeLineView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.albumList != oldWidget.albumList) {
+      setState(() {
+        groupedAlbums = groupAlbumsByGroupId(widget.albumList);
+        groupAlbumKeys = groupedAlbums.keys.toList();
+        isRestoringPosition = false;
+      });
     }
-    _scrollController.dispose();
-    super.dispose();
   }
 
   void _saveScrollPosition() {
@@ -183,7 +188,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       if (isValidGroupIndex) {
         _scrollController.jumpToItem(savedGroupIndex);
       } else {
-        _scrollController.jumpToItem(0); // デフォルト値
+        _scrollController.jumpToItem(0);
       }
 
       setState(() {
@@ -193,7 +198,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
           selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.first;
         }
         debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
-        isRestoringPosition = false; // 復元が完了したらfalseに設定
+        isRestoringPosition = false;
         if (selectedAlbumItemNotifier.value != null) {
           MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
         }
@@ -201,202 +206,145 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     });
   }
 
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+      onWillPop: () async {
+        _saveScrollPosition();
+        return true;
+      },
+      child: AnimatedOpacity(
+        opacity: isRestoringPosition ? 0 : 1,
+        duration: Duration(milliseconds: 300),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: <Widget>[
+            NotificationListener<ScrollNotification>(
+              onNotification: (ScrollNotification notification) {
+                if (notification is ScrollEndNotification) {
+                  int index = _scrollController.selectedItem;
+                  List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
+                  int selectedItemIndex = selectedIndexes[groupAlbumKeys[index]] ?? 0;
+                  ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                    state[widget.lastSelectedAlbumGroupID] = index;
+                    state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
+                    debugPrint('Updated group index: $index, item index: $selectedItemIndex');
+                    return state;
+                  });
+                  AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
+                  selectedAlbumItemNotifier.value = selectedItem;
+                  MapUpdateService.updateMapLocation(selectedItem);
+                }
+                return true;
+              },
+              child: ListWheelScrollView.useDelegate(
+                controller: _scrollController,
+                itemExtent: MediaQuery.of(context).size.width * 0.2,
+                diameterRatio: 1.25,
+                physics: const FixedExtentScrollPhysics(),
+                onSelectedItemChanged: (int index) {
+                  setState(() {
+                    centralRowIndex = index;
+                    selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
+                    debugPrint("onSelectedItemChanged = ${selectedIndexes[groupAlbumKeys[index]]}");
+                  });
+                },
+                childDelegate: ListWheelChildBuilderDelegate(
+                  builder: (context, index) {
+                    return HorizontalAlbumGroup(
+                      albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
+                      size: MediaQuery.of(context).size,
+                      currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
+                      onHorizontalIndexChanged: (newIndex) {
+                        setState(() {
+                          selectedIndexes[groupAlbumKeys[index]] = newIndex;
+                          ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                            state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
+                            debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
+                            return state;
+                          });
+                        });
+                      },
+                      onTapCallback: (album, albumIndex) {
+                        // タップされたサムネイルが中央に表示されるようにスクロール
+                        int groupIndex = groupAlbumKeys.indexOf(album.groupID);
+                        if (_scrollController.hasClients) {
+                          _scrollController.animateToItem(groupIndex, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+                        }
+                        // サムネイルの情報を変数に格納
+                        selectedAlbumItemNotifier.value = album;
+                      },
+                    );
+                  },
+                  childCount: groupedAlbums.length,
+                ),
+              ),
+            ),
+            ValueListenableBuilder<AlbumTimeLine?>(
+              valueListenable: selectedAlbumItemNotifier,
+              builder: (context, selectedItem, child) {
+                if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+                  return const SizedBox();
+                }
 
-  void showFullSizeImageDialog(AlbumTimeLine album) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          content: Image.file(File(album.imagePath)),
-          actions: <Widget>[
-            TextButton(
-              child: Text('閉じる'),
-              onPressed: () {
-                Navigator.of(context).pop();
+                final timeParts = selectedItem.localtime.split(' ');
+
+                return Positioned(
+                  bottom: widget.size.height * 0.25 + 5,
+                  left: widget.size.width * 0.15,
+                  right: widget.size.width * 0.15,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Align(
+                        alignment: Alignment.center,
+                        child: CustomPaint(
+                          painter: BubblePainter(),
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: widget.size.width * 0.7,
+                            ),
+                            padding: const EdgeInsets.all(15),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                const SizedBox(height: 5),
+                                Text(
+                                  '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 5),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: -10,
+                        left: 0,
+                        right: 0,
+                        child: Align(
+                          alignment: Alignment.topCenter,
+                          child: buildFlagWidget(selectedItem.country),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    final albumDataAsyncValue = ref.watch(albumDataProvider);
-
-    return albumDataAsyncValue.when(
-      data: (albumList) {
-        if (albumList.isEmpty) {
-          return Center(
-            child: Text('アルバムに写真が存在しません'),
-          );
-        }
-        groupedAlbums = groupAlbumsByGroupId(albumList);
-        groupAlbumKeys = groupedAlbums.keys.toList();
-        final selectedAlbumIndexes = ref.watch(selectedAlbumIndexesProvider);
-        for (var groupID in groupAlbumKeys) {
-          selectedIndexes[groupID] = selectedAlbumIndexes['itemIndex_${groupID}'] ?? 0;
-        }
-
-        return WillPopScope(
-          onWillPop: () async {
-            _saveScrollPosition();
-            return true;
-          },
-          child: AnimatedOpacity(
-            opacity: isRestoringPosition ? 0 : 1,
-            duration: Duration(milliseconds: 300),
-            child: Stack(
-              clipBehavior: Clip.none,
-              children: <Widget>[
-                NotificationListener<ScrollNotification>(
-                  onNotification: (ScrollNotification notification) {
-                    if (notification is ScrollEndNotification) {
-                      int index = _scrollController.selectedItem;
-                      List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
-                      int selectedItemIndex = selectedIndexes[groupAlbumKeys[index]] ?? 0;
-                      ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                        state[widget.lastSelectedAlbumGroupID] = index;
-                        state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
-                        debugPrint('Updated group index: $index, item index: $selectedItemIndex');
-                        return state;
-                      });
-                      AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
-                      selectedAlbumItemNotifier.value = selectedItem;
-                      MapUpdateService.updateMapLocation(selectedItem);
-                    }
-                    return true;
-                  },
-                  child: ListWheelScrollView.useDelegate(
-                    controller: _scrollController,
-                    itemExtent: MediaQuery.of(context).size.width * 0.2,
-                    diameterRatio: 1.25,
-                    physics: const FixedExtentScrollPhysics(),
-                    onSelectedItemChanged: (int index) {
-                      setState(() {
-                        centralRowIndex = index;
-                        selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
-                        debugPrint("onSelectedItemChanged = ${selectedIndexes[groupAlbumKeys[index]]}");
-                      });
-                    },
-                    childDelegate: ListWheelChildBuilderDelegate(
-                      builder: (context, index) {
-                        return HorizontalAlbumGroup(
-                          albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
-                          size: MediaQuery.of(context).size,
-                          currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
-                          onHorizontalIndexChanged: (newIndex) {
-                            setState(() {
-                              selectedIndexes[groupAlbumKeys[index]] = newIndex;
-                              ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                                state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
-                                debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
-                                return state;
-                              });
-                            });
-                          },
-                          onTapCallback: (album, albumIndex) {
-                            // タップされたサムネイルが中央に表示されるようにスクロール
-                            int groupIndex = groupAlbumKeys.indexOf(album.groupID);
-                            if (_scrollController.hasClients) {
-                              _scrollController.animateToItem(groupIndex, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-                            }
-                            // サムネイルの情報を変数に格納
-                            selectedAlbumItemNotifier.value = album;
-                          },
-                        );
-                      },
-                      childCount: groupedAlbums.length,
-                    ),
-                  ),
-                ),
-                ValueListenableBuilder<AlbumTimeLine?>(
-                  valueListenable: selectedAlbumItemNotifier,
-                  builder: (context, selectedItem, child) {
-                    if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
-                      return const SizedBox();
-                    }
-
-                    final timeParts = selectedItem.localtime.split(' ');
-
-                    return Positioned(
-                      bottom: widget.size.height * 0.25 + 5,
-                      left: widget.size.width * 0.15,
-                      right: widget.size.width * 0.15,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Align(
-                            alignment: Alignment.center,
-                            child: CustomPaint(
-                              painter: BubblePainter(),
-                              child: Container(
-                                constraints: BoxConstraints(
-                                  maxWidth: widget.size.width * 0.7,
-                                ),
-                                padding: const EdgeInsets.all(15),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(height: 5),
-                                    Text(
-                                      '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 5),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: -10,
-                            left: 0,
-                            right: 0,
-                            child: Align(
-                              alignment: Alignment.topCenter,
-                              child: buildFlagWidget(selectedItem.country),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-      loading: () => Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(child: Text('Error: $error')),
-    );
-  }
-
-
-
-
-  void updateMapToSelectedAlbumItem(List<AlbumTimeLine> selectedGroup, int albumIndex) {
-    if (selectedGroup.isNotEmpty && albumIndex >= 0 && albumIndex < selectedGroup.length) {
-      AlbumTimeLine selectedAlbumItem = selectedGroup[albumIndex];
-      debugPrint("selectedAlbumItem = $selectedAlbumItem");
-      double lat = selectedAlbumItem.lat;
-      double lng = selectedAlbumItem.lng;
-      debugPrint("lat = $lat / lng = $lng");
-      // Update the map location
-      MapController.instance.updateMapLocation(lat, lng);
-    } else {
-      debugPrint("Selected album item index out of range: $albumIndex");
-    }
   }
 }
+
 
 class HorizontalAlbumGroup extends StatefulWidget {
   final List<AlbumTimeLine> albumsInGroup;

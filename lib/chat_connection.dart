@@ -1222,7 +1222,7 @@ class ChatNotifier extends ChangeNotifier {
     }
   }
 
-  void addPostedPhoto(BuildContext context, Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems, Map<String, int> selectedItemsMap, List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId, VoidCallback toggleTimelineAndAlbum) async {
+  void addPostedPhoto(BuildContext context, Size size, PageController pageController, FixedExtentScrollController pickerController, List<TimelineItem> timelineItems, Map<String, int> selectedItemsMap, List<List<TimelineItem>> Function(List<TimelineItem>) groupItemsByGroupId) async {
     final prefs = await SharedPreferences.getInstance();
     final myUserId = prefs.getString('userID');
 

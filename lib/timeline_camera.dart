@@ -393,7 +393,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         return true; // 保存成功
       }
     } catch (e) {
-      print("Error saving image: $e");
+      debugPrint("Error saving image: $e");
     }
     return false; // 保存失敗
   }
@@ -405,7 +405,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     _disposeCameraController();
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
-    _photoEventSubscription?.cancel();
+    _photoEventSubscription.cancel();
     socket?.off('receive_tap_message');
     _animationController.dispose();
     super.dispose();
@@ -557,8 +557,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();

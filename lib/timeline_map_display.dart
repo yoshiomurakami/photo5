@@ -6,7 +6,6 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:camera/camera.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:http/http.dart' as http;
 import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
@@ -14,7 +13,6 @@ import 'chat_connection.dart';
 import 'timeline_camera.dart';
 import 'album_timeline.dart';
 import 'package:flag/flag.dart';
-import 'package:sqflite/sqflite.dart';
 
 
 
@@ -515,6 +513,7 @@ class MapDisplayStateful extends ConsumerStatefulWidget {
 
 class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   late FixedExtentScrollController _scrollController;
+  // bool isFullScreenMode = false;
   List<CameraDescription>? _cameras;
   late CameraController _controller;
   ChatConnection chatConnection = ChatConnection();
@@ -534,7 +533,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   ValueNotifier<bool> isScrollingNotifier = ValueNotifier<bool>(false);
   Timer? _debounce;
   bool isAlbumDataLoaded = false;
-  bool _isDatabaseEmpty = true; // 変数の名前を変更
 
   TimelineItem? lastTappedItem;
   bool isDialogShowing = false;
@@ -553,7 +551,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         widget.timelineItems,
         chatNotifier.selectedItemsMap,
         groupItemsByGroupId,
-        toggleTimelineAndAlbum
+        // toggleTimelineAndAlbum
     );
     _initializeCamera();
 
@@ -568,8 +566,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         _pickerController.jumpToItem(0);
       }
     });
-
-    _checkDatabaseEmpty(); // データベースの状態をチェック
   }
 
   @override
@@ -581,22 +577,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _debounce?.cancel();
     isScrollingNotifier.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkDatabaseEmpty() async {
-    _isDatabaseEmpty = await isDatabaseEmpty(); // データベースの状態をチェック
-    setState(() {});
-  }
-
-  Future<bool> isDatabaseEmpty() async {
-    final dbPath = await getDatabasesPath();
-    final path = p.join(dbPath, 'images_database.db');
-    final database = openDatabase(path);
-
-    final List<Map<String, dynamic>> maps = await (await database).query('images');
-
-    // データが存在しない場合はtrueを返す
-    return maps.isEmpty;
   }
 
   void _onScrollStarted() {
@@ -830,11 +810,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               right: widget.size.width * 0.05,
               top: widget.size.height * 0.3,
               child: ElevatedButton(
-                onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
+                onPressed: toggleTimelineAndAlbum,
                 child: Text(showNewListWheelScrollView ? 'タイムライン' : 'アルバム'),
-                style: ElevatedButton.styleFrom(
-                  primary: _isDatabaseEmpty ? Colors.grey : Colors.blue,
-                ),
               ),
             ),
             if (!showNewListWheelScrollView)
@@ -953,6 +930,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     );
   }
 
+
   void scrollToTarget() {
     if (_pickerController.hasClients) {
       debugPrint("Callback from new_photo");
@@ -1004,16 +982,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     if (showNewListWheelScrollView) {
       _loadAlbumData();
     }
-    // アルバムデータの存在をチェックするためのメソッド呼び出し
-    _checkAlbumDataExistence();
   }
 
-  Future<void> _checkAlbumDataExistence() async {
-    bool isEmpty = await isDatabaseEmpty();
-    setState(() {
-      _isDatabaseEmpty = isEmpty; // 変数の名前を変更
-    });
-  }
+
+
 
   void updateGroupedItemsList(List<TimelineItem> items, ChatNotifier chatNotifier) {
     groupedItemsList = groupItemsByGroupId(items);
@@ -1059,8 +1031,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
-  void _openCamera(CameraDescription cameraDescription, Map<String, dynamic> cameraData) async {
-    await Navigator.push(
+  void _openCamera(CameraDescription cameraDescription, Map<String, dynamic> cameraData) {
+    Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => CameraScreen(
@@ -1071,11 +1043,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         ),
       ),
     );
-
-    // カメラから戻ったときにアルバムデータの存在をチェックする
-    await _checkAlbumDataExistence();
   }
-
 
   Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
     Completer<Map<String, dynamic>?> completer = Completer();
@@ -1115,15 +1083,15 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   Future<void> _loadAlbumData() async {
     List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
+    debugPrint('Fetched album data: ${albumData.length} items');
 
     setState(() {
       _albumList = albumData;
       isAlbumDataLoaded = true;
+      debugPrint('_albumList updated: ${_albumList.length} items');
     });
   }
 }
-
-
 
 
 
