@@ -986,7 +986,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       showNewListWheelScrollView = !showNewListWheelScrollView;
     });
 
-    if (!showNewListWheelScrollView) {
+    if (showNewListWheelScrollView) {
+      _loadAlbumData();
+    } else {
       int targetIndex = groupedItemsList.indexWhere((list) =>
           list.any((item) => item.groupID == _lastSelectedGroupID));
       if (targetIndex != -1) {
@@ -1000,13 +1002,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         MapUpdateService.updateMapLocation(selectedItem);
       }
     }
-
-    if (showNewListWheelScrollView) {
-      _loadAlbumData();
-    }
-    // アルバムデータの存在をチェックするためのメソッド呼び出し
-    _checkAlbumDataExistence();
   }
+
+  Future<void> _loadAlbumData() async {
+    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
+    debugPrint('Fetched album data: ${albumData.length} items');
+
+    setState(() {
+      _albumList = albumData;
+      isAlbumDataLoaded = true;
+      debugPrint('_albumList updated: ${_albumList.length} items');
+    });
+  }
+
 
   Future<void> _checkAlbumDataExistence() async {
     bool isEmpty = await isDatabaseEmpty();
@@ -1113,14 +1121,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     return groupedMap.values.toList();
   }
 
-  Future<void> _loadAlbumData() async {
-    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
-
-    setState(() {
-      _albumList = albumData;
-      isAlbumDataLoaded = true;
-    });
-  }
 }
 
 
