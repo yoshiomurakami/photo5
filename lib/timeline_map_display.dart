@@ -387,7 +387,7 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
                   onPressed: widget.onPressed,
                   style: ElevatedButton.styleFrom(
                     shape: const CircleBorder(),
-                    backgroundColor: buttonText == 'expand_less' ? Colors.white : Colors.transparent,
+                    backgroundColor: buttonText == 'expand_less' ? const Color(0xFFFFCC4D) : Colors.transparent,
                     side: const BorderSide(color: Colors.transparent, width: 2.0),
                     fixedSize: Size(widget.size.width * 0.18, widget.size.width * 0.18),
                     elevation: 0, // これで影をなくします
@@ -1123,13 +1123,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
 }
 
-
-
-
-
-
-
-
 class HorizontalGroupedItems extends StatefulWidget {
   final List<TimelineItem> itemsInGroup;
   final Size size;
@@ -1270,185 +1263,6 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     );
   }
 }
-
-
-
-
-
-// class TimelineCard extends StatefulWidget {
-//   final TimelineItem item;
-//   final Size size;
-//   final FixedExtentScrollController controller;
-//   final int currentIndex;
-//   final FixedExtentScrollController pickerController;
-//   final List<TimelineItem> items;
-//   final void Function(TimelineItem)? onTapCallback;
-//   final int centralRowIndex; // 追加
-//
-//   const TimelineCard({
-//     Key? key,
-//     required this.item,
-//     required this.size,
-//     required this.controller,
-//     required this.currentIndex,
-//     required this.pickerController,
-//     required this.items,
-//     this.onTapCallback,
-//     required this.centralRowIndex, // 追加
-//   }) : super(key: key);
-//
-//   @override
-//   TimelineCardState createState() => TimelineCardState();
-// }
-//
-// class TimelineCardState extends State<TimelineCard> {
-//   bool isDialogShown = false;
-//   int? currentSelectedItem;
-//   TimelineItem? centerItem; // 追加
-//   bool isFullScreenMode = false; // デフォルトは非表示
-//
-//   @override
-//   void initState() {
-//     super.initState();
-//     currentSelectedItem = widget.currentIndex;
-//   }
-//
-//   @override
-//   Widget build(BuildContext context) {
-//     return GestureDetector(
-//       onTap: () {
-//         if (widget.onTapCallback != null) {
-//           widget.onTapCallback!(widget.item);
-//         }
-//         if (widget.currentIndex == widget.centralRowIndex) {
-//           // _showFullSizeImage(context, 'https://photo5.world/${widget.item.imageFilename}');
-//         }
-//       },
-//       child: Align(
-//         alignment: Alignment.center,
-//         child: Container(
-//           key: ValueKey(widget.item.thumbnailFilename),
-//           width: widget.size.width * 0.2,
-//           height: widget.size.width * 0.2,
-//           decoration: BoxDecoration(
-//             borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-//           ),
-//           child: ClipRRect(
-//             borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-//             child: widget.item.systemId == "shootbutton"
-//                 ? Stack(
-//               children: <Widget>[
-//                 Align(
-//                   alignment: Alignment.center,
-//                   child: SizedBox(
-//                     width: MediaQuery.of(context).size.width * 0.18,
-//                     height: MediaQuery.of(context).size.width * 0.18,
-//                     child: FloatingActionButton(
-//                       backgroundColor: const Color(0xFFFFCC4D),
-//                       foregroundColor: Colors.black,
-//                       elevation: 0,
-//                       shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-//                       // onPressed: widget.onCameraButtonPressed,
-//                       onPressed: () {},
-//                       child: const Center(
-//                         child: Text(
-//                           '\u{1F4F8}',
-//                           textAlign: TextAlign.center,
-//                           style: TextStyle(
-//                             fontSize: 24,
-//                             height: 1.0,
-//                           ),
-//                         ),
-//                       ),
-//                     ),
-//                   ),
-//                 ),
-//               ],
-//             )
-//                 : _buildImageWidget(context, widget.item.thumbnailFilename),
-//           ),
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void _showFullSizeImage(BuildContext context, String imageUrl) {
-//     String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
-//
-//     showGeneralDialog(
-//       context: context,
-//       barrierDismissible: true,
-//       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-//       transitionDuration: const Duration(milliseconds: 200),
-//       pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
-//         return Scaffold(
-//           backgroundColor: Colors.transparent,
-//           body: Center(
-//             child: FutureBuilder<File>(
-//               future: getCachedImage(imageFilename),
-//               builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-//                 if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-//                   return LayoutBuilder(
-//                     builder: (context, constraints) {
-//                       double maxWidth = constraints.maxWidth;
-//                       double maxHeight = constraints.maxHeight;
-//                       return Center(
-//                         child: ClipRRect(
-//                           // borderRadius: BorderRadius.circular(20), // 角丸の半径を指定
-//                           child: Image.file(
-//                             snapshot.data!,
-//                             fit: BoxFit.cover,
-//                             width: maxWidth,
-//                             height: maxHeight,
-//                           ),
-//                         ),
-//                       );
-//                     },
-//                   );
-//                 } else {
-//                   return const Center(
-//                     child: CircularProgressIndicator(),
-//                   );
-//                 }
-//               },
-//             ),
-//           ),
-//         );
-//       },
-//       transitionBuilder: (context, animation, secondaryAnimation, child) {
-//         return FadeTransition(
-//           opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-//           child: child,
-//         );
-//       },
-//     );
-//   }
-//
-//
-//
-//
-//   Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
-//     return Image.network(
-//       'https://photo5.world/$thumbnailFilename',
-//       fit: BoxFit.cover,
-//       loadingBuilder: (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-//         if (loadingProgress == null) return child;
-//         return Center(
-//           child: CircularProgressIndicator(
-//             value: loadingProgress.expectedTotalBytes != null
-//                 ? loadingProgress.cumulativeBytesLoaded / (loadingProgress.expectedTotalBytes ?? 1)
-//                 : null,
-//           ),
-//         );
-//       },
-//       errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
-//         return const Icon(Icons.error);
-//       },
-//     );
-//   }
-// }
-
-
 
 class BubblePainter extends CustomPainter {
   @override
