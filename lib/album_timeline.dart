@@ -23,6 +23,10 @@ final albumDataProvider = FutureProvider<List<AlbumTimeLine>>((ref) async {
 
 Map<String, int> selectedAlbumIndexes = {};
 
+AlbumTimeLine? _lastTappedAlbum;
+
+final lastTappedAlbumProvider = StateProvider<AlbumTimeLine?>((ref) => null);
+
 class AlbumTimeLine {
   final Key key;
   final String id;
@@ -128,6 +132,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   late Map<String, int> selectedIndexes;
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
   bool isRestoringPosition = true;
+  // AlbumTimeLine? _lastTappedAlbum; // 追加
 
   @override
   void initState() {
@@ -136,6 +141,15 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
     groupAlbumKeys = groupedAlbums.keys.toList();
     selectedIndexes = {};
     _scrollController = FixedExtentScrollController();
+
+    // スクロールイベントをリスンして、スワイプ移動を検出
+    _scrollController.addListener(() {
+      if (_scrollController.position.isScrollingNotifier.value) {
+        // スワイプが検出されたら lastTappedAlbum をクリア
+        ref.read(lastTappedAlbumProvider.notifier).state = null;
+      }
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _restoreScrollPosition();
     });
@@ -160,7 +174,6 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
         state[widget.lastSelectedAlbumGroupID] = groupIndex;
         state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = itemIndex;
-        debugPrint('Saved group index: $groupIndex, item index: $itemIndex');
         return state;
       });
     }
@@ -169,13 +182,11 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   void _restoreScrollPosition() {
     final savedGroupIndex = ref.read(selectedAlbumIndexesProvider)[widget.lastSelectedAlbumGroupID] ?? 0;
     final savedItemIndex = ref.read(selectedAlbumIndexesProvider)['itemIndex_${widget.lastSelectedAlbumGroupID}'] ?? 0;
-    debugPrint('Attempting to restore group index: $savedGroupIndex, item index: $savedItemIndex');
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (groupAlbumKeys.isEmpty || groupedAlbums.isEmpty) {
         setState(() {
           isRestoringPosition = false;
-          debugPrint("アルバムに写真が存在しません");
         });
         return;
       }
@@ -195,7 +206,6 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
         } else if (groupedAlbums[groupAlbumKeys[savedGroupIndex]] != null && groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.isNotEmpty) {
           selectedAlbumItemNotifier.value = groupedAlbums[groupAlbumKeys[savedGroupIndex]]!.first;
         }
-        debugPrint('Restored group index: $savedGroupIndex, item index: $savedItemIndex');
         isRestoringPosition = false;
         if (selectedAlbumItemNotifier.value != null) {
           MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
@@ -226,12 +236,12 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
                     state[widget.lastSelectedAlbumGroupID] = index;
                     state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
-                    debugPrint('Updated group index: $index, item index: $selectedItemIndex');
                     return state;
                   });
                   AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
                   selectedAlbumItemNotifier.value = selectedItem;
                   MapUpdateService.updateMapLocation(selectedItem);
+                  ref.read(lastTappedAlbumProvider.notifier).state = selectedItem; // 変更
                 }
                 return true;
               },
@@ -244,7 +254,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   setState(() {
                     centralRowIndex = index;
                     selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
-                    debugPrint("onSelectedItemChanged = ${selectedIndexes[groupAlbumKeys[index]]}");
+                    _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0]; // 追加
                   });
                 },
                 childDelegate: ListWheelChildBuilderDelegate(
@@ -258,21 +268,20 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                           selectedIndexes[groupAlbumKeys[index]] = newIndex;
                           ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
                             state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
-                            debugPrint('Updated horizontal index for group ${groupAlbumKeys[index]}: $newIndex');
                             return state;
                           });
                         });
                       },
                       onTapCallback: (album, albumIndex) {
-                        // タップされたサムネイルが中央に表示されるようにスクロール
                         int groupIndex = groupAlbumKeys.indexOf(album.groupID);
                         if (_scrollController.hasClients) {
                           _scrollController.animateToItem(groupIndex, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
                         }
-                        // サムネイルの情報を変数に格納
                         selectedAlbumItemNotifier.value = album;
                       },
+                      ref: ref, // ref を渡す
                     );
+
                   },
                   childCount: groupedAlbums.length,
                 ),
@@ -344,12 +353,14 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
 }
 
 
+
 class HorizontalAlbumGroup extends StatefulWidget {
   final List<AlbumTimeLine> albumsInGroup;
   final Size size;
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
   final void Function(AlbumTimeLine, int)? onTapCallback;
+  final WidgetRef ref; // ref を追加
 
   const HorizontalAlbumGroup({
     super.key,
@@ -358,6 +369,7 @@ class HorizontalAlbumGroup extends StatefulWidget {
     required this.currentIndex,
     required this.onHorizontalIndexChanged,
     this.onTapCallback,
+    required this.ref, // ref を追加
   });
 
   @override
@@ -366,7 +378,6 @@ class HorizontalAlbumGroup extends StatefulWidget {
 
 class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
-  AlbumTimeLine? _lastTappedAlbum;
   bool isDialogShowing = false;
   late Directory imageDir;
   late Directory thumbnailDir;
@@ -507,8 +518,6 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     });
   }
 
-
-
   @override
   Widget build(BuildContext context) {
     if (!isDirectoriesInitialized) {
@@ -533,12 +542,10 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(album, index);
         }
-        if (_lastTappedAlbum == album) {
+        if (widget.ref.read(lastTappedAlbumProvider) == album) { // 変更
           _showFullSizeImage(context, album.imagePath);
         } else {
-          setState(() {
-            _lastTappedAlbum = album;
-          });
+          widget.ref.read(lastTappedAlbumProvider.notifier).state = album; // 変更
           if (_pageController.hasClients) {
             _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
           }
@@ -617,6 +624,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     );
   }
 }
+
 
 
 // アルバムデータのグループ化
