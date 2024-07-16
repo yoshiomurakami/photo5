@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'chat_connection.dart';
 import 'timeline_providers.dart';
 import 'dart:convert';
+import 'package:flutter/services.dart';
 
 final cameraButtonKey = GlobalKey();
 
@@ -71,9 +72,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   int delay = 0;
   late Timer countdownTimer;
   int remainingSeconds = 0;
-
-
   int userShootingListCount = 0; // データ件数を保持する状態変数
+
+  bool _isControllerDisposed = false;
 
   // final ChatConnection chatConnection = ChatConnection();
   final ChatConnection chatConnection = ChatConnection()..connect();
@@ -156,6 +157,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
     WidgetsBinding.instance.addObserver(this);
+
+    SystemChannels.lifecycle.setMessageHandler((msg) async {
+      if (msg == "AppLifecycleState.detached") {
+        _leaveShootingRoom();
+      }
+      return;
+    });
 
     // _photoEventSubscription = eventBus.stream.listen((data) {
     //   if (mounted) {
@@ -268,7 +276,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     _photoEventSubscription = eventBus.stream.listen((data) async {
       debugPrint("_photoEventSubscription = $data");
       if (mounted) {
-      // if (mounted && data['userID'] != myUserID) {
+        // if (mounted && data['userID'] != myUserID) {
         // thumbnailDataが空の場合、または同じgroupIDがリスト内に存在する場合にのみ追加
         // if (thumbnailData.isEmpty || thumbnailData.any((item) => item['groupID'] == data['groupID'])) {
         // if (thumbnailData.isEmpty) {
@@ -280,7 +288,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           setState(() {
             thumbnailData.add(data);
           });
-      }
+        }
 
         String imageUrl = 'https://photo5.world/${data["imageFilename"]}';
         String imageName = data['imageFilename'];
@@ -401,8 +409,13 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   @override
   void dispose() {
-    // 初期化が完了している場合のみdisposeを呼び出す
-    _disposeCameraController();
+    // ウィジェットが完全にディスポーズされる前に非同期操作を実行する
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _leaveShootingRoom();
+        _disposeCameraController();
+      }
+    });
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     _photoEventSubscription?.cancel();
@@ -412,13 +425,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
   Future<void> _disposeCameraController() async {
-    try {
-      if (_controller.value.isInitialized) {
-        await _controller.dispose();
-      }
-    } catch (e) {
-      debugPrint('Error disposing camera controller: $e');
+    if (_controller.value.isInitialized) {
+      await _controller.dispose();
     }
+    _isControllerDisposed = true;
   }
 
   @override
@@ -436,9 +446,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
   void _leaveShootingRoom() {
-    // 'leave_shooting_room' イベントを発行して、サーバー側のルームから離脱する
     ref.read(connectionWidgetsManagerProvider).chatConnection.emitEvent("leave_shooting_room");
   }
+
 
   // Generate a random string
   String _getRandomString(int length) {
@@ -457,6 +467,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       _showImage = false;
     }
     if (mounted) {
+      _leaveShootingRoom();
+      _disposeCameraController();
       Navigator.pop(context);
     }
   }
@@ -909,30 +921,32 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     final screenSize = MediaQuery.of(context).size;
     final screenAspectRatio = MediaQuery.of(context).size.aspectRatio;
 
-    // CurrentScreenを使用して現在の画面名をセットする
-    return CurrentScreen(
-        screenName: CameraScreen.routeName,  // CameraScreenのstatic const routeNameを使用
+    return WillPopScope(
+      onWillPop: () async {
+        _navigateBack(context); // バックボタンが押されたときの処理
+        return false; // デフォルトの動作をキャンセル
+      },
+      child: CurrentScreen(
+        screenName: CameraScreen.routeName,
         child: Scaffold(
           body: FutureBuilder<void>(
             future: _initializeControllerFuture,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.done) {
-                if (_controller.value.isInitialized) {
+                if (_controller.value.isInitialized && !_isControllerDisposed) {
                   final previewSize = _controller.value.previewSize!;
                   final previewAspectRatio = previewSize.height / previewSize.width;
 
-                  // Calculate the scaling factor
                   double scale = 1.0;
                   if (previewAspectRatio > screenAspectRatio) {
                     scale = previewAspectRatio / screenAspectRatio;
                   } else {
                     scale = screenAspectRatio / previewAspectRatio;
                   }
-
                   return Stack(
                     children: [
                       // Camera preview scaled according to the aspect ratio
-                      if (!_showImage)  // カメラプレビューを表示する条件
+                      if (!_showImage && !_isControllerDisposed) // カメラプレビューを表示する条件に_isControllerDisposedを追加
                         Center(
                           child: Transform.scale(
                             scale: scale,
@@ -983,15 +997,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                             ),
                           ),
                         ),
+
+                      // ここにBackボタンの位置を追加
+                      if (!_showImage) // 撮影前の状態でのみ表示
+                        Positioned(
+                          top: 50,
+                          left: 20,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              _navigateBack(context);
+                            },
+                            child: const Text('Back'),
+                          ),
+                        ),
                       // The controls should be outside the scaled preview
-                      if (_showImage)  // Only show the buttons if _showImage is false
-                        //画面タップでシャッター
-                        // Positioned.fill(
-                        //   child: GestureDetector(
-                        //     onTap: _takePicture,
-                        //     child: Container(color: Colors.transparent),
-                        //   ),
-                        // ),
+                      // if (_showImage)  // Only show the buttons if _showImage is false
+                      //画面タップでシャッター
+                      // Positioned.fill(
+                      //   child: GestureDetector(
+                      //     onTap: _takePicture,
+                      //     child: Container(color: Colors.transparent),
+                      //   ),
+                      // ),
                       // Positioned(
                       //   top: 50,
                       //   left: 0,
@@ -1013,7 +1040,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       //   ),
                       // ),
                       _showImage && _imagePath != null
-                      ? Positioned.fill(
+                          ? Positioned.fill(
                         child: Stack(
                           children: <Widget>[
                             Positioned.fill(
@@ -1082,97 +1109,97 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                         ),
                                       ),
                                       if (_showLikeAnimation)  // この条件に基づいてアニメーションを表示
-                                      AnimatedBuilder(
-                                        animation: _animationController,
-                                        builder: (context, child) {
-                                          return Positioned(
-                                            bottom: _animationMove.value,
-                                            child: Opacity(
-                                              opacity: _animationFade.value,
-                                              child: IntrinsicWidth(
-                                                child: Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.white,
-                                                    border: Border.all(color: Colors.black, width: 2),
-                                                    borderRadius: BorderRadius.circular(20),
-                                                  ),
-                                                  child: const Text(
-                                                    "いいね！",
-                                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                        AnimatedBuilder(
+                                          animation: _animationController,
+                                          builder: (context, child) {
+                                            return Positioned(
+                                              bottom: _animationMove.value,
+                                              child: Opacity(
+                                                opacity: _animationFade.value,
+                                                child: IntrinsicWidth(
+                                                  child: Container(
+                                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.white,
+                                                      border: Border.all(color: Colors.black, width: 2),
+                                                      borderRadius: BorderRadius.circular(20),
+                                                    ),
+                                                    child: const Text(
+                                                      "いいね！",
+                                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                                                    ),
                                                   ),
                                                 ),
                                               ),
-                                            ),
-                                          );
-                                        },
-                                      ),
+                                            );
+                                          },
+                                        ),
                                     ],
                                   ),
                                 ),
                               ),
 
 
-                              Positioned(
-                                top: 50,
-                                left: 0,
-                                child: Row(
-                                  children: [
-                                    // ElevatedButton(
-                                    //   onPressed: _takePicture,
-                                    //   child: Text('Take Picture'),
-                                    // ),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        // chatConnection.emitEvent("leave_shooting_room");
-                                        _navigateBack(context);
-                                      },
-                                      child: const Text('Back'),
-                                    ),
-                                  ],
-                                ),
+                            Positioned(
+                              top: 50,
+                              left: 0,
+                              child: Row(
+                                children: [
+                                  // ElevatedButton(
+                                  //   onPressed: _takePicture,
+                                  //   child: Text('Take Picture'),
+                                  // ),
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      // chatConnection.emitEvent("leave_shooting_room");
+                                      _navigateBack(context);
+                                    },
+                                    child: const Text('Back'),
+                                  ),
+                                ],
                               ),
+                            ),
 
                             // if (_showEmoji)  // 絵文字表示条件
-                              for (var position in emojiPositions)  // 絵文字の位置リストをループ
-                                // Positioned(
-                                //   left: position.dx,
-                                //   top: position.dy,
-                                //   child: Container(
-                                //     width: screenSize.width * 0.2,
-                                //     height: screenSize.width * 0.2,
-                                //     decoration: BoxDecoration(
-                                //       // color: const Color(0xFFFFCC4D),
-                                //       color: Colors.white,
-                                //       border: Border.all(color: Colors.black, width: 2),
-                                //       shape: BoxShape.circle,
-                                //     ),
-                                //     child: Center(
-                                //       child: Text("\u{1F590}", style: TextStyle(fontSize: 36)),
-                                //     ),
-                                //   ),
-                                // ),
-                                Positioned(
-                                  left: position.dx,
-                                  top: position.dy,
-                                  child: IntrinsicWidth(
-                                    // stepWidth: screenSize.width * 0.2,
-                                    // stepHeight: screenSize.width * 0.1,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), // テキストの周囲に余白を追加
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        border: Border.all(color: Colors.black, width: 2),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        "いいね！",
-                                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                                        textAlign: TextAlign.center,
-                                      ),
+                            for (var position in emojiPositions)  // 絵文字の位置リストをループ
+                            // Positioned(
+                            //   left: position.dx,
+                            //   top: position.dy,
+                            //   child: Container(
+                            //     width: screenSize.width * 0.2,
+                            //     height: screenSize.width * 0.2,
+                            //     decoration: BoxDecoration(
+                            //       // color: const Color(0xFFFFCC4D),
+                            //       color: Colors.white,
+                            //       border: Border.all(color: Colors.black, width: 2),
+                            //       shape: BoxShape.circle,
+                            //     ),
+                            //     child: Center(
+                            //       child: Text("\u{1F590}", style: TextStyle(fontSize: 36)),
+                            //     ),
+                            //   ),
+                            // ),
+                              Positioned(
+                                left: position.dx,
+                                top: position.dy,
+                                child: IntrinsicWidth(
+                                  // stepWidth: screenSize.width * 0.2,
+                                  // stepHeight: screenSize.width * 0.1,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), // テキストの周囲に余白を追加
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      border: Border.all(color: Colors.black, width: 2),
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: const Text(
+                                      "いいね！",
+                                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                                      textAlign: TextAlign.center,
                                     ),
                                   ),
                                 ),
+                              ),
                           ],
                         ),
                       )
@@ -1223,6 +1250,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
             },
           ),
         ),
+      ),
     );
   }
 }
