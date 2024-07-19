@@ -447,14 +447,14 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     }
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl) {
+  void _showFullSizeImage(BuildContext context, String imageUrl, List<AlbumTimeLine> albumsInGroup, int initialIndex) {
     if (isDialogShowing) {
       return;
     }
 
     isDialogShowing = true;
 
-    String imageFilename = imageUrl.split('/').last;
+    PageController pageController = PageController(initialPage: initialIndex);
 
     showGeneralDialog(
       context: context,
@@ -464,46 +464,83 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
       pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: Center(
-            child: FutureBuilder<File>(
-              future: _getImageFile(imageFilename, false),
-              builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                  // 画像データの検証
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      double maxWidth = constraints.maxWidth;
-                      double maxHeight = constraints.maxHeight;
-                      try {
-                        return Center(
-                          child: ClipRRect(
-                            child: Image.file(
-                              snapshot.data!,
-                              fit: BoxFit.cover,
-                              width: maxWidth,
-                              height: maxHeight,
-                              errorBuilder: (context, error, stackTrace) {
-                                // ネットワークから再取得
-                                return Image.network('https://photo5.world/$imageFilename');
-                              },
-                            ),
-                          ),
-                        );
-                      } catch (e) {
-                        // ネットワークから再取得
-                        return Image.network('https://photo5.world/$imageFilename');
-                      }
-                    },
-                  );
-                } else if (snapshot.hasError) {
-                  return Image.network('https://photo5.world/$imageFilename');
-                } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              },
-            ),
+          body: Stack(
+            children: [
+              Center(
+                child: PageView.builder(
+                  controller: pageController,
+                  itemCount: albumsInGroup.length,
+                  itemBuilder: (context, index) {
+                    String imageFilename = albumsInGroup[index].imagePath.split('/').last;
+                    return FutureBuilder<File>(
+                      future: _getImageFile(imageFilename, false),
+                      builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                          return LayoutBuilder(
+                            builder: (context, constraints) {
+                              double maxWidth = constraints.maxWidth;
+                              double maxHeight = constraints.maxHeight;
+                              return Center(
+                                child: ClipRRect(
+                                  child: Image.file(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    width: maxWidth,
+                                    height: maxHeight,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.network('https://photo5.world/$imageFilename');
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        } else if (snapshot.hasError) {
+                          return Image.network('https://photo5.world/$imageFilename');
+                        } else {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 40,
+                left: 20,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    isDialogShowing = false;
+                  },
+                ),
+              ),
+              // if (initialIndex > 0)
+              //   Positioned(
+              //     left: 20,
+              //     top: MediaQuery.of(context).size.height / 2 - 30,
+              //     child: IconButton(
+              //       icon: Icon(Icons.arrow_left, color: Colors.white, size: 30),
+              //       onPressed: () {
+              //         pageController.previousPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+              //       },
+              //     ),
+              //   ),
+              // if (initialIndex < albumsInGroup.length - 1)
+              //   Positioned(
+              //     right: 20,
+              //     top: MediaQuery.of(context).size.height / 2 - 30,
+              //     child: IconButton(
+              //       icon: Icon(Icons.arrow_right, color: Colors.white, size: 30),
+              //       onPressed: () {
+              //         pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+              //       },
+              //     ),
+              //   ),
+            ],
           ),
         );
       },
@@ -517,6 +554,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
       isDialogShowing = false;
     });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -542,10 +580,10 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(album, index);
         }
-        if (widget.ref.read(lastTappedAlbumProvider) == album) { // 変更
-          _showFullSizeImage(context, album.imagePath);
+        if (widget.ref.read(lastTappedAlbumProvider) == album) {
+          _showFullSizeImage(context, album.imagePath, widget.albumsInGroup, index); // 修正: albumsInGroupとindexを追加
         } else {
-          widget.ref.read(lastTappedAlbumProvider.notifier).state = album; // 変更
+          widget.ref.read(lastTappedAlbumProvider.notifier).state = album;
           if (_pageController.hasClients) {
             _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
           }

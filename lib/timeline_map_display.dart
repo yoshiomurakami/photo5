@@ -637,34 +637,49 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
         return Scaffold(
           backgroundColor: Colors.transparent,
-          body: Center(
-            child: FutureBuilder<File>(
-              future: _getCachedImage(imageFilename),
-              builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-                if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                  return LayoutBuilder(
-                    builder: (context, constraints) {
-                      double maxWidth = constraints.maxWidth;
-                      double maxHeight = constraints.maxHeight;
-                      return Center(
-                        child: ClipRRect(
-                          child: Image.file(
-                            snapshot.data!,
-                            fit: BoxFit.cover,
-                            width: maxWidth,
-                            height: maxHeight,
-                          ),
-                        ),
+          body: Stack(
+            children: [
+              Center(
+                child: FutureBuilder<File>(
+                  future: _getCachedImage(imageFilename),
+                  builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                      return LayoutBuilder(
+                        builder: (context, constraints) {
+                          double maxWidth = constraints.maxWidth;
+                          double maxHeight = constraints.maxHeight;
+                          return Center(
+                            child: ClipRRect(
+                              child: Image.file(
+                                snapshot.data!,
+                                fit: BoxFit.cover,
+                                width: maxWidth,
+                                height: maxHeight,
+                              ),
+                            ),
+                          );
+                        },
                       );
-                    },
-                  );
-                } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              },
-            ),
+                    } else {
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                  },
+                ),
+              ),
+              Positioned(
+                top: 40,
+                left: 20,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                    isDialogShowing = false;
+                  },
+                ),
+              ),
+            ],
           ),
         );
       },
