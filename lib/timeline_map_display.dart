@@ -621,17 +621,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl) {
-
+  void _showFullSizeImage(BuildContext context, String imageUrl, List<TimelineItem> itemsInGroup, int initialIndex) {
     if (isDialogShowing) {
       return;
     }
 
     isDialogShowing = true;
 
-    String imageFilename = imageUrl.split('/').last;
+    PageController pageController = PageController(initialPage: initialIndex);
 
-    showGeneralDialog(
+    showGeneralDialog<int>(
       context: context,
       barrierDismissible: true,
       barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
@@ -642,31 +641,43 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
           body: Stack(
             children: [
               Center(
-                child: FutureBuilder<File>(
-                  future: _getCachedImage(imageFilename),
-                  builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                      return LayoutBuilder(
-                        builder: (context, constraints) {
-                          double maxWidth = constraints.maxWidth;
-                          double maxHeight = constraints.maxHeight;
-                          return Center(
-                            child: ClipRRect(
-                              child: Image.file(
-                                snapshot.data!,
-                                fit: BoxFit.cover,
-                                width: maxWidth,
-                                height: maxHeight,
-                              ),
-                            ),
+                child: PageView.builder(
+                  controller: pageController,
+                  itemCount: itemsInGroup.length,
+                  itemBuilder: (context, index) {
+                    String imageFilename = itemsInGroup[index].imageFilename.split('/').last;
+                    return FutureBuilder<File>(
+                      future: _getCachedImage(imageFilename),
+                      builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                          return LayoutBuilder(
+                            builder: (context, constraints) {
+                              double maxWidth = constraints.maxWidth;
+                              double maxHeight = constraints.maxHeight;
+                              return Center(
+                                child: ClipRRect(
+                                  child: Image.file(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    width: maxWidth,
+                                    height: maxHeight,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.network('https://photo5.world/$imageFilename');
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
                           );
-                        },
-                      );
-                    } else {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
+                        } else if (snapshot.hasError) {
+                          return Image.network('https://photo5.world/$imageFilename');
+                        } else {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                      },
+                    );
                   },
                 ),
               ),
@@ -676,7 +687,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 child: IconButton(
                   icon: Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(pageController.page?.round());
                     isDialogShowing = false;
                   },
                 ),
@@ -691,11 +702,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
           child: child,
         );
       },
-    ).then((_) {
-      // ダイアログが閉じられたときにフラグをリセット
+    ).then((finalIndex) {
       isDialogShowing = false;
+      if (finalIndex != null) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            // 必要な場合に、戻った後の処理をここに追加
+          });
+        });
+      }
     });
   }
+
 
   Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
@@ -717,14 +735,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void onThumbnailTap(TimelineItem tappedItem) {
     if (lastTappedItem == tappedItem) {
-      // 2回連続でタップされた場合
-      _showFullSizeImage(
-          context, 'https://photo5.world/${tappedItem.imageFilename}');
+      // 同じサムネイルが2回連続でタップされた場合
+      final groupID = tappedItem.groupID; // タップされたアイテムの groupID を取得
+      final itemsInGroup = groupedItemsList.firstWhere((group) => group.first.groupID == groupID);
+      final initialIndex = itemsInGroup.indexOf(tappedItem); // タップされたアイテムのインデックスを取得
+
+      _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex);
     } else {
       // 変数にサムネイルの情報を保持
       lastTappedItem = tappedItem;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
