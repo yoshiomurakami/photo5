@@ -500,14 +500,14 @@ class ScrollToCenterService {
 
 
 
-
 class MapDisplayStateful extends ConsumerStatefulWidget {
   final LatLng currentLocation;
   final List<TimelineItem> timelineItems;
   final Size size;
   final PageController pageController;
 
-  const MapDisplayStateful({super.key,
+  const MapDisplayStateful({
+    super.key,
     required this.currentLocation,
     required this.timelineItems,
     required this.size,
@@ -539,7 +539,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   ValueNotifier<bool> isScrollingNotifier = ValueNotifier<bool>(false);
   Timer? _debounce;
   bool isAlbumDataLoaded = false;
-  bool _isDatabaseEmpty = true; // 変数の名前を変更
+  bool _isDatabaseEmpty = true;
 
   TimelineItem? lastTappedItem;
   bool isDialogShowing = false;
@@ -551,14 +551,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     debugPrint("Listener added to _pickerController");
     final chatNotifier = ref.read(chatNotifierProvider);
     chatNotifier.addPostedPhoto(
-        context,
-        widget.size,
-        widget.pageController,
-        _pickerController,
-        widget.timelineItems,
-        chatNotifier.selectedItemsMap,
-        groupItemsByGroupId,
-        toggleTimelineAndAlbum
+      context,
+      widget.size,
+      widget.pageController,
+      _pickerController,
+      widget.timelineItems,
+      chatNotifier.selectedItemsMap,
+      groupItemsByGroupId,
+      toggleTimelineAndAlbum,
     );
     _initializeCamera();
 
@@ -568,13 +568,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
     manager.setOnPhotoTapCallback(scrollToTarget);
 
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   if (_pickerController.hasClients) {
-    //     _pickerController.jumpToItem(0);
-    //   }
-    // });
-
-    _checkDatabaseEmpty(); // データベースの状態をチェック
+    _checkDatabaseEmpty();
   }
 
   @override
@@ -589,7 +583,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   Future<void> _checkDatabaseEmpty() async {
-    _isDatabaseEmpty = await isDatabaseEmpty(); // データベースの状態をチェック
+    _isDatabaseEmpty = await isDatabaseEmpty();
     setState(() {});
   }
 
@@ -600,7 +594,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     final List<Map<String, dynamic>> maps = await (await database).query('images');
 
-    // データが存在しない場合はtrueを返す
     return maps.isEmpty;
   }
 
@@ -707,13 +700,28 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       if (finalIndex != null) {
         SchedulerBinding.instance.addPostFrameCallback((_) {
           setState(() {
-            // 必要な場合に、戻った後の処理をここに追加
+            final groupID = itemsInGroup[0].groupID;
+            final groupIndex = groupedItemsList.indexWhere((group) => group.first.groupID == groupID);
+            if (groupIndex != -1) {
+              _pickerController.animateToItem(groupIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+              final chatNotifier = ref.read(chatNotifierProvider);
+              chatNotifier.selectedItemsMap[groupID] = finalIndex;
+              selectedItemNotifier.value = itemsInGroup[finalIndex];
+              MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (_scrollController.hasClients) {
+                  _scrollController.jumpToItem(groupIndex);
+                }
+                // サムネイルリストの状態を更新するために通知を追加
+                chatNotifier.notifyListeners();
+              });
+            }
           });
         });
       }
     });
   }
-
 
   Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
@@ -735,18 +743,15 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void onThumbnailTap(TimelineItem tappedItem) {
     if (lastTappedItem == tappedItem) {
-      // 同じサムネイルが2回連続でタップされた場合
-      final groupID = tappedItem.groupID; // タップされたアイテムの groupID を取得
+      final groupID = tappedItem.groupID;
       final itemsInGroup = groupedItemsList.firstWhere((group) => group.first.groupID == groupID);
-      final initialIndex = itemsInGroup.indexOf(tappedItem); // タップされたアイテムのインデックスを取得
+      final initialIndex = itemsInGroup.indexOf(tappedItem);
 
       _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex);
     } else {
-      // 変数にサムネイルの情報を保持
       lastTappedItem = tappedItem;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -1027,7 +1032,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void toggleTimelineAndAlbum() {
     setState(() {
-        showNewListWheelScrollView = !showNewListWheelScrollView;
+      showNewListWheelScrollView = !showNewListWheelScrollView;
     });
 
     if (showNewListWheelScrollView) {
@@ -1059,11 +1064,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
-
   Future<void> _checkAlbumDataExistence() async {
     bool isEmpty = await isDatabaseEmpty();
     setState(() {
-      _isDatabaseEmpty = isEmpty; // 変数の名前を変更
+      _isDatabaseEmpty = isEmpty;
     });
   }
 
@@ -1124,10 +1128,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       ),
     );
 
-    // カメラから戻ったときにアルバムデータの存在をチェックする
     await _checkAlbumDataExistence();
   }
-
 
   Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
     Completer<Map<String, dynamic>?> completer = Completer();
@@ -1164,7 +1166,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     debugPrint("groupedMapAAA = $groupedMap");
     return groupedMap.values.toList();
   }
-
 }
 
 class HorizontalGroupedItems extends StatefulWidget {
@@ -1225,6 +1226,12 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     }
   }
 
+  void updateScrollController(int index) {
+    if (_scrollController.hasClients) {
+      _scrollController.jumpToPage(index);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1237,14 +1244,6 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
       viewportFraction: 0.165,
     );
     _scrollController.addListener(_onScrollChange);
-
-    // widget.chatNotifier.addListener(() {
-    //   String groupID = widget.itemsInGroup.first.groupID;
-    //   int newPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
-    //   if (_scrollController.hasClients) {
-    //     _scrollController.jumpToPage(newPageIndex);
-    //   }
-    // });
 
     widget.chatNotifier.addListener(_updateScrollPosition);
   }
@@ -1280,7 +1279,6 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
                   curve: Curves.easeInOut,
                 );
               } else {
-                // タップされたサムネイルの情報を変数に保持
                 final parentState = context.findAncestorStateOfType<MapDisplayState>();
                 if (parentState != null) {
                   parentState.onThumbnailTap(widget.itemsInGroup[index]);
@@ -1307,6 +1305,11 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     );
   }
 }
+
+
+
+
+
 
 class BubblePainter extends CustomPainter {
   @override
