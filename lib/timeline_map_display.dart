@@ -568,11 +568,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
     manager.setOnPhotoTapCallback(scrollToTarget);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_pickerController.hasClients) {
-        _pickerController.jumpToItem(0);
-      }
-    });
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (_pickerController.hasClients) {
+    //     _pickerController.jumpToItem(0);
+    //   }
+    // });
 
     _checkDatabaseEmpty(); // データベースの状態をチェック
   }
@@ -606,8 +606,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void _onScrollStarted() {
     if (!isScrollingNotifier.value) {
-      isScrollingNotifier.value = true;
-      debugPrint("isScrolling = true;");
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        isScrollingNotifier.value = true;
+        debugPrint("isScrolling = true;");
+      });
     }
   }
 
@@ -1003,7 +1005,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void toggleTimelineAndAlbum() {
     setState(() {
-      showNewListWheelScrollView = !showNewListWheelScrollView;
+        showNewListWheelScrollView = !showNewListWheelScrollView;
     });
 
     if (showNewListWheelScrollView) {
@@ -1192,7 +1194,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     String groupID = widget.itemsInGroup.first.groupID;
     int newSelectedIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
 
-    if (_scrollController.hasClients && _scrollController.page!.round() != newSelectedIndex) {
+    if (_scrollController.hasClients && _scrollController.page!.round() != newSelectedIndex && widget.pickerController.hasClients) {
       _scrollController.animateToPage(
         newSelectedIndex,
         duration: const Duration(milliseconds: 300),
@@ -1214,13 +1216,13 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
     );
     _scrollController.addListener(_onScrollChange);
 
-    widget.chatNotifier.addListener(() {
-      String groupID = widget.itemsInGroup.first.groupID;
-      int newPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
-      if (_scrollController.hasClients) {
-        _scrollController.jumpToPage(newPageIndex);
-      }
-    });
+    // widget.chatNotifier.addListener(() {
+    //   String groupID = widget.itemsInGroup.first.groupID;
+    //   int newPageIndex = widget.chatNotifier.selectedItemsMap[groupID] ?? 0;
+    //   if (_scrollController.hasClients) {
+    //     _scrollController.jumpToPage(newPageIndex);
+    //   }
+    // });
 
     widget.chatNotifier.addListener(_updateScrollPosition);
   }

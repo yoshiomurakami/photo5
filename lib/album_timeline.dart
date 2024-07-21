@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flag/flag.dart';
+import 'package:flutter/scheduler.dart';
 
 
 final selectedAlbumItemProvider = StateProvider<AlbumTimeLine?>((ref) {
@@ -132,7 +133,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   late Map<String, int> selectedIndexes;
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
   bool isRestoringPosition = true;
-  // AlbumTimeLine? _lastTappedAlbum; // 追加
+  AlbumTimeLine? _lastTappedAlbum;
 
   @override
   void initState() {
@@ -230,18 +231,20 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
             NotificationListener<ScrollNotification>(
               onNotification: (ScrollNotification notification) {
                 if (notification is ScrollEndNotification) {
-                  int index = _scrollController.selectedItem;
-                  List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
-                  int selectedItemIndex = selectedIndexes[groupAlbumKeys[index]] ?? 0;
-                  ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                    state[widget.lastSelectedAlbumGroupID] = index;
-                    state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
-                    return state;
+                  SchedulerBinding.instance.addPostFrameCallback((_) {
+                    int index = _scrollController.selectedItem;
+                    List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
+                    int selectedItemIndex = selectedIndexes[groupAlbumKeys[index]] ?? 0;
+                    ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                      state[widget.lastSelectedAlbumGroupID] = index;
+                      state['itemIndex_${widget.lastSelectedAlbumGroupID}'] = selectedItemIndex;
+                      return state;
+                    });
+                    AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
+                    selectedAlbumItemNotifier.value = selectedItem;
+                    MapUpdateService.updateMapLocation(selectedItem);
+                    ref.read(lastTappedAlbumProvider.notifier).state = selectedItem;
                   });
-                  AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
-                  selectedAlbumItemNotifier.value = selectedItem;
-                  MapUpdateService.updateMapLocation(selectedItem);
-                  ref.read(lastTappedAlbumProvider.notifier).state = selectedItem; // 変更
                 }
                 return true;
               },
@@ -254,7 +257,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   setState(() {
                     centralRowIndex = index;
                     selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
-                    _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0]; // 追加
+                    _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0];
                   });
                 },
                 childDelegate: ListWheelChildBuilderDelegate(
@@ -279,9 +282,8 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                         }
                         selectedAlbumItemNotifier.value = album;
                       },
-                      ref: ref, // ref を渡す
+                      ref: ref,
                     );
-
                   },
                   childCount: groupedAlbums.length,
                 ),
@@ -352,15 +354,13 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   }
 }
 
-
-
 class HorizontalAlbumGroup extends StatefulWidget {
   final List<AlbumTimeLine> albumsInGroup;
   final Size size;
   final int currentIndex;
   final ValueChanged<int> onHorizontalIndexChanged;
   final void Function(AlbumTimeLine, int)? onTapCallback;
-  final WidgetRef ref; // ref を追加
+  final WidgetRef ref;
 
   const HorizontalAlbumGroup({
     super.key,
@@ -369,7 +369,7 @@ class HorizontalAlbumGroup extends StatefulWidget {
     required this.currentIndex,
     required this.onHorizontalIndexChanged,
     this.onTapCallback,
-    required this.ref, // ref を追加
+    required this.ref,
   });
 
   @override
@@ -378,26 +378,34 @@ class HorizontalAlbumGroup extends StatefulWidget {
 
 class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   late PageController _pageController;
-  bool isDialogShowing = false;
-  late Directory imageDir;
-  late Directory thumbnailDir;
-  bool isDirectoriesInitialized = false;
   Map<String, File> imageCache = {};
   Map<String, File> thumbnailCache = {};
+  bool isDialogShowing = false;
+  int currentPageIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _initializeDirectories();
+    currentPageIndex = widget.currentIndex;
     _pageController = PageController(
       initialPage: widget.currentIndex,
       viewportFraction: 0.165,
     );
     _pageController.addListener(() {
       int newIndex = _pageController.page!.round();
-      if (newIndex != widget.currentIndex) {
+      if (newIndex != currentPageIndex) {
+        setState(() {
+          currentPageIndex = newIndex;
+        });
         widget.onHorizontalIndexChanged(newIndex);
       }
+    });
+    _cacheImages();
+
+    // Restore the scroll position
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final savedItemIndex = widget.ref.read(selectedAlbumIndexesProvider)['itemIndex_${widget.albumsInGroup[0].groupID}'] ?? 0;
+      _pageController.jumpToPage(savedItemIndex);
     });
   }
 
@@ -405,16 +413,6 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   void dispose() {
     _pageController.dispose();
     super.dispose();
-  }
-
-  Future<void> _initializeDirectories() async {
-    final directory = await getApplicationDocumentsDirectory();
-    imageDir = Directory('${directory.path}/uploadImage/');
-    thumbnailDir = Directory('${directory.path}/uploadThumb/');
-    setState(() {
-      isDirectoriesInitialized = true;
-    });
-    await _cacheImages();
   }
 
   Future<void> _cacheImages() async {
@@ -425,8 +423,8 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
   }
 
   Future<File> _getImageFile(String imageFilename, bool isThumbnail) async {
-    final dir = isThumbnail ? thumbnailDir : imageDir;
-    final filePath = '${dir.path}/$imageFilename';  // 修正点: パスのスラッシュを追加
+    final dir = isThumbnail ? await getApplicationDocumentsDirectory() : await getTemporaryDirectory();
+    final filePath = '${dir.path}/$imageFilename';
     final file = File(filePath);
 
     if (await file.exists()) {
@@ -447,121 +445,8 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     }
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl, List<AlbumTimeLine> albumsInGroup, int initialIndex) {
-    if (isDialogShowing) {
-      return;
-    }
-
-    isDialogShowing = true;
-
-    PageController pageController = PageController(initialPage: initialIndex);
-
-    showGeneralDialog(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-      transitionDuration: const Duration(milliseconds: 200),
-      pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
-        return Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              Center(
-                child: PageView.builder(
-                  controller: pageController,
-                  itemCount: albumsInGroup.length,
-                  itemBuilder: (context, index) {
-                    String imageFilename = albumsInGroup[index].imagePath.split('/').last;
-                    return FutureBuilder<File>(
-                      future: _getImageFile(imageFilename, false),
-                      builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-                          return LayoutBuilder(
-                            builder: (context, constraints) {
-                              double maxWidth = constraints.maxWidth;
-                              double maxHeight = constraints.maxHeight;
-                              return Center(
-                                child: ClipRRect(
-                                  child: Image.file(
-                                    snapshot.data!,
-                                    fit: BoxFit.cover,
-                                    width: maxWidth,
-                                    height: maxHeight,
-                                    errorBuilder: (context, error, stackTrace) {
-                                      return Image.network('https://photo5.world/$imageFilename');
-                                    },
-                                  ),
-                                ),
-                              );
-                            },
-                          );
-                        } else if (snapshot.hasError) {
-                          return Image.network('https://photo5.world/$imageFilename');
-                        } else {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                      },
-                    );
-                  },
-                ),
-              ),
-              Positioned(
-                top: 40,
-                left: 20,
-                child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    isDialogShowing = false;
-                  },
-                ),
-              ),
-              // if (initialIndex > 0)
-              //   Positioned(
-              //     left: 20,
-              //     top: MediaQuery.of(context).size.height / 2 - 30,
-              //     child: IconButton(
-              //       icon: Icon(Icons.arrow_left, color: Colors.white, size: 30),
-              //       onPressed: () {
-              //         pageController.previousPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-              //       },
-              //     ),
-              //   ),
-              // if (initialIndex < albumsInGroup.length - 1)
-              //   Positioned(
-              //     right: 20,
-              //     top: MediaQuery.of(context).size.height / 2 - 30,
-              //     child: IconButton(
-              //       icon: Icon(Icons.arrow_right, color: Colors.white, size: 30),
-              //       onPressed: () {
-              //         pageController.nextPage(duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
-              //       },
-              //     ),
-              //   ),
-            ],
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return FadeTransition(
-          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-          child: child,
-        );
-      },
-    ).then((_) {
-      isDialogShowing = false;
-    });
-  }
-
-
   @override
   Widget build(BuildContext context) {
-    if (!isDirectoriesInitialized) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return PageView.builder(
       controller: _pageController,
       itemCount: widget.albumsInGroup.length,
@@ -581,7 +466,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
           widget.onTapCallback!(album, index);
         }
         if (widget.ref.read(lastTappedAlbumProvider) == album) {
-          _showFullSizeImage(context, album.imagePath, widget.albumsInGroup, index); // 修正: albumsInGroupとindexを追加
+          _showFullSizeImage(context, album.imagePath, widget.albumsInGroup, index);
         } else {
           widget.ref.read(lastTappedAlbumProvider.notifier).state = album;
           if (_pageController.hasClients) {
@@ -661,7 +546,103 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
       ),
     );
   }
+
+  void _showFullSizeImage(BuildContext context, String imageUrl, List<AlbumTimeLine> albumsInGroup, int initialIndex) {
+    if (isDialogShowing) {
+      return;
+    }
+
+    isDialogShowing = true;
+
+    PageController pageController = PageController(initialPage: initialIndex);
+
+    showGeneralDialog<int>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
+        return Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              Center(
+                child: PageView.builder(
+                  controller: pageController,
+                  itemCount: albumsInGroup.length,
+                  itemBuilder: (context, index) {
+                    String imageFilename = albumsInGroup[index].imagePath.split('/').last;
+                    return FutureBuilder<File>(
+                      future: _getImageFile(imageFilename, false),
+                      builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
+                        if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
+                          return LayoutBuilder(
+                            builder: (context, constraints) {
+                              double maxWidth = constraints.maxWidth;
+                              double maxHeight = constraints.maxHeight;
+                              return Center(
+                                child: ClipRRect(
+                                  child: Image.file(
+                                    snapshot.data!,
+                                    fit: BoxFit.cover,
+                                    width: maxWidth,
+                                    height: maxHeight,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Image.network('https://photo5.world/$imageFilename');
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
+                          );
+                        } else if (snapshot.hasError) {
+                          return Image.network('https://photo5.world/$imageFilename');
+                        } else {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                      },
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                top: 40,
+                left: 20,
+                child: IconButton(
+                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () {
+                    Navigator.of(context).pop(pageController.page?.round());
+                    isDialogShowing = false;
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
+          child: child,
+        );
+      },
+    ).then((finalIndex) {
+      isDialogShowing = false;
+      if (finalIndex != null) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            widget.onHorizontalIndexChanged(finalIndex);
+            _pageController.jumpToPage(finalIndex);
+          });
+        });
+      }
+    });
+  }
 }
+
+
 
 
 
