@@ -543,6 +543,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   TimelineItem? lastTappedItem;
   bool isDialogShowing = false;
+  bool isMapVisible = false;
+  ValueNotifier<File?> currentImageNotifier = ValueNotifier<File?>(null);
+  ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(false); // 追加
 
   @override
   void initState() {
@@ -569,6 +572,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     manager.setOnPhotoTapCallback(scrollToTarget);
 
     _checkDatabaseEmpty();
+
+    selectedItemNotifier.addListener(_loadNextImage);
   }
 
   @override
@@ -579,6 +584,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     _controller.dispose();
     _debounce?.cancel();
     isScrollingNotifier.dispose();
+    selectedItemNotifier.removeListener(_loadNextImage);
+    currentImageNotifier.dispose();
     super.dispose();
   }
 
@@ -753,6 +760,25 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
+  void _loadNextImage() async {
+    final selectedItem = selectedItemNotifier.value;
+    // インデックスが先頭であるかどうかを確認
+    if (selectedItem != null && selectedItem.systemId != "shootbutton") {
+      final imageFile = await _getCachedImage(selectedItem.imageFilename.split('/').last);
+      if (mounted) {
+        isMapVisibleNotifier.value = true; // 追加
+        currentImageNotifier.value = imageFile;
+      }
+    } else {
+      // 先頭の場合は画像を表示しない
+      if (mounted) {
+        isMapVisibleNotifier.value = false; // 追加
+        currentImageNotifier.value = null;
+      }
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Consumer(
@@ -780,6 +806,42 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               scrollGesturesEnabled: false,
               padding: const EdgeInsets.only(bottom: 0),
             ),
+            ValueListenableBuilder<bool>(
+              valueListenable: isMapVisibleNotifier,
+              builder: (context, isMapVisible, child) {
+                return isMapVisible
+                    ? Container(
+                  color: Colors.black,
+                )
+                    : const SizedBox.shrink();
+              },
+            ),
+            Positioned.fill(
+              child: ValueListenableBuilder<File?>(
+                valueListenable: currentImageNotifier,
+                builder: (context, currentImage, child) {
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 500),
+                    child: currentImage != null
+                        ? Container(
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: FileImage(currentImage),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    )
+                        : const SizedBox(),
+                  );
+                },
+              ),
+            ),
+            // if (showNewListWheelScrollView)
+            //   Positioned.fill(
+            //     child: Container(
+            //       color: Colors.red, // デバッグ用の背景色
+            //     ),
+            //   ),
             if (!showNewListWheelScrollView)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -811,19 +873,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   },
                   child: ListWheelScrollView(
                     controller: _pickerController,
-                    itemExtent: MediaQuery.of(context).size.width * 0.2,
-                    diameterRatio: 1.25,
+                    itemExtent: MediaQuery.of(context).size.width * 0.2, // itemExtent を確認
+                    diameterRatio: 1.25, // diameterRatio を確認
                     onSelectedItemChanged: (int index) async {
                       if (index + 1 == groupKeys.length) {
                         await ref.read(timelineAddProvider.notifier).addMoreItems();
-                        debugPrint("onSelectedItemChanged_A");
                       }
                       if (index >= 0 && index < groupKeys.length) {
                         String lastSelectedGroupID = groupKeys[index];
                         _lastSelectedIndexes[lastSelectedGroupID] = index;
-                        debugPrint("onSelectedItemChanged_B");
                       }
-                      debugPrint("onSelectedItemChanged_C + $index + groupKeys.length =${groupKeys.length} + groupKeys = $groupKeys");
                     },
                     physics: const FixedExtentScrollPhysics(),
                     children: List<Widget>.generate(
@@ -882,7 +941,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
                 child: Text(showNewListWheelScrollView ? 'タイムライン' : 'アルバム'),
                 style: ElevatedButton.styleFrom(
-                  primary: _isDatabaseEmpty ? Colors.grey : Colors.blue,
+                  backgroundColor: _isDatabaseEmpty ? Colors.grey : Colors.blue,
                 ),
               ),
             ),
@@ -996,11 +1055,25 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   }
                 },
               ),
+            Positioned(
+              top: widget.size.height * 0.05,
+              left: widget.size.width * 0.3,
+              right: widget.size.width * 0.3,
+              child: Container(
+                height: widget.size.height * 0.1,
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/titles.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ],
         );
       },
     );
   }
+
 
   void scrollToTarget() {
     if (_pickerController.hasClients) {
