@@ -809,13 +809,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                return isMapVisible
-                    ? Container(
-                  color: Colors.black,
-                )
-                    : const SizedBox.shrink();
+                return Positioned.fill(
+                  child: isMapVisible && !showNewListWheelScrollView
+                      ? Container(
+                    color: Colors.black,
+                  )
+                      : const SizedBox.shrink(),
+                );
               },
             ),
+
             Positioned.fill(
               child: ValueListenableBuilder<File?>(
                 valueListenable: currentImageNotifier,
@@ -847,10 +850,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               builder: (context, isMapVisible, child) {
                 if (isMapVisible) {
                   return Positioned(
-                    top: widget.size.height * 0.4,
-                    bottom: widget.size.height * 0.4,
-                    left: widget.size.width * 0.01,
-                    right: widget.size.width * 0.01,
+                    top: widget.size.height * 0.3,
+                    bottom: widget.size.height * 0.3,
+                    left: widget.size.width * 0.05,
+                    right: widget.size.width * 0.05,
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
@@ -947,21 +950,31 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 ),
               ),
             if (showNewListWheelScrollView && _albumList.isNotEmpty)
-              Positioned(
-                top: widget.size.height * 0.3,
-                bottom: widget.size.height * 0.3,
-                left: 0,
-                right: 0,
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
-                    border: Border.all(
-                      color: Colors.black,
-                      width: 2.0,
+            ValueListenableBuilder<bool>(
+              valueListenable: isMapVisibleNotifier,
+              builder: (context, isMapVisible, child) {
+                if (!isMapVisible) {
+                  return Positioned(
+                    top: widget.size.height * 0.3,
+                    bottom: widget.size.height * 0.3,
+                    left: widget.size.width * 0.05,
+                    right: widget.size.width * 0.05,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white.withOpacity(0.2),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 1.0,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              ),
+                  );
+                } else {
+                  return SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
+                }
+              },
+            ),
             if (showNewListWheelScrollView && _albumList.isNotEmpty)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -977,7 +990,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               ),
             Positioned(
               right: widget.size.width * 0.05,
-              top: widget.size.height * 0.3,
+              top: widget.size.height * 0.1,
               child: ElevatedButton(
                 onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
                 child: Text(showNewListWheelScrollView ? 'タイムライン' : 'アルバム'),
@@ -1017,10 +1030,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 },
                 scrollController: _pickerController,
               ),
-            ZoomControl(
-              size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
-              right: widget.size.width * 0.05,
-              top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075),
+            ValueListenableBuilder<bool>(
+              valueListenable: isMapVisibleNotifier,
+              builder: (context, isMapVisible, child) {
+                if (!isMapVisible || showNewListWheelScrollView) {
+                  return ZoomControl(
+                    size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
+                    right: widget.size.width * 0.05,
+                    top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075),
+                  );
+                } else {
+                  return SizedBox.shrink();
+                }
+              },
             ),
             if (!showNewListWheelScrollView)
               ValueListenableBuilder<bool>(
@@ -1184,6 +1206,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     setState(() {
       showNewListWheelScrollView = !showNewListWheelScrollView;
     });
+
+    isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
+
 
     if (showNewListWheelScrollView) {
       _loadAlbumData();
