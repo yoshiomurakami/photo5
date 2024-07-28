@@ -389,7 +389,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     currentPageIndex = widget.currentIndex;
     _pageController = PageController(
       initialPage: widget.currentIndex,
-      viewportFraction: 0.165,
+      viewportFraction: 0.23,
     );
     _pageController.addListener(() {
       int newIndex = _pageController.page!.round();

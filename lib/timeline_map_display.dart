@@ -842,6 +842,31 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             //       color: Colors.red, // デバッグ用の背景色
             //     ),
             //   ),
+            ValueListenableBuilder<bool>(
+              valueListenable: isMapVisibleNotifier,
+              builder: (context, isMapVisible, child) {
+                if (isMapVisible) {
+                  return Positioned(
+                    top: widget.size.height * 0.4,
+                    bottom: widget.size.height * 0.4,
+                    left: widget.size.width * 0.01,
+                    right: widget.size.width * 0.01,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.white.withOpacity(0.2),
+                        border: Border.all(
+                          color: Colors.white,
+                          width: 1.0,
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
+                }
+              },
+            ),
             if (!showNewListWheelScrollView)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -873,8 +898,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   },
                   child: ListWheelScrollView(
                     controller: _pickerController,
-                    itemExtent: MediaQuery.of(context).size.width * 0.2, // itemExtent を確認
-                    diameterRatio: 1.25, // diameterRatio を確認
+                    itemExtent: MediaQuery.of(context).size.width * 0.2,
+                    diameterRatio: 1.25,
                     onSelectedItemChanged: (int index) async {
                       if (index + 1 == groupKeys.length) {
                         await ref.read(timelineAddProvider.notifier).addMoreItems();
@@ -925,8 +950,24 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               Positioned(
                 top: widget.size.height * 0.3,
                 bottom: widget.size.height * 0.3,
-                left: widget.size.width * -0.18,
-                right: widget.size.width * -0.18,
+                left: 0,
+                right: 0,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.5),
+                    border: Border.all(
+                      color: Colors.black,
+                      width: 2.0,
+                    ),
+                  ),
+                ),
+              ),
+            if (showNewListWheelScrollView && _albumList.isNotEmpty)
+              Positioned(
+                top: widget.size.height * 0.3,
+                bottom: widget.size.height * 0.3,
+                left: 0,
+                right: 0,
                 child: AlbumTimeLineView(
                   size: MediaQuery.of(context).size,
                   albumList: _albumList,
