@@ -264,63 +264,77 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   // @override
   Widget _buildLoadingScreen() {
     final l10n = L10n.of(context)!;
+    final size = MediaQuery.of(context).size; // 追加
     return Scaffold(
       body: Stack(
         children: [
           Container(
             color: const Color(0xFFFFCC4D),
             // color: Colors.transparent,
-
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Container(
-                    width: MediaQuery.of(context).size.width * 0.2,
-                    height: MediaQuery.of(context).size.width * 0.2,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.black,
-                        width: 2.0,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        "\u{1F590}",
-                        style: TextStyle(
-                          fontSize: MediaQuery.of(context).size.width * 0.1,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),
-                  Text(
-                    "${l10n.latestVersion}$latestVersion", // Display the latest version here
-                    // l10n.latestVersion, // Display the latest version here
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 16.0,
-                    ),
-                  ),
-                  const SizedBox(height: 16.0),  // Add spacing between the two text widgets
-                  Text(
-                    l10n.loadingText,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 16.0,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
+          ),
+          // タイトル画像の表示
+          Positioned(
+            top: size.height * 0.1, // タイトル画像を画面の上端から10%の位置に設定
+            left: size.width * 0.2, // 左右の余白を10%に設定
+            right: size.width * 0.2,
+            child: Container(
+              // height: size.height * 0.2, // タイトル画像の高さを画面の20%に設定
+              alignment: Alignment.center,
+              child: Image.asset(
+                'assets/titles.png',
+                fit: BoxFit.contain,
               ),
+            ),
+          ),
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: size.width * 0.2,
+                  height: size.width * 0.2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.black,
+                      width: 2.0,
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      "\u{1F590}",
+                      style: TextStyle(
+                        fontSize: size.width * 0.1,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16.0),
+                Text(
+                  "${l10n.latestVersion}$latestVersion", // Display the latest version here
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16.0,
+                  ),
+                ),
+                const SizedBox(height: 16.0), // Add spacing between the two text widgets
+                Text(
+                  l10n.loadingText,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16.0,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
     );
   }
+
 
   Future<bool> _startupProcedures(BuildContext context) async {
     debugPrint("Startup procedures starting");

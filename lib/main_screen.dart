@@ -47,6 +47,8 @@ class _MainScreenState extends State<_MainScreenContent> {
       // ここでは直接 List<TimelineItem> を取得
       final timelineItems = ref.watch(timelineAddProvider);
 
+
+
       Widget timelineMapWidget;
       if (timelineItems.isNotEmpty) {
         final currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
@@ -67,6 +69,20 @@ class _MainScreenState extends State<_MainScreenContent> {
             timelineMapWidget,
             const ConnectionNumber(),
             const ConnectionWidgetsDisplay(),
+            // タイトル画像の表示
+            Positioned(
+              top: size.height * 0.1, // タイトル画像を画面の上端から10%の位置に設定
+              left: size.width * 0.2, // 左右の余白を10%に設定
+              right: size.width * 0.2,
+              child: Container(
+                // height: size.height * 0.2, // タイトル画像の高さを画面の20%に設定
+                alignment: Alignment.center,
+                child: Image.asset(
+                  'assets/titles.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
           ],
         ),
       );

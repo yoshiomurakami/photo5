@@ -999,47 +999,83 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             selectedItemsMap[selectedItem.groupID]! >= 0 &&
                             selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
                           return Positioned(
-                            bottom: widget.size.height * 0.5 + widget.size.width * 0.1 + 5,
-                            left: widget.size.width * 0.15,
-                            right: widget.size.width * 0.15,
+                            bottom: widget.size.height * 0,
+                            right: widget.size.width * 0,
                             child: Stack(
                               clipBehavior: Clip.none,
                               children: [
                                 Align(
-                                  alignment: Alignment.center,
+                                  // alignment: Alignment.topRight,
                                   child: CustomPaint(
-                                    painter: BubblePainter(),
+                                    // painter: BubblePainter(),
                                     child: Container(
                                       constraints: BoxConstraints(
-                                        maxWidth: widget.size.width * 0.7,
+                                        maxWidth: widget.size.width * 0.4,
                                       ),
                                       padding: const EdgeInsets.all(15),
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.end, // 追加
                                         children: [
                                           const SizedBox(height: 5),
-                                          Text(
-                                            '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
-                                            style: const TextStyle(
-                                              fontSize: 16,
-                                              color: Colors.black,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                            textAlign: TextAlign.center,
+                                          Stack(
+                                            children: [
+                                              // 縁取りの黒いテキスト（都市）
+                                              Text(
+                                                selectedItem.geocodedCity ?? '',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  foreground: Paint()
+                                                    ..style = PaintingStyle.stroke
+                                                    ..strokeWidth = 2
+                                                    ..color = Colors.black,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                              // 内側の白いテキスト（都市）
+                                              Text(
+                                                selectedItem.geocodedCity ?? '',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ],
+                                          ),
+                                          // const SizedBox(height: 5),
+                                          Stack(
+                                            children: [
+                                              // 縁取りの黒いテキスト（国）
+                                              Text(
+                                                selectedItem.geocodedCountry ?? 'N/A',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  foreground: Paint()
+                                                    ..style = PaintingStyle.stroke
+                                                    ..strokeWidth = 2
+                                                    ..color = Colors.black,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                              // 内側の白いテキスト（国）
+                                              Text(
+                                                selectedItem.geocodedCountry ?? 'N/A',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ],
                                           ),
                                           const SizedBox(height: 5),
                                         ],
                                       ),
                                     ),
-                                  ),
-                                ),
-                                Positioned(
-                                  top: -10,
-                                  left: 0,
-                                  right: 0,
-                                  child: Align(
-                                    alignment: Alignment.topCenter,
-                                    child: buildFlagWidget(selectedItem.country),
                                   ),
                                 ),
                               ],
@@ -1056,11 +1092,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 },
               ),
             Positioned(
-              top: widget.size.height * 0.05,
-              left: widget.size.width * 0.3,
-              right: widget.size.width * 0.3,
+              top: widget.size.height * 0.1,
+              left: widget.size.width * 0.2,
+              right: widget.size.width * 0.2,
               child: Container(
-                height: widget.size.height * 0.1,
+                // height: widget.size.height * 0.2,
                 alignment: Alignment.center,
                 child: Image.asset(
                   'assets/titles.png',
