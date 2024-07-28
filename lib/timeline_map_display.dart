@@ -749,16 +749,21 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void onThumbnailTap(TimelineItem tappedItem) {
-    if (lastTappedItem == tappedItem) {
-      final groupID = tappedItem.groupID;
-      final itemsInGroup = groupedItemsList.firstWhere((group) => group.first.groupID == groupID);
-      final initialIndex = itemsInGroup.indexOf(tappedItem);
+    if (isMapVisibleNotifier.value == false && !showNewListWheelScrollView) {
+      if (lastTappedItem == tappedItem) {
+        final groupID = tappedItem.groupID;
+        final itemsInGroup = groupedItemsList.firstWhere((group) => group.first.groupID == groupID);
+        final initialIndex = itemsInGroup.indexOf(tappedItem);
 
-      _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex);
-    } else {
-      lastTappedItem = tappedItem;
+        _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex);
+      } else {
+        lastTappedItem = tappedItem;
+      }
+    }else{
+      //新しい処理を追加
     }
   }
+
 
   void _loadNextImage() async {
     final selectedItem = selectedItemNotifier.value;
@@ -819,26 +824,34 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               },
             ),
 
-            Positioned.fill(
-              child: ValueListenableBuilder<File?>(
-                valueListenable: currentImageNotifier,
-                builder: (context, currentImage, child) {
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 500),
-                    child: currentImage != null
-                        ? Container(
-                      decoration: BoxDecoration(
-                        image: DecorationImage(
-                          image: FileImage(currentImage),
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                    )
-                        : const SizedBox(),
-                  );
-                },
-              ),
+            ValueListenableBuilder<bool>(
+              valueListenable: isMapVisibleNotifier,
+              builder: (context, isMapVisible, child) {
+                return isMapVisible && !showNewListWheelScrollView
+                    ? Positioned.fill(
+                  child: ValueListenableBuilder<File?>(
+                    valueListenable: currentImageNotifier,
+                    builder: (context, currentImage, child) {
+                      return AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 500),
+                        child: currentImage != null
+                            ? Container(
+                          decoration: BoxDecoration(
+                            image: DecorationImage(
+                              image: FileImage(currentImage),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        )
+                            : const SizedBox(),
+                      );
+                    },
+                  ),
+                )
+                    : const SizedBox.shrink();
+              },
             ),
+
             // if (showNewListWheelScrollView)
             //   Positioned.fill(
             //     child: Container(
@@ -857,7 +870,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     child: Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(10),
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withOpacity(0.8),
                         border: Border.all(
                           color: Colors.white,
                           width: 1.0,
