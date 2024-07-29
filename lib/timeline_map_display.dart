@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui'; // ぼかし効果を使うために必要
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -526,7 +527,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   final _jumpToTopKey = GlobalKey<JumpToTopState>();
   List<List<TimelineItem>> groupedItemsList = [];
   int centralRowIndex = 0;
-  bool showNewListWheelScrollView = false;
+  bool showAlbumWheelScrollView = false;
   List<AlbumTimeLine> _albumList = [];
   String _lastSelectedGroupID = 'camera';
   final Map<String, int> _lastSelectedIndexes = {};
@@ -621,7 +622,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl, List<TimelineItem> itemsInGroup, int initialIndex) {
+  void _showFullSizeImage(BuildContext context, String imageUrl, List<TimelineItem> itemsInGroup, int initialIndex, Map<String, int> selectedItemsMap) {
     if (isDialogShowing) {
       return;
     }
@@ -629,6 +630,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     isDialogShowing = true;
 
     PageController pageController = PageController(initialPage: initialIndex);
+
+    pageController.addListener(() {
+      final pageIndex = pageController.page?.round() ?? initialIndex;
+      if (pageIndex >= 0 && pageIndex < itemsInGroup.length) {
+        selectedItemNotifier.value = itemsInGroup[pageIndex];
+      }
+    });
 
     showGeneralDialog<int>(
       context: context,
@@ -681,6 +689,108 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   },
                 ),
               ),
+              ValueListenableBuilder<bool>(
+                valueListenable: isScrollingNotifier,
+                builder: (context, isScrolling, child) {
+                  if (!isScrolling) {
+                    return ValueListenableBuilder<TimelineItem?>(
+                      valueListenable: selectedItemNotifier,
+                      builder: (context, selectedItem, child) {
+                        if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+                          return const SizedBox();
+                        }
+
+                        final timeParts = selectedItem.localtime.split(' ');
+
+                        if (selectedItemsMap.containsKey(selectedItem.groupID) &&
+                            selectedItemsMap[selectedItem.groupID]! >= 0 &&
+                            selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
+                          return Positioned(
+                            bottom: MediaQuery.of(context).size.height * 0,
+                            right: MediaQuery.of(context).size.width * 0,
+                            child: Stack(
+                              clipBehavior: Clip.none,
+                              children: [
+                                Align(
+                                  child: CustomPaint(
+                                    child: Container(
+                                      constraints: BoxConstraints(
+                                        maxWidth: MediaQuery.of(context).size.width * 0.4,
+                                      ),
+                                      padding: const EdgeInsets.all(15),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          const SizedBox(height: 5),
+                                          Stack(
+                                            children: [
+                                              Text(
+                                                selectedItem.geocodedCity ?? '',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  foreground: Paint()
+                                                    ..style = PaintingStyle.stroke
+                                                    ..strokeWidth = 2
+                                                    ..color = Colors.black,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                              Text(
+                                                selectedItem.geocodedCity ?? '',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ],
+                                          ),
+                                          Stack(
+                                            children: [
+                                              Text(
+                                                selectedItem.geocodedCountry ?? 'N/A',
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                  foreground: Paint()
+                                                    ..style = PaintingStyle.stroke
+                                                    ..strokeWidth = 2
+                                                    ..color = Colors.black,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                              Text(
+                                                selectedItem.geocodedCountry ?? 'N/A',
+                                                style: const TextStyle(
+                                                  fontSize: 16,
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                                textAlign: TextAlign.right,
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 5),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          return const SizedBox();
+                        }
+                      },
+                    );
+                  } else {
+                    return const SizedBox();
+                  }
+                },
+              ),
               Positioned(
                 top: 40,
                 left: 20,
@@ -690,6 +800,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     Navigator.of(context).pop(pageController.page?.round());
                     isDialogShowing = false;
                   },
+                ),
+              ),
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.1,
+                left: MediaQuery.of(context).size.width * 0.2,
+                right: MediaQuery.of(context).size.width * 0.2,
+                child: Container(
+                  alignment: Alignment.center,
+                  child: Image.asset(
+                    'assets/titles.png',
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
             ],
@@ -730,6 +852,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
+
   Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
     File cachedImage = File('$cacheDirPath/$filename');
@@ -749,20 +872,25 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   }
 
   void onThumbnailTap(TimelineItem tappedItem) {
-    if (isMapVisibleNotifier.value == false && !showNewListWheelScrollView) {
+    if (isMapVisibleNotifier.value == true && !showAlbumWheelScrollView) {
+      final chatNotifier = ref.read(chatNotifierProvider);
+      final selectedItemsMap = chatNotifier.selectedItemsMap;
+
       if (lastTappedItem == tappedItem) {
         final groupID = tappedItem.groupID;
         final itemsInGroup = groupedItemsList.firstWhere((group) => group.first.groupID == groupID);
         final initialIndex = itemsInGroup.indexOf(tappedItem);
 
-        _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex);
+        _showFullSizeImage(context, 'https://photo5.world/${tappedItem.imageFilename}', itemsInGroup, initialIndex, selectedItemsMap);
       } else {
         lastTappedItem = tappedItem;
       }
-    }else{
-      //新しい処理を追加
+    } else {
+      debugPrint("tappedItem");
+      // isWhiteBoxVisibleNotifier.value = !isWhiteBoxVisibleNotifier.value;
     }
   }
+
 
 
   void _loadNextImage() async {
@@ -815,7 +943,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
                 return Positioned.fill(
-                  child: isMapVisible && !showNewListWheelScrollView
+                  child: isMapVisible && !showAlbumWheelScrollView
                       ? Container(
                     color: Colors.black,
                   )
@@ -827,7 +955,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                return isMapVisible && !showNewListWheelScrollView
+                return isMapVisible && !showAlbumWheelScrollView
                     ? Positioned.fill(
                   child: ValueListenableBuilder<File?>(
                     valueListenable: currentImageNotifier,
@@ -852,7 +980,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               },
             ),
 
-            // if (showNewListWheelScrollView)
+            // if (showAlbumWheelScrollView)
             //   Positioned.fill(
             //     child: Container(
             //       color: Colors.red, // デバッグ用の背景色
@@ -863,17 +991,20 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               builder: (context, isMapVisible, child) {
                 if (isMapVisible) {
                   return Positioned(
-                    top: widget.size.height * 0.3,
-                    bottom: widget.size.height * 0.3,
-                    left: widget.size.width * 0.05,
-                    right: widget.size.width * 0.05,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.white.withOpacity(0.8),
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 1.0,
+                    // top: widget.size.height * 0,
+                    // bottom: widget.size.height * 0,
+                    // left: widget.size.width * 0,
+                    // right: widget.size.width * 0,
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // ぼかし効果を追加
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(0),
+                          color: Colors.white.withOpacity(0), // 透明度を調整
+                          // border: Border.all(
+                          //   color: Colors.white,
+                          //   width: 1,
+                          // ),
                         ),
                       ),
                     ),
@@ -883,7 +1014,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 }
               },
             ),
-            if (!showNewListWheelScrollView)
+            if (!showAlbumWheelScrollView)
               Positioned(
                 top: widget.size.height * 0.3,
                 bottom: widget.size.height * 0.3,
@@ -962,33 +1093,33 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   ),
                 ),
               ),
-            if (showNewListWheelScrollView && _albumList.isNotEmpty)
-            ValueListenableBuilder<bool>(
-              valueListenable: isMapVisibleNotifier,
-              builder: (context, isMapVisible, child) {
-                if (!isMapVisible) {
-                  return Positioned(
-                    top: widget.size.height * 0.3,
-                    bottom: widget.size.height * 0.3,
-                    left: widget.size.width * 0.05,
-                    right: widget.size.width * 0.05,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.white.withOpacity(0.2),
-                        border: Border.all(
-                          color: Colors.white,
-                          width: 1.0,
-                        ),
-                      ),
-                    ),
-                  );
-                } else {
-                  return SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
-                }
-              },
-            ),
-            if (showNewListWheelScrollView && _albumList.isNotEmpty)
+            // if (showAlbumWheelScrollView && _albumList.isNotEmpty)
+            // ValueListenableBuilder<bool>(
+            //   valueListenable: isMapVisibleNotifier,
+            //   builder: (context, isMapVisible, child) {
+            //     if (!isMapVisible) {
+            //       return Positioned(
+            //         top: widget.size.height * 0.3,
+            //         bottom: widget.size.height * 0.3,
+            //         left: widget.size.width * 0.05,
+            //         right: widget.size.width * 0.05,
+            //         child: Container(
+            //           decoration: BoxDecoration(
+            //             borderRadius: BorderRadius.circular(10),
+            //             color: Colors.white.withOpacity(0.2),
+            //             border: Border.all(
+            //               color: Colors.white,
+            //               width: 1.0,
+            //             ),
+            //           ),
+            //         ),
+            //       );
+            //     } else {
+            //       return SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
+            //     }
+            //   },
+            // ),
+            if (showAlbumWheelScrollView && _albumList.isNotEmpty)
               Positioned(
                 top: widget.size.height * 0.3,
                 bottom: widget.size.height * 0.3,
@@ -1006,13 +1137,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               top: widget.size.height * 0.1,
               child: ElevatedButton(
                 onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
-                child: Text(showNewListWheelScrollView ? 'タイムライン' : 'アルバム'),
+                child: Text(showAlbumWheelScrollView ? 'タイムライン' : 'アルバム'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _isDatabaseEmpty ? Colors.grey : Colors.blue,
                 ),
               ),
             ),
-            if (!showNewListWheelScrollView)
+            if (!showAlbumWheelScrollView)
               JumpToTop(
                 key: _jumpToTopKey,
                 size: Size(widget.size.width, widget.size.height),
@@ -1046,7 +1177,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                if (!isMapVisible || showNewListWheelScrollView) {
+                if (!isMapVisible || showAlbumWheelScrollView) {
                   return ZoomControl(
                     size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
                     right: widget.size.width * 0.05,
@@ -1057,7 +1188,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 }
               },
             ),
-            if (!showNewListWheelScrollView)
+            if (!showAlbumWheelScrollView)
               ValueListenableBuilder<bool>(
                 valueListenable: isScrollingNotifier,
                 builder: (context, isScrolling, child) {
@@ -1196,7 +1327,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         curve: Curves.easeInOut,
       );
       setState(() {
-        showNewListWheelScrollView = false;
+        showAlbumWheelScrollView = false;
         if (selectedItemNotifier.value != null) {
           MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
         } else {
@@ -1217,13 +1348,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
   void toggleTimelineAndAlbum() {
     setState(() {
-      showNewListWheelScrollView = !showNewListWheelScrollView;
+      showAlbumWheelScrollView = !showAlbumWheelScrollView;
     });
 
     isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
 
 
-    if (showNewListWheelScrollView) {
+    if (showAlbumWheelScrollView) {
       _loadAlbumData();
     } else {
       int targetIndex = groupedItemsList.indexWhere((list) =>
@@ -1452,7 +1583,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
         return Listener(
           onPointerDown: (event) {
             _isTap = true;
-            _tapTimer = Timer(const Duration(milliseconds: 100), () {
+            _tapTimer = Timer(const Duration(milliseconds: 300), () {
               _isTap = false;
             });
           },
