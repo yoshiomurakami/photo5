@@ -209,7 +209,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
         }
         isRestoringPosition = false;
         if (selectedAlbumItemNotifier.value != null) {
-          MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!);
+          MapUpdateService.updateMapLocation(selectedAlbumItemNotifier.value!, true);
         }
       });
     });
@@ -242,7 +242,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                     });
                     AlbumTimeLine selectedItem = selectedGroup[selectedItemIndex];
                     selectedAlbumItemNotifier.value = selectedItem;
-                    MapUpdateService.updateMapLocation(selectedItem);
+                    MapUpdateService.updateMapLocation(selectedItem, true);
                     ref.read(lastTappedAlbumProvider.notifier).state = selectedItem;
                   });
                 }

@@ -465,7 +465,13 @@ class JumpToTopState extends State<JumpToTop> with TickerProviderStateMixin {
 
 class MapUpdateService {
 
-  static void updateMapLocation(dynamic selectedItem) {
+  static void updateMapLocation(dynamic selectedItem, bool isMapVisible) {
+    // showAlbumWheelScrollViewがtrueの場合は、マップの移動をさせない
+    if (!isMapVisible) {
+      return;
+    }
+
+
     double lat, lng;
 
     // selectedItemがTimelineItemかAlbumTimeLineかに基づいてlatとlngを設定
@@ -482,6 +488,8 @@ class MapUpdateService {
     // Update the map location
     MapController.instance.updateMapLocation(lat, lng);
   }
+
+
 }
 
 class ScrollToCenterService {
@@ -836,7 +844,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               final chatNotifier = ref.read(chatNotifierProvider);
               chatNotifier.selectedItemsMap[groupID] = finalIndex;
               selectedItemNotifier.value = itemsInGroup[finalIndex];
-              MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+              MapUpdateService.updateMapLocation(selectedItemNotifier.value!, false);
 
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (_scrollController.hasClients) {
@@ -1034,7 +1042,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
                             if (selectedItemIndex >= 0 && selectedItemIndex < groupedItemsList[index].length) {
                               selectedItemNotifier.value = groupedItemsList[index][selectedItemIndex];
-                              MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+                              MapUpdateService.updateMapLocation(selectedItemNotifier.value!, false);
                               _lastSelectedGroupID = groupID;
                             }
                           }
@@ -1062,63 +1070,73 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                           (int index) {
                         String groupID = groupedItemsList[index].first.groupID;
                         int currentIndex = selectedItemsMap[groupID] ?? 0;
-                        return Center(
-                          child: HorizontalGroupedItems(
-                            itemsInGroup: groupedItemsList[index],
-                            size: MediaQuery.of(context).size,
-                            controller: _scrollController,
-                            currentIndex: currentIndex,
-                            pickerController: _pickerController,
-                            items: items,
-                            onTapCallback: (TimelineItem item) {
-                              ScrollToCenterService.scrollToCenter(_pickerController, index);
-                              if (_pickerController.selectedItem == index) {
-                                Future.delayed(const Duration(milliseconds: 100), () {
-                                  onThumbnailTap(item);
-                                });
-                              }
-                            },
-                            centralRowIndex: centralRowIndex,
-                            chatNotifier: chatNotifier,
-                            onHorizontalIndexChanged: (int newIndex) {
-                              if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
-                                selectedItemsMap[groupID] = newIndex;
-                                selectedItemNotifier.value = groupedItemsList[index][newIndex];
-                              }
-                            },
-                          ),
+                        String dateString = groupedItemsList[index].first.localtime; // 日付情報を取得
+
+                        return Stack(
+                          children: [
+                            Center(
+                              child: HorizontalGroupedItems(
+                                itemsInGroup: groupedItemsList[index],
+                                size: MediaQuery.of(context).size,
+                                controller: _scrollController,
+                                currentIndex: currentIndex,
+                                pickerController: _pickerController,
+                                items: items,
+                                onTapCallback: (TimelineItem item) {
+                                  ScrollToCenterService.scrollToCenter(_pickerController, index);
+                                  if (_pickerController.selectedItem == index) {
+                                    Future.delayed(const Duration(milliseconds: 100), () {
+                                      onThumbnailTap(item);
+                                    });
+                                  }
+                                },
+                                centralRowIndex: centralRowIndex,
+                                chatNotifier: chatNotifier,
+                                onHorizontalIndexChanged: (int newIndex) {
+                                  if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                    selectedItemsMap[groupID] = newIndex;
+                                    selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                                  }
+                                },
+                              ),
+                            ),
+                            Positioned(
+                              left: widget.size.width * 0.3, // 画面中央から左に横幅の20%分寄せる
+                              child: (index != 0)
+                                  ? Container(
+                                alignment: Alignment.centerRight, // テキストを右寄せ
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end, // テキストを右寄せ
+                                  children: [
+                                    Text(
+                                      '${dateString.split(', ')[0]}, ${dateString.split(', ')[1]} ${dateString.split(', ')[2]}',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    Text(
+                                      dateString.split(', ').length > 3 ? dateString.split(', ')[3] : '',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16, // 時:分のフォントサイズを大きく
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              )
+                                  : SizedBox.shrink(),
+                            ),
+
+                          ],
                         );
                       },
                     ),
                   ),
                 ),
               ),
-            // if (showAlbumWheelScrollView && _albumList.isNotEmpty)
-            // ValueListenableBuilder<bool>(
-            //   valueListenable: isMapVisibleNotifier,
-            //   builder: (context, isMapVisible, child) {
-            //     if (!isMapVisible) {
-            //       return Positioned(
-            //         top: widget.size.height * 0.3,
-            //         bottom: widget.size.height * 0.3,
-            //         left: widget.size.width * 0.05,
-            //         right: widget.size.width * 0.05,
-            //         child: Container(
-            //           decoration: BoxDecoration(
-            //             borderRadius: BorderRadius.circular(10),
-            //             color: Colors.white.withOpacity(0.2),
-            //             border: Border.all(
-            //               color: Colors.white,
-            //               width: 1.0,
-            //             ),
-            //           ),
-            //         ),
-            //       );
-            //     } else {
-            //       return SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
-            //     }
-            //   },
-            // ),
             if (showAlbumWheelScrollView && _albumList.isNotEmpty)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -1134,7 +1152,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               ),
             Positioned(
               right: widget.size.width * 0.05,
-              top: widget.size.height * 0.1,
+              top: widget.size.height * 0.2,
               child: ElevatedButton(
                 onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
                 child: Text(showAlbumWheelScrollView ? 'タイムライン' : 'アルバム'),
@@ -1329,7 +1347,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       setState(() {
         showAlbumWheelScrollView = false;
         if (selectedItemNotifier.value != null) {
-          MapUpdateService.updateMapLocation(selectedItemNotifier.value!);
+          MapUpdateService.updateMapLocation(selectedItemNotifier.value!, false);
         } else {
           debugPrint("selectedItem is null");
         }
@@ -1367,7 +1385,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
         String groupID = groupedItemsList[targetIndex].first.groupID;
         int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
         TimelineItem selectedItem = groupedItemsList[targetIndex][selectedItemIndex];
-        MapUpdateService.updateMapLocation(selectedItem);
+        MapUpdateService.updateMapLocation(selectedItem, false);
       }
     }
   }
