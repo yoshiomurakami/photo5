@@ -212,7 +212,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    pageController = PageController(viewportFraction: 1.0);
+    pageController = PageController(viewportFraction: 2.0);
     _startupController = StreamController<bool>();
     WidgetsBinding.instance.addObserver(this); // ウィジェットバインディングオブザーバーを追加
     chatConnection = ChatConnection();

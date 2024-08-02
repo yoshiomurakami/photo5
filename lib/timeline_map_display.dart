@@ -16,6 +16,7 @@ import 'timeline_camera.dart';
 import 'album_timeline.dart';
 import 'package:flag/flag.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:intl/intl.dart';
 
 
 
@@ -555,6 +556,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   bool isMapVisible = false;
   ValueNotifier<File?> currentImageNotifier = ValueNotifier<File?>(null);
   ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(false); // 追加
+  ValueNotifier<int> selectedIndexNotifier = ValueNotifier<int>(0); // 中央行のインデックスを保持するためのValueNotifier
 
   @override
   void initState() {
@@ -595,6 +597,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     isScrollingNotifier.dispose();
     selectedItemNotifier.removeListener(_loadNextImage);
     currentImageNotifier.dispose();
+    selectedIndexNotifier.dispose(); // ValueNotifierの破棄
     super.dispose();
   }
 
@@ -919,6 +922,28 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
+  Map<String, String> formatDateString(String dateString) {
+    DateTime dateTime;
+
+    if (dateString == "dummy") {
+      dateTime = DateTime.now(); // 現在時刻を使用
+    } else {
+      // "Sun, 28 07, 2024, 22:17"の形式の日付文字列をDateTime型に変換
+      dateTime = DateFormat("EEE, dd MM, yyyy, HH:mm").parse(dateString);
+    }
+
+    // 日付部分をフォーマット
+    String formattedDate = DateFormat("EEE, dd MMM yyyy").format(dateTime);
+
+    // 時間部分をフォーマット
+    String formattedTime = DateFormat("HH:mm").format(dateTime);
+
+    return {
+      'date': formattedDate,
+      'time': formattedTime,
+    };
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -1038,6 +1063,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                         if (_pickerController.hasClients && groupedItemsList.isNotEmpty) {
                           int index = _pickerController.selectedItem;
                           if (index >= 0 && index < groupedItemsList.length) {
+                            selectedIndexNotifier.value = index; // 中央行のインデックスを更新
                             String groupID = groupedItemsList[index].first.groupID;
                             int selectedItemIndex = selectedItemsMap[groupID] ?? 0;
                             if (selectedItemIndex >= 0 && selectedItemIndex < groupedItemsList[index].length) {
@@ -1051,90 +1077,135 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     }
                     return true;
                   },
-                  child: ListWheelScrollView(
-                    controller: _pickerController,
-                    itemExtent: MediaQuery.of(context).size.width * 0.2,
-                    diameterRatio: 1.25,
-                    onSelectedItemChanged: (int index) async {
-                      if (index + 1 == groupKeys.length) {
-                        await ref.read(timelineAddProvider.notifier).addMoreItems();
-                      }
-                      if (index >= 0 && index < groupKeys.length) {
-                        String lastSelectedGroupID = groupKeys[index];
-                        _lastSelectedIndexes[lastSelectedGroupID] = index;
-                      }
-                    },
-                    physics: const FixedExtentScrollPhysics(),
-                    children: List<Widget>.generate(
-                      groupedItemsList.length,
-                          (int index) {
-                        String groupID = groupedItemsList[index].first.groupID;
-                        int currentIndex = selectedItemsMap[groupID] ?? 0;
-                        String dateString = groupedItemsList[index].first.localtime; // 日付情報を取得
+                  child: Stack(
+                    children: [
+                      ListWheelScrollView(
+                        controller: _pickerController,
+                        itemExtent: MediaQuery.of(context).size.width * 0.2,
+                        diameterRatio: 1.25,
+                        onSelectedItemChanged: (int index) async {
+                          if (index + 1 == groupKeys.length) {
+                            await ref.read(timelineAddProvider.notifier).addMoreItems();
+                          }
+                          if (index >= 0 && index < groupKeys.length) {
+                            String lastSelectedGroupID = groupKeys[index];
+                            _lastSelectedIndexes[lastSelectedGroupID] = index;
+                          }
+                        },
+                        physics: const FixedExtentScrollPhysics(),
+                        children: List<Widget>.generate(
+                          groupedItemsList.length,
+                              (int index) {
+                            // if (index == 0) {
+                            //   return const SizedBox.shrink(); // インデックス0は空のウィジェットを返す
+                            // }
 
-                        return Stack(
-                          children: [
-                            Center(
-                              child: HorizontalGroupedItems(
-                                itemsInGroup: groupedItemsList[index],
-                                size: MediaQuery.of(context).size,
-                                controller: _scrollController,
-                                currentIndex: currentIndex,
-                                pickerController: _pickerController,
-                                items: items,
-                                onTapCallback: (TimelineItem item) {
-                                  ScrollToCenterService.scrollToCenter(_pickerController, index);
-                                  if (_pickerController.selectedItem == index) {
-                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                      onThumbnailTap(item);
-                                    });
-                                  }
-                                },
-                                centralRowIndex: centralRowIndex,
-                                chatNotifier: chatNotifier,
-                                onHorizontalIndexChanged: (int newIndex) {
-                                  if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
-                                    selectedItemsMap[groupID] = newIndex;
-                                    selectedItemNotifier.value = groupedItemsList[index][newIndex];
-                                  }
-                                },
-                              ),
-                            ),
-                            Positioned(
-                              left: widget.size.width * 0.3, // 画面中央から左に横幅の20%分寄せる
-                              child: (index != 0)
-                                  ? Container(
-                                alignment: Alignment.centerRight, // テキストを右寄せ
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end, // テキストを右寄せ
-                                  children: [
-                                    Text(
-                                      '${dateString.split(', ')[0]}, ${dateString.split(', ')[1]} ${dateString.split(', ')[2]}',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      dateString.split(', ').length > 3 ? dateString.split(', ')[3] : '',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16, // 時:分のフォントサイズを大きく
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
+                            String groupID = groupedItemsList[index].first.groupID;
+                            int currentIndex = selectedItemsMap[groupID] ?? 0;
+                            String dateString = groupedItemsList[index].first.localtime; // 日付情報を取得
+
+                            var formattedDate = formatDateString(dateString); // 日付文字列をフォーマット
+
+                            return Stack(
+                              children: [
+                                Center(
+                                  child: HorizontalGroupedItems(
+                                    itemsInGroup: groupedItemsList[index],
+                                    size: MediaQuery.of(context).size,
+                                    controller: _scrollController,
+                                    currentIndex: currentIndex,
+                                    pickerController: _pickerController,
+                                    items: items,
+                                    onTapCallback: (TimelineItem item) {
+                                      ScrollToCenterService.scrollToCenter(_pickerController, index);
+                                      if (_pickerController.selectedItem == index) {
+                                        Future.delayed(const Duration(milliseconds: 100), () {
+                                          onThumbnailTap(item);
+                                        });
+                                      }
+                                    },
+                                    centralRowIndex: centralRowIndex,
+                                    chatNotifier: chatNotifier,
+                                    onHorizontalIndexChanged: (int newIndex) {
+                                      if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                        selectedItemsMap[groupID] = newIndex;
+                                        selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                                      }
+                                    },
+                                  ),
                                 ),
-                              )
-                                  : SizedBox.shrink(),
-                            ),
+                                Positioned(
+                                  left: MediaQuery.of(context).size.width * 0.4, // 画面中央からデバイス横幅40% - テキストの半分の幅
+                                  top: MediaQuery.of(context).size.width * 0.10 - 15, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                  child: Container(
+                                    // width: MediaQuery.of(context).size.width * 0.2, // テキストの横幅を指定
+                                    alignment: Alignment.centerRight,
+                                    child: Text(
+                                      formattedDate['time']!,
+                                      style: TextStyle(
+                                        // backgroundColor: Colors.black,
+                                        color: Colors.white,
+                                        fontSize: 20, // 時:分のフォントサイズを大きく
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ),
 
-                          ],
-                        );
-                      },
-                    ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                      Center(
+                        child: ValueListenableBuilder<int>(
+                          valueListenable: selectedIndexNotifier,
+                          builder: (context, selectedIndex, child) {
+                            if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
+                              return SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
+                            }
+                            String centralDateString = groupedItemsList[selectedIndex].first.localtime;
+                            var centralFormattedDate = formatDateString(centralDateString);
+
+                            return Stack(
+                              children: [
+                                Positioned(
+                                  top: 0,
+                                  left: widget.size.width * 0.3,
+                                  right: widget.size.width * 0.3,
+                                  child: Container(
+                                    alignment: Alignment.center,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.center,
+                                      children: [
+                                        // Text(
+                                        //   centralFormattedDate['time']!,
+                                        //   style: TextStyle(
+                                        //     color: Colors.white,
+                                        //     fontSize: 40,
+                                        //     fontWeight: FontWeight.bold,
+                                        //   ),
+                                        // ),
+                                        Text(
+                                          centralFormattedDate['date']!,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   ),
+
                 ),
               ),
             if (showAlbumWheelScrollView && _albumList.isNotEmpty)
