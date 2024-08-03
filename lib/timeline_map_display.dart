@@ -934,18 +934,14 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     // 日付部分をフォーマット
     String formattedDate = DateFormat("EEE, dd MMM yyyy").format(dateTime);
-    String dayOfWeek = DateFormat("EEE").format(dateTime); // "Sat"
-    String day = DateFormat("dd").format(dateTime); // "27th"
-    String monthAndYear = DateFormat("MMM yyyy").format(dateTime); // "Jul 2024"
 
     // 時間部分をフォーマット
     String formattedTime = DateFormat("HH:mm").format(dateTime);
 
     return {
-      'date': formattedDate,
-      'EEE': dayOfWeek,
-      'dd': day,
-      'MMM yyyy': monthAndYear,
+      'EEE': DateFormat('EEE').format(dateTime),
+      'dd': DateFormat('dd').format(dateTime) + 'th',
+      'MMM yyyy': DateFormat('MMM yyyy').format(dateTime),
       'time': formattedTime,
     };
   }
@@ -1141,75 +1137,173 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                           }
                                         },
                                       ),
-                                      ValueListenableBuilder<int>(
-                                        valueListenable: selectedIndexNotifier,
-                                        builder: (context, selectedIndex, child) {
-                                          if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
-                                            return SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
-                                          }
-                                          String centralDateString = groupedItemsList[selectedIndex].first.localtime;
-                                          var centralFormattedDate = formatDateString(centralDateString);
-
-                                          return Positioned(
-                                            top: widget.size.height * 0.2 - (14 + 20 + 14 + 4) / 2, // テキスト全体の高さの半分を引く
-                                            left: widget.size.width * 0.18 + 20,
-                                            child: Container(
-                                              alignment: Alignment.center,
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    centralFormattedDate['EEE']!,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
+                                      IgnorePointer(
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              top: widget.size.height * 0.2 - (14 + 20 + 14 + 4) / 2, // テキスト全体の高さの半分を引く
+                                              left: widget.size.width * 0.18 + 20,
+                                              child: Container(
+                                                alignment: Alignment.center,
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      formattedDate['EEE']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ),
-                                                  SizedBox(height: 4), // 行間を追加
-                                                  Text(
-                                                    centralFormattedDate['dd']!,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 20,
-                                                      fontWeight: FontWeight.bold,
+                                                    Text(
+                                                      formattedDate['dd']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 20,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ),
-                                                  SizedBox(height: 4), // 行間を追加
-                                                  Text(
-                                                    centralFormattedDate['MMM yyyy']!,
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
+                                                    Text(
+                                                      formattedDate['MMM yyyy']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
                                             ),
-                                          );
-                                        },
-                                      ),
-                                      Positioned(
-                                        left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
-                                        top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
-                                        child: Container(
-                                          alignment: Alignment.centerRight,
-                                          child: Text(
-                                            formattedDate['time']!,
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 20, // 時:分のフォントサイズを大きく
-                                              fontWeight: FontWeight.bold,
+                                            Positioned(
+                                              left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
+                                              top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                              child: Container(
+                                                alignment: Alignment.centerRight,
+                                                child: Text(
+                                                  formattedDate['time']!,
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 20, // 時:分のフォントサイズを大きく
+                                                    fontWeight: FontWeight.bold,
+                                                    shadows: [
+                                                      Shadow(
+                                                        offset: Offset(2.0, 2.0),
+                                                        blurRadius: 3.0,
+                                                        color: Color.fromARGB(150, 0, 0, 0),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
+                                Center(
+                                  child: ValueListenableBuilder<int>(
+                                    valueListenable: selectedIndexNotifier,
+                                    builder: (context, selectedIndex, child) {
+                                      if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
+                                        return SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
+                                      }
+                                      String centralDateString = groupedItemsList[selectedIndex].first.localtime;
+                                      var centralFormattedDate = formatDateString(centralDateString);
+
+                                      return IgnorePointer(
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              top: widget.size.height * 0.2 - (14 + 20 + 14 + 4) / 2, // テキスト全体の高さの半分を引く
+                                              left: widget.size.width * 0.18 + 20,
+                                              child: Container(
+                                                alignment: Alignment.center,
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      centralFormattedDate['EEE']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      centralFormattedDate['dd']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 20,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      centralFormattedDate['MMM yyyy']!,
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                        shadows: [
+                                                          Shadow(
+                                                            offset: Offset(2.0, 2.0),
+                                                            blurRadius: 3.0,
+                                                            color: Color.fromARGB(150, 0, 0, 0),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ],
                             );
+
 
                           },
                         ),
@@ -1269,7 +1363,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                       ),
                     ],
                   ),
-
                 ),
               ),
             if (showAlbumWheelScrollView && _albumList.isNotEmpty)
@@ -1736,7 +1829,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
         return Listener(
           onPointerDown: (event) {
             _isTap = true;
-            _tapTimer = Timer(const Duration(milliseconds: 300), () {
+            _tapTimer = Timer(const Duration(milliseconds: 100), () {
               _isTap = false;
             });
           },
