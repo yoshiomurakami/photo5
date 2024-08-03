@@ -934,12 +934,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
     // 日付部分をフォーマット
     String formattedDate = DateFormat("EEE, dd MMM yyyy").format(dateTime);
+    String dayOfWeek = DateFormat("EEE").format(dateTime); // "Sat"
+    String day = DateFormat("dd").format(dateTime); // "27th"
+    String monthAndYear = DateFormat("MMM yyyy").format(dateTime); // "Jul 2024"
 
     // 時間部分をフォーマット
     String formattedTime = DateFormat("HH:mm").format(dateTime);
 
     return {
       'date': formattedDate,
+      'EEE': dayOfWeek,
+      'dd': day,
+      'MMM yyyy': monthAndYear,
       'time': formattedTime,
     };
   }
@@ -1109,51 +1115,102 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             return Stack(
                               children: [
                                 Center(
-                                  child: HorizontalGroupedItems(
-                                    itemsInGroup: groupedItemsList[index],
-                                    size: MediaQuery.of(context).size,
-                                    controller: _scrollController,
-                                    currentIndex: currentIndex,
-                                    pickerController: _pickerController,
-                                    items: items,
-                                    onTapCallback: (TimelineItem item) {
-                                      ScrollToCenterService.scrollToCenter(_pickerController, index);
-                                      if (_pickerController.selectedItem == index) {
-                                        Future.delayed(const Duration(milliseconds: 100), () {
-                                          onThumbnailTap(item);
-                                        });
-                                      }
-                                    },
-                                    centralRowIndex: centralRowIndex,
-                                    chatNotifier: chatNotifier,
-                                    onHorizontalIndexChanged: (int newIndex) {
-                                      if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
-                                        selectedItemsMap[groupID] = newIndex;
-                                        selectedItemNotifier.value = groupedItemsList[index][newIndex];
-                                      }
-                                    },
-                                  ),
-                                ),
-                                Positioned(
-                                  left: MediaQuery.of(context).size.width * 0.4, // 画面中央からデバイス横幅40% - テキストの半分の幅
-                                  top: MediaQuery.of(context).size.width * 0.10 - 15, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
-                                  child: Container(
-                                    // width: MediaQuery.of(context).size.width * 0.2, // テキストの横幅を指定
-                                    alignment: Alignment.centerRight,
-                                    child: Text(
-                                      formattedDate['time']!,
-                                      style: TextStyle(
-                                        // backgroundColor: Colors.black,
-                                        color: Colors.white,
-                                        fontSize: 20, // 時:分のフォントサイズを大きく
-                                        fontWeight: FontWeight.bold,
+                                  child: Stack(
+                                    children: [
+                                      HorizontalGroupedItems(
+                                        itemsInGroup: groupedItemsList[index],
+                                        size: MediaQuery.of(context).size,
+                                        controller: _scrollController,
+                                        currentIndex: currentIndex,
+                                        pickerController: _pickerController,
+                                        items: items,
+                                        onTapCallback: (TimelineItem item) {
+                                          ScrollToCenterService.scrollToCenter(_pickerController, index);
+                                          if (_pickerController.selectedItem == index) {
+                                            Future.delayed(const Duration(milliseconds: 100), () {
+                                              onThumbnailTap(item);
+                                            });
+                                          }
+                                        },
+                                        centralRowIndex: centralRowIndex,
+                                        chatNotifier: chatNotifier,
+                                        onHorizontalIndexChanged: (int newIndex) {
+                                          if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                            selectedItemsMap[groupID] = newIndex;
+                                            selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                                          }
+                                        },
                                       ),
-                                    ),
+                                      ValueListenableBuilder<int>(
+                                        valueListenable: selectedIndexNotifier,
+                                        builder: (context, selectedIndex, child) {
+                                          if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
+                                            return SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
+                                          }
+                                          String centralDateString = groupedItemsList[selectedIndex].first.localtime;
+                                          var centralFormattedDate = formatDateString(centralDateString);
+
+                                          return Positioned(
+                                            top: widget.size.height * 0.2 - (14 + 20 + 14 + 4) / 2, // テキスト全体の高さの半分を引く
+                                            left: widget.size.width * 0.18 + 20,
+                                            child: Container(
+                                              alignment: Alignment.center,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.center,
+                                                children: [
+                                                  Text(
+                                                    centralFormattedDate['EEE']!,
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4), // 行間を追加
+                                                  Text(
+                                                    centralFormattedDate['dd']!,
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 20,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 4), // 行間を追加
+                                                  Text(
+                                                    centralFormattedDate['MMM yyyy']!,
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 14,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      Positioned(
+                                        left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
+                                        top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                        child: Container(
+                                          alignment: Alignment.centerRight,
+                                          child: Text(
+                                            formattedDate['time']!,
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 20, // 時:分のフォントサイズを大きく
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-
                               ],
                             );
+
                           },
                         ),
                       ),
@@ -1170,27 +1227,34 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             return Stack(
                               children: [
                                 Positioned(
-                                  top: 0,
-                                  left: widget.size.width * 0.3,
-                                  right: widget.size.width * 0.3,
+                                  top: widget.size.height * 0.2 - (14 + 20 + 14 + 4) / 2, // テキスト全体の高さの半分を引く
+                                  left: widget.size.width * 0.18 + 20,
                                   child: Container(
                                     alignment: Alignment.center,
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.center,
                                       children: [
-                                        // Text(
-                                        //   centralFormattedDate['time']!,
-                                        //   style: TextStyle(
-                                        //     color: Colors.white,
-                                        //     fontSize: 40,
-                                        //     fontWeight: FontWeight.bold,
-                                        //   ),
-                                        // ),
                                         Text(
-                                          centralFormattedDate['date']!,
+                                          centralFormattedDate['EEE']!,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          centralFormattedDate['dd']!,
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 20,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        Text(
+                                          centralFormattedDate['MMM yyyy']!,
+                                          style: TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
