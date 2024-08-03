@@ -52,10 +52,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   late Future<void> _initializeControllerFuture;
   late bool _showImage;
   String? _imagePath;
-  String? _thumbnailPath;
+  // String? _thumbnailPath;
   bool _uploading = false;
   bool _conversionCompleted = false;
-  bool _locationAvailable = false;
+  // bool _locationAvailable = false;
   String? _imageLat;
   String? _imageLng;
   String? _imageCountry;
@@ -92,7 +92,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   late Animation<double> _animationMove;
   bool _showLikeAnimation = false;
 
-  late Animation<double> _scaleAnimation; // スケールアニメーション用の変数を追加
+  // late Animation<double> _scaleAnimation; // スケールアニメーション用の変数を追加
 
 
 
@@ -223,12 +223,12 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
     // スケールアニメーションの定義
-    _scaleAnimation = Tween<double>(begin: 2.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOut, // イーズアウトカーブでスムーズに縮小
-      ),
-    );
+    // _scaleAnimation = Tween<double>(begin: 2.0, end: 1.0).animate(
+    //   CurvedAnimation(
+    //     parent: _animationController,
+    //     curve: Curves.easeOut, // イーズアウトカーブでスムーズに縮小
+    //   ),
+    // );
 
     _animationController.forward(); // アニメーションの開始
 
@@ -401,7 +401,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         return true; // 保存成功
       }
     } catch (e) {
-      print("Error saving image: $e");
+      debugPrint("Error saving image: $e");
     }
     return false; // 保存失敗
   }
@@ -418,7 +418,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     });
     countdownTimer.cancel();
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
-    _photoEventSubscription?.cancel();
+    _photoEventSubscription.cancel();
     socket?.off('receive_tap_message');
     _animationController.dispose();
     super.dispose();
@@ -509,7 +509,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
       // Set the path for the image and thumbnail
       _imagePath = imgPath;
-      _thumbnailPath = thumbPath;
+      // _thumbnailPath = thumbPath;
 
       // Update the image display
       setState(() {
@@ -584,9 +584,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     debugPrint('Placemarks: $placemarks');
 
     // Update _locationAvailable state
-    setState(() {
-      _locationAvailable = true;
-    });
+    // setState(() {
+    //   _locationAvailable = true;
+    // });
 
     final Directory tempDir = await getTemporaryDirectory();
 
@@ -1065,7 +1065,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                                         spacing: 8.0, // 横のスペース
                                         runSpacing: 8.0, // 縦のスペース
                                         children: List.generate(thumbnailData.length, (index) {
-                                          return buildThumbnail(thumbnailData[index] as Map<String, dynamic>, screenSize);
+                                          return buildThumbnail(thumbnailData[index], screenSize);
                                         }),
                                       ),
                                     ),

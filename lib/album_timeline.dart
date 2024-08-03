@@ -24,7 +24,7 @@ final albumDataProvider = FutureProvider<List<AlbumTimeLine>>((ref) async {
 
 Map<String, int> selectedAlbumIndexes = {};
 
-AlbumTimeLine? _lastTappedAlbum;
+// AlbumTimeLine? _lastTappedAlbum;
 
 final lastTappedAlbumProvider = StateProvider<AlbumTimeLine?>((ref) => null);
 
@@ -133,7 +133,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   late Map<String, int> selectedIndexes;
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
   bool isRestoringPosition = true;
-  AlbumTimeLine? _lastTappedAlbum;
+  // AlbumTimeLine? _lastTappedAlbum;
 
   @override
   void initState() {
@@ -224,7 +224,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       },
       child: AnimatedOpacity(
         opacity: isRestoringPosition ? 0 : 1,
-        duration: Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 300),
         child: Stack(
           clipBehavior: Clip.none,
           children: <Widget>[
@@ -257,7 +257,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   setState(() {
                     centralRowIndex = index;
                     selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
-                    _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0];
+                    // _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0];
                   });
                 },
                 childDelegate: ListWheelChildBuilderDelegate(
@@ -278,7 +278,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                       onTapCallback: (album, albumIndex) {
                         int groupIndex = groupAlbumKeys.indexOf(album.groupID);
                         if (_scrollController.hasClients) {
-                          _scrollController.animateToItem(groupIndex, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+                          _scrollController.animateToItem(groupIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
                         }
                         selectedAlbumItemNotifier.value = album;
                       },
@@ -296,7 +296,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   return const SizedBox();
                 }
 
-                final timeParts = selectedItem.localtime.split(' ');
+                // final timeParts = selectedItem.localtime.split(' ');
 
                 return Positioned(
                   bottom: widget.size.height * 0.25 + 5,
@@ -470,7 +470,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
         } else {
           widget.ref.read(lastTappedAlbumProvider.notifier).state = album;
           if (_pageController.hasClients) {
-            _pageController.animateToPage(index, duration: Duration(milliseconds: 300), curve: Curves.easeInOut);
+            _pageController.animateToPage(index, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
           }
         }
       },
@@ -611,7 +611,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
                 top: 40,
                 left: 20,
                 child: IconButton(
-                  icon: Icon(Icons.arrow_back, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back, color: Colors.white),
                   onPressed: () {
                     Navigator.of(context).pop(pageController.page?.round());
                     isDialogShowing = false;

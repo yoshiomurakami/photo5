@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'timeline_providers.dart';
-import 'chat_connection.dart';
+// import 'chat_connection.dart';
 import 'dart:async';
 
 class TimelineCard extends StatefulWidget {
