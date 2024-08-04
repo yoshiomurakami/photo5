@@ -1394,115 +1394,115 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
               },
             ),
             if (!showAlbumWheelScrollView)
-              ValueListenableBuilder<bool>(
-                valueListenable: isScrollingNotifier,
-                builder: (context, isScrolling, child) {
-                  if (!isScrolling) {
-                    return ValueListenableBuilder<TimelineItem?>(
-                      valueListenable: selectedItemNotifier,
-                      builder: (context, selectedItem, child) {
-                        if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
-                          return const SizedBox();
-                        }
-
-                        // final timeParts = selectedItem.localtime.split(' ');
-
-                        if (selectedItemsMap.containsKey(selectedItem.groupID) &&
-                            selectedItemsMap[selectedItem.groupID]! >= 0 &&
-                            selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
-                          return Positioned(
-                            bottom: widget.size.height * 0,
-                            right: widget.size.width * 0,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                Align(
-                                  // alignment: Alignment.topRight,
-                                  child: CustomPaint(
-                                    // painter: BubblePainter(),
-                                    child: Container(
-                                      constraints: BoxConstraints(
-                                        maxWidth: widget.size.width * 0.4,
-                                      ),
-                                      padding: const EdgeInsets.all(15),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.end, // 追加
-                                        children: [
-                                          const SizedBox(height: 5),
-                                          Stack(
-                                            children: [
-                                              // 縁取りの黒いテキスト（都市）
-                                              Text(
-                                                selectedItem.geocodedCity ?? '',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  foreground: Paint()
-                                                    ..style = PaintingStyle.stroke
-                                                    ..strokeWidth = 2
-                                                    ..color = Colors.black,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                              // 内側の白いテキスト（都市）
-                                              Text(
-                                                selectedItem.geocodedCity ?? '',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                            ],
-                                          ),
-                                          // const SizedBox(height: 5),
-                                          Stack(
-                                            children: [
-                                              // 縁取りの黒いテキスト（国）
-                                              Text(
-                                                selectedItem.geocodedCountry ?? 'N/A',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  foreground: Paint()
-                                                    ..style = PaintingStyle.stroke
-                                                    ..strokeWidth = 2
-                                                    ..color = Colors.black,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                              // 内側の白いテキスト（国）
-                                              Text(
-                                                selectedItem.geocodedCountry ?? 'N/A',
-                                                style: const TextStyle(
-                                                  fontSize: 16,
-                                                  color: Colors.white,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 5),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        } else {
-                          return const SizedBox();
-                        }
-                      },
-                    );
-                  } else {
-                    return const SizedBox();
-                  }
-                },
-              ),
+              // ValueListenableBuilder<bool>(
+              //   valueListenable: isScrollingNotifier,
+              //   builder: (context, isScrolling, child) {
+              //     if (!isScrolling) {
+              //       return ValueListenableBuilder<TimelineItem?>(
+              //         valueListenable: selectedItemNotifier,
+              //         builder: (context, selectedItem, child) {
+              //           if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+              //             return const SizedBox();
+              //           }
+              //
+              //           // final timeParts = selectedItem.localtime.split(' ');
+              //
+              //           if (selectedItemsMap.containsKey(selectedItem.groupID) &&
+              //               selectedItemsMap[selectedItem.groupID]! >= 0 &&
+              //               selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
+              //             return Positioned(
+              //               bottom: widget.size.height * 0,
+              //               right: widget.size.width * 0,
+              //               child: Stack(
+              //                 clipBehavior: Clip.none,
+              //                 children: [
+              //                   Align(
+              //                     // alignment: Alignment.topRight,
+              //                     child: CustomPaint(
+              //                       // painter: BubblePainter(),
+              //                       child: Container(
+              //                         constraints: BoxConstraints(
+              //                           maxWidth: widget.size.width * 0.4,
+              //                         ),
+              //                         padding: const EdgeInsets.all(15),
+              //                         child: Column(
+              //                           crossAxisAlignment: CrossAxisAlignment.end, // 追加
+              //                           children: [
+              //                             const SizedBox(height: 5),
+              //                             Stack(
+              //                               children: [
+              //                                 // 縁取りの黒いテキスト（都市）
+              //                                 Text(
+              //                                   selectedItem.geocodedCity ?? '',
+              //                                   style: TextStyle(
+              //                                     fontSize: 16,
+              //                                     fontWeight: FontWeight.bold,
+              //                                     foreground: Paint()
+              //                                       ..style = PaintingStyle.stroke
+              //                                       ..strokeWidth = 2
+              //                                       ..color = Colors.black,
+              //                                   ),
+              //                                   textAlign: TextAlign.right,
+              //                                 ),
+              //                                 // 内側の白いテキスト（都市）
+              //                                 Text(
+              //                                   selectedItem.geocodedCity ?? '',
+              //                                   style: const TextStyle(
+              //                                     fontSize: 16,
+              //                                     color: Colors.white,
+              //                                     fontWeight: FontWeight.bold,
+              //                                   ),
+              //                                   textAlign: TextAlign.right,
+              //                                 ),
+              //                               ],
+              //                             ),
+              //                             // const SizedBox(height: 5),
+              //                             Stack(
+              //                               children: [
+              //                                 // 縁取りの黒いテキスト（国）
+              //                                 Text(
+              //                                   selectedItem.geocodedCountry ?? 'N/A',
+              //                                   style: TextStyle(
+              //                                     fontSize: 16,
+              //                                     fontWeight: FontWeight.bold,
+              //                                     foreground: Paint()
+              //                                       ..style = PaintingStyle.stroke
+              //                                       ..strokeWidth = 2
+              //                                       ..color = Colors.black,
+              //                                   ),
+              //                                   textAlign: TextAlign.right,
+              //                                 ),
+              //                                 // 内側の白いテキスト（国）
+              //                                 Text(
+              //                                   selectedItem.geocodedCountry ?? 'N/A',
+              //                                   style: const TextStyle(
+              //                                     fontSize: 16,
+              //                                     color: Colors.white,
+              //                                     fontWeight: FontWeight.bold,
+              //                                   ),
+              //                                   textAlign: TextAlign.right,
+              //                                 ),
+              //                               ],
+              //                             ),
+              //                             const SizedBox(height: 5),
+              //                           ],
+              //                         ),
+              //                       ),
+              //                     ),
+              //                   ),
+              //                 ],
+              //               ),
+              //             );
+              //           } else {
+              //             return const SizedBox();
+              //           }
+              //         },
+              //       );
+              //     } else {
+              //       return const SizedBox();
+              //     }
+              //   },
+              // ),
             Positioned(
               top: widget.size.height * 0.1,
               left: widget.size.width * 0.2,
