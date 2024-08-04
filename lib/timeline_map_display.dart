@@ -633,12 +633,30 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
-  void _showFullSizeImage(BuildContext context, String imageUrl, List<TimelineItem> itemsInGroup, int initialIndex, Map<String, int> selectedItemsMap) {
+  void _showFullSizeImage(
+      BuildContext context,
+      String imageUrl,
+      List<TimelineItem> itemsInGroup,
+      int initialIndex,
+      Map<String, int> selectedItemsMap) async {
     if (isDialogShowing) {
       return;
     }
 
     isDialogShowing = true;
+
+    // データベースパスを取得
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, 'images_database.db');
+    final database = openDatabase(path);
+
+    // android_metadataテーブルからロケール情報を取得
+    final List<Map<String, dynamic>> metadata = await (await database).query('android_metadata');
+    String locale = 'en_US'; // デフォルトのロケール
+    if (metadata.isNotEmpty) {
+      locale = metadata.first['locale'] as String;
+    }
+    Intl.defaultLocale = locale;
 
     PageController pageController = PageController(initialPage: initialIndex);
 
@@ -707,11 +725,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     return ValueListenableBuilder<TimelineItem?>(
                       valueListenable: selectedItemNotifier,
                       builder: (context, selectedItem, child) {
-                        if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
+                        if (selectedItem == null) {
                           return const SizedBox();
                         }
 
-                        // final timeParts = selectedItem.localtime.split(' ');
+                        String formattedDate = _formatDateTime(selectedItem.localtime);
 
                         if (selectedItemsMap.containsKey(selectedItem.groupID) &&
                             selectedItemsMap[selectedItem.groupID]! >= 0 &&
@@ -726,7 +744,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                   child: CustomPaint(
                                     child: Container(
                                       constraints: BoxConstraints(
-                                        maxWidth: MediaQuery.of(context).size.width * 0.4,
+                                        maxWidth: MediaQuery.of(context).size.width * 0.8,
                                       ),
                                       padding: const EdgeInsets.all(15),
                                       child: Column(
@@ -736,19 +754,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                           Stack(
                                             children: [
                                               Text(
-                                                selectedItem.geocodedCity ?? '',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  foreground: Paint()
-                                                    ..style = PaintingStyle.stroke
-                                                    ..strokeWidth = 2
-                                                    ..color = Colors.black,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                              Text(
-                                                selectedItem.geocodedCity ?? '',
+                                                "${selectedItem.geocodedCity} ${selectedItem.geocodedCountry}",
                                                 style: const TextStyle(
                                                   fontSize: 16,
                                                   color: Colors.white,
@@ -761,19 +767,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                           Stack(
                                             children: [
                                               Text(
-                                                selectedItem.geocodedCountry ?? 'N/A',
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.bold,
-                                                  foreground: Paint()
-                                                    ..style = PaintingStyle.stroke
-                                                    ..strokeWidth = 2
-                                                    ..color = Colors.black,
-                                                ),
-                                                textAlign: TextAlign.right,
-                                              ),
-                                              Text(
-                                                selectedItem.geocodedCountry ?? 'N/A',
+                                                formattedDate,
                                                 style: const TextStyle(
                                                   fontSize: 16,
                                                   color: Colors.white,
@@ -863,6 +857,33 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
   }
 
+  String _formatDateTime(String dateTimeString) {
+    // Custom parsing logic for the given format: "Sat, 3 08, 2024, 21:48"
+    try {
+      final parts = dateTimeString.split(', ');
+      if (parts.length == 4) {
+        final dayOfWeek = parts[0]; // 曜日を取り出す
+        final datePart = parts[1].split(' ');
+        final day = int.parse(datePart[0]);
+        final month = int.parse(datePart[1]);
+        final year = int.parse(parts[2]);
+        final timePart = parts[3].split(':');
+        final hour = int.parse(timePart[0]);
+        final minute = int.parse(timePart[1]);
+
+        final dateTime = DateTime(year, month, day, hour, minute);
+        final locale = Intl.defaultLocale; // デフォルトロケールを使用
+        final dateFormat = DateFormat.yMMMMEEEEd(locale); // 曜日を含めた日付形式
+        final timeFormat = DateFormat.Hm(locale); // デバイスのロケールに応じた時間形式
+
+        return '${dateFormat.format(dateTime)}, ${timeFormat.format(dateTime)}';
+      } else {
+        throw FormatException("Invalid date format");
+      }
+    } catch (e) {
+      return 'N/A';
+    }
+  }
 
   Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
@@ -1393,116 +1414,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 }
               },
             ),
-            if (!showAlbumWheelScrollView)
-              // ValueListenableBuilder<bool>(
-              //   valueListenable: isScrollingNotifier,
-              //   builder: (context, isScrolling, child) {
-              //     if (!isScrolling) {
-              //       return ValueListenableBuilder<TimelineItem?>(
-              //         valueListenable: selectedItemNotifier,
-              //         builder: (context, selectedItem, child) {
-              //           if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
-              //             return const SizedBox();
-              //           }
-              //
-              //           // final timeParts = selectedItem.localtime.split(' ');
-              //
-              //           if (selectedItemsMap.containsKey(selectedItem.groupID) &&
-              //               selectedItemsMap[selectedItem.groupID]! >= 0 &&
-              //               selectedItemsMap[selectedItem.groupID]! < groupedItemsList.length) {
-              //             return Positioned(
-              //               bottom: widget.size.height * 0,
-              //               right: widget.size.width * 0,
-              //               child: Stack(
-              //                 clipBehavior: Clip.none,
-              //                 children: [
-              //                   Align(
-              //                     // alignment: Alignment.topRight,
-              //                     child: CustomPaint(
-              //                       // painter: BubblePainter(),
-              //                       child: Container(
-              //                         constraints: BoxConstraints(
-              //                           maxWidth: widget.size.width * 0.4,
-              //                         ),
-              //                         padding: const EdgeInsets.all(15),
-              //                         child: Column(
-              //                           crossAxisAlignment: CrossAxisAlignment.end, // 追加
-              //                           children: [
-              //                             const SizedBox(height: 5),
-              //                             Stack(
-              //                               children: [
-              //                                 // 縁取りの黒いテキスト（都市）
-              //                                 Text(
-              //                                   selectedItem.geocodedCity ?? '',
-              //                                   style: TextStyle(
-              //                                     fontSize: 16,
-              //                                     fontWeight: FontWeight.bold,
-              //                                     foreground: Paint()
-              //                                       ..style = PaintingStyle.stroke
-              //                                       ..strokeWidth = 2
-              //                                       ..color = Colors.black,
-              //                                   ),
-              //                                   textAlign: TextAlign.right,
-              //                                 ),
-              //                                 // 内側の白いテキスト（都市）
-              //                                 Text(
-              //                                   selectedItem.geocodedCity ?? '',
-              //                                   style: const TextStyle(
-              //                                     fontSize: 16,
-              //                                     color: Colors.white,
-              //                                     fontWeight: FontWeight.bold,
-              //                                   ),
-              //                                   textAlign: TextAlign.right,
-              //                                 ),
-              //                               ],
-              //                             ),
-              //                             // const SizedBox(height: 5),
-              //                             Stack(
-              //                               children: [
-              //                                 // 縁取りの黒いテキスト（国）
-              //                                 Text(
-              //                                   selectedItem.geocodedCountry ?? 'N/A',
-              //                                   style: TextStyle(
-              //                                     fontSize: 16,
-              //                                     fontWeight: FontWeight.bold,
-              //                                     foreground: Paint()
-              //                                       ..style = PaintingStyle.stroke
-              //                                       ..strokeWidth = 2
-              //                                       ..color = Colors.black,
-              //                                   ),
-              //                                   textAlign: TextAlign.right,
-              //                                 ),
-              //                                 // 内側の白いテキスト（国）
-              //                                 Text(
-              //                                   selectedItem.geocodedCountry ?? 'N/A',
-              //                                   style: const TextStyle(
-              //                                     fontSize: 16,
-              //                                     color: Colors.white,
-              //                                     fontWeight: FontWeight.bold,
-              //                                   ),
-              //                                   textAlign: TextAlign.right,
-              //                                 ),
-              //                               ],
-              //                             ),
-              //                             const SizedBox(height: 5),
-              //                           ],
-              //                         ),
-              //                       ),
-              //                     ),
-              //                   ),
-              //                 ],
-              //               ),
-              //             );
-              //           } else {
-              //             return const SizedBox();
-              //           }
-              //         },
-              //       );
-              //     } else {
-              //       return const SizedBox();
-              //     }
-              //   },
-              // ),
+            // if (!showAlbumWheelScrollView)
             Positioned(
               top: widget.size.height * 0.1,
               left: widget.size.width * 0.2,
