@@ -16,6 +16,7 @@ class TimelineItem {
   final Key key;
   final String systemId;
   final int sequenceNumber;
+  final String createdAt;
   final String userID;
   final String country;  // This is from DB
   final double lat;
@@ -32,6 +33,7 @@ class TimelineItem {
     required this.key,
     required this.systemId,
     required this.sequenceNumber,
+    required this.createdAt,
     required this.userID,
     required this.country,
     required this.lat,
@@ -55,6 +57,7 @@ class TimelineItem {
     return {
       'systemId': 'shootbutton',
       'sequenceNumber': 0,
+      'createdAt': 'dummy',
       'userID': 'dummy',
       'country': 'dummy',
       'lat': lat.toString(),
@@ -74,6 +77,7 @@ class TimelineItem {
       key: ValueKey(json['_key'] ?? '0'), // この行を追加
       systemId: json['_id'] ?? 'shootbutton',
       sequenceNumber: int.tryParse(json['sequenceNumber'].toString()) ?? 0,
+      createdAt: json['createdAt'] ?? 'dummy',
       userID: json['userID'] ?? 'dummy',
       country: json['country'] ?? 'dummy',
       lat: (json['lat'] is String) ? double.parse(json['lat']) : (json['lat'] as double? ?? 0.0),
@@ -90,7 +94,7 @@ class TimelineItem {
 
   @override
   String toString() {
-    return 'TimelineItem(systemId: $systemId, sequenceNumber: $sequenceNumber, userID: $userID, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity, statement: $statement)';
+    return 'TimelineItem(systemId: $systemId, sequenceNumber: $sequenceNumber, createdAt: $createdAt, userID: $userID, country: $country, lat: $lat, lng: $lng, imageFilename: $imageFilename, thumbnailFilename: $thumbnailFilename, localtime: $localtime, groupID : $groupID, geocodedCountry: $geocodedCountry, geocodedCity: $geocodedCity, statement: $statement)';
   }
 }
 

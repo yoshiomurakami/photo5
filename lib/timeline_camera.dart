@@ -477,7 +477,16 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     final Directory tempDir = await getTemporaryDirectory();
 
     _timestamp = DateTime.now().toUtc().millisecondsSinceEpoch.toString();
-    _localTimestamp = DateFormat('EE, d MM, yyyy, HH:mm').format(DateTime.now());
+    DateTime localTime = DateTime.now();
+    String localTimestamp = DateFormat('EE, d MM, yyyy, HH:mm').format(localTime);
+
+    // // 時差情報を取得
+    // String timeZoneOffset = localTime.timeZoneOffset.isNegative
+    //     ? '-${localTime.timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:${(localTime.timeZoneOffset.inMinutes.remainder(60)).abs().toString().padLeft(2, '0')}'
+    //     : '+${localTime.timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:${(localTime.timeZoneOffset.inMinutes.remainder(60)).abs().toString().padLeft(2, '0')}';
+
+    // 時差情報を付記したタイムスタンプ
+    _localTimestamp = '$localTimestamp';
 
     final String randomStr = _getRandomString(5);
 
@@ -558,8 +567,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     // 疑似的な位置情報を生成
     Position fakePosition = Position(
-      latitude: 37.76486445816393,
-      longitude: -122.45051079519227,
+      latitude: 21.308123936307684,
+      longitude: -157.85814244747237,
       timestamp: DateTime.now(), // 現在時刻を設定
       accuracy: 0, // 精度を適宜設定
       altitude: 0, // 標高を適宜設定
@@ -569,8 +578,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
