@@ -584,6 +584,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(false); // 追加
   ValueNotifier<int> selectedIndexNotifier = ValueNotifier<int>(0); // 中央行のインデックスを保持するためのValueNotifier
 
+  Map<String, Map<String, String>> formattedDateCache = {};
+
   @override
   void initState() {
     super.initState();
@@ -949,8 +951,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
-
-
   void _loadNextImage() async {
     final selectedItem = selectedItemNotifier.value;
     // インデックスが先頭であるかどうかを確認
@@ -969,11 +969,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     }
   }
 
-  Future<Map<String, String>> formatDateString(String dateString) async {
-    DateTime dateTime;
+
+  Future<Map<String, String>> formatDateString(String unixTimestampString) async {
+    if (formattedDateCache.containsKey(unixTimestampString)) {
+      return Future.value(formattedDateCache[unixTimestampString]);
+    }
 
     try {
-      debugPrint("formatDateString called with dateString: $dateString");
+      debugPrint("formatDateString called with dateString: $unixTimestampString");
+
+      final int timestamp = int.parse(unixTimestampString);
+      final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
 
       final dbPath = await getDatabasesPath();
       final path = p.join(dbPath, 'images_database.db');
@@ -988,45 +994,28 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
       debugPrint("Locale set to: $locale");
 
-      if (dateString == "dummy") {
-        int timestamp = DateTime.now().toUtc().millisecondsSinceEpoch;
-        dateString = timestamp.toString();
-      }
-
-      int timestamp = int.parse(dateString);
-      DateTime originalDateTime = DateTime.fromMillisecondsSinceEpoch(timestamp, isUtc: true);
-
-      Duration deviceOffset = DateTime.now().timeZoneOffset;
-      debugPrint("deviceOffset = $deviceOffset");
-
-      dateTime = originalDateTime.add(deviceOffset);
-
-      debugPrint("dateTime after offset = $dateTime");
-
-      final dateFormat = DateFormat.yMMMMEEEEd(locale);
-      final timeFormat = DateFormat.Hm(locale);
+      final dateFormat = DateFormat.yMMMMEEEEd(locale); // 曜日を含めた日付形式
+      final timeFormat = DateFormat.Hm(locale); // デバイスのロケールに応じた時間形式
 
       String formattedDate = dateFormat.format(dateTime);
       String formattedTime = timeFormat.format(dateTime);
 
       debugPrint("formattedDate = $formattedDate, formattedTime = $formattedTime");
 
-      // 年、月、日、曜日を個別にフォーマット
-      String formattedYear = DateFormat('yyyy', locale).format(dateTime);
-      String formattedMonth = DateFormat('MMMM', locale).format(dateTime);
-      String formattedDay = DateFormat('dd', locale).format(dateTime);
-      String formattedWeekDay = DateFormat('EEE', locale).format(dateTime);
-
-      return {
-        'year': formattedYear,
-        'month': formattedMonth,
-        'day': formattedDay,
+      final formattedResult = {
+        'year': DateFormat('yyyy', locale).format(dateTime),
+        'month': DateFormat('MMMM', locale).format(dateTime),
+        'day': DateFormat('dd', locale).format(dateTime),
         'time': formattedTime,
-        'weekday': formattedWeekDay,
+        'weekday': DateFormat('EEE', locale).format(dateTime),
       };
 
+      // キャッシュに保存
+      formattedDateCache[unixTimestampString] = formattedResult;
+
+      return formattedResult;
     } catch (e) {
-      debugPrint('Error parsing date string: $dateString');
+      debugPrint('Error parsing date string: $unixTimestampString');
       debugPrint(e.toString());
       return {
         'year': 'N/A',
@@ -1037,14 +1026,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       };
     }
   }
-
-
-
-
-
-
-
-
 
 
 
@@ -1185,32 +1166,123 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     }
                     return true;
                   },
-                    child: Stack(
-                      children: [
-                        ListWheelScrollView(
-                          controller: _pickerController,
-                          itemExtent: MediaQuery.of(context).size.width * 0.2,
-                          diameterRatio: 1.25,
-                          onSelectedItemChanged: (int index) async {
-                            if (index + 1 == groupKeys.length) {
-                              await ref.read(timelineAddProvider.notifier).addMoreItems();
-                            }
-                            if (index >= 0 && index < groupKeys.length) {
-                              String lastSelectedGroupID = groupKeys[index];
-                              _lastSelectedIndexes[lastSelectedGroupID] = index;
-                            }
-                          },
-                          physics: const FixedExtentScrollPhysics(),
-                          children: List<Widget>.generate(
-                            groupedItemsList.length,
-                                (int index) {
-                              String groupID = groupedItemsList[index].first.groupID;
-                              int currentIndex = selectedItemsMap[groupID] ?? 0;
-                              String dateString = groupedItemsList[index].first.createdAt; // 日付情報を取得
-                              debugPrint("String dateString = $dateString");
+                  child: Stack(
+                    children: [
+                      ListWheelScrollView(
+                        controller: _pickerController,
+                        itemExtent: MediaQuery.of(context).size.width * 0.2,
+                        diameterRatio: 1.25,
+                        onSelectedItemChanged: (int index) async {
+                          if (index + 1 == groupKeys.length) {
+                            await ref.read(timelineAddProvider.notifier).addMoreItems();
+                          }
+                          if (index >= 0 && index < groupKeys.length) {
+                            String lastSelectedGroupID = groupKeys[index];
+                            _lastSelectedIndexes[lastSelectedGroupID] = index;
+                          }
+                        },
+                        physics: const FixedExtentScrollPhysics(),
+                        children: List<Widget>.generate(
+                          groupedItemsList.length,
+                              (int index) {
+                            String groupID = groupedItemsList[index].first.groupID;
+                            int currentIndex = selectedItemsMap[groupID] ?? 0;
+                            String dateString = groupedItemsList[index].first.createdAt; // 日付情報を取得
+                            debugPrint("String dateString = $dateString");
 
+                            return FutureBuilder<Map<String, String>>(
+                              future: formatDateString(dateString), // 非同期関数を使用
+                              builder: (BuildContext context, AsyncSnapshot<Map<String, String>> snapshot) {
+                                if (snapshot.connectionState == ConnectionState.waiting) {
+                                  return const Center(child: CircularProgressIndicator());
+                                } else if (snapshot.hasError) {
+                                  debugPrint('FutureBuilder error: ${snapshot.error}');
+                                  return Center(child: Text('Error: ${snapshot.error}'));
+                                } else if (!snapshot.hasData) {
+                                  debugPrint('FutureBuilder no data');
+                                  return const Center(child: Text('No data'));
+                                } else {
+                                  final formattedDate = snapshot.data!;
+                                  return Stack(
+                                    children: [
+                                      Center(
+                                        child: Stack(
+                                          children: [
+                                            HorizontalGroupedItems(
+                                              itemsInGroup: groupedItemsList[index],
+                                              size: MediaQuery.of(context).size,
+                                              controller: _scrollController,
+                                              currentIndex: currentIndex,
+                                              pickerController: _pickerController,
+                                              items: items,
+                                              onTapCallback: (TimelineItem item) {
+                                                ScrollToCenterService.scrollToCenter(_pickerController, index);
+                                                if (_pickerController.selectedItem == index) {
+                                                  Future.delayed(const Duration(milliseconds: 100), () {
+                                                    onThumbnailTap(item);
+                                                  });
+                                                }
+                                              },
+                                              centralRowIndex: centralRowIndex,
+                                              chatNotifier: chatNotifier,
+                                              onHorizontalIndexChanged: (int newIndex) {
+                                                if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                                  selectedItemsMap[groupID] = newIndex;
+                                                  selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                                                }
+                                              },
+                                            ),
+                                            IgnorePointer(
+                                              child: Stack(
+                                                children: [
+                                                  if (index != 0)
+                                                    Positioned(
+                                                      left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
+                                                      top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                                      child: Container(
+                                                        alignment: Alignment.centerRight,
+                                                        child: Text(
+                                                          formattedDate['time']!,
+                                                          style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 20, // 時:分のフォントサイズを大きく
+                                                            fontWeight: FontWeight.bold,
+                                                            shadows: [
+                                                              Shadow(
+                                                                offset: Offset(2.0, 2.0),
+                                                                blurRadius: 3.0,
+                                                                color: Color.fromARGB(150, 0, 0, 0),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                      IgnorePointer(
+                        child: Center(
+                          child: ValueListenableBuilder<int>(
+                            valueListenable: selectedIndexNotifier,
+                            builder: (context, selectedIndex, child) {
+                              if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
+                                return const SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
+                              }
+                              String centralDateString = groupedItemsList[selectedIndex].first.createdAt; // UNIXタイムの文字列
                               return FutureBuilder<Map<String, String>>(
-                                future: formatDateString(dateString), // 非同期関数を使用
+                                future: formatDateString(centralDateString), // 非同期関数を使用
                                 builder: (BuildContext context, AsyncSnapshot<Map<String, String>> snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
                                     return const Center(child: CircularProgressIndicator());
@@ -1221,66 +1293,62 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                     debugPrint('FutureBuilder no data');
                                     return const Center(child: Text('No data'));
                                   } else {
-                                    final formattedDate = snapshot.data!;
+                                    final centralFormattedDate = snapshot.data!;
                                     return Stack(
                                       children: [
-                                        Center(
-                                          child: Stack(
-                                            children: [
-                                              HorizontalGroupedItems(
-                                                itemsInGroup: groupedItemsList[index],
-                                                size: MediaQuery.of(context).size,
-                                                controller: _scrollController,
-                                                currentIndex: currentIndex,
-                                                pickerController: _pickerController,
-                                                items: items,
-                                                onTapCallback: (TimelineItem item) {
-                                                  ScrollToCenterService.scrollToCenter(_pickerController, index);
-                                                  if (_pickerController.selectedItem == index) {
-                                                    Future.delayed(const Duration(milliseconds: 100), () {
-                                                      onThumbnailTap(item);
-                                                    });
-                                                  }
-                                                },
-                                                centralRowIndex: centralRowIndex,
-                                                chatNotifier: chatNotifier,
-                                                onHorizontalIndexChanged: (int newIndex) {
-                                                  if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
-                                                    selectedItemsMap[groupID] = newIndex;
-                                                    selectedItemNotifier.value = groupedItemsList[index][newIndex];
-                                                  }
-                                                },
+                                        Positioned(
+                                          top: widget.size.height * 0.1 + widget.size.width * 0.05 + 2, // テキスト全体の高さの半分を引く
+                                          left: widget.size.width * 0.18,
+                                          child: Container(
+                                            height: widget.size.height * 0.2 - widget.size.width * 0.1,
+                                            width: widget.size.width * 0.2,
+                                            alignment: Alignment.center,
+                                            padding: const EdgeInsets.all(0.0), // パディングを追加してテキストの周りに余白を確保
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.8), // 背景色を白に設定
+                                              borderRadius: const BorderRadius.only(
+                                                topRight: Radius.circular(12.0), // 右上の角を丸める
+                                                bottomRight: Radius.circular(12.0), // 右下の角を丸める
                                               ),
-                                              IgnorePointer(
-                                                child: Stack(
-                                                  children: [
-                                                    if (index != 0)
-                                                      Positioned(
-                                                        left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
-                                                        top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
-                                                        child: Container(
-                                                          alignment: Alignment.centerRight,
-                                                          child: Text(
-                                                            formattedDate['time']!,
-                                                            style: const TextStyle(
-                                                              color: Colors.white,
-                                                              fontSize: 20, // 時:分のフォントサイズを大きく
-                                                              fontWeight: FontWeight.bold,
-                                                              shadows: [
-                                                                Shadow(
-                                                                  offset: Offset(2.0, 2.0),
-                                                                  blurRadius: 3.0,
-                                                                  color: Color.fromARGB(150, 0, 0, 0),
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ),
-                                                  ],
+                                            ),
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center, // 縦中央に配置
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                Text(
+                                                  centralFormattedDate['year']!,
+                                                  style: const TextStyle(
+                                                    color: Colors.black, // テキストの色を黒に変更
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                                Text(
+                                                  centralFormattedDate['month']!,
+                                                  style: const TextStyle(
+                                                    color: Colors.black, // テキストの色を黒に変更
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  centralFormattedDate['weekday']!,
+                                                  style: const TextStyle(
+                                                    color: Colors.black, // テキストの色を黒に変更
+                                                    fontSize: 14,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  centralFormattedDate['day']!,
+                                                  style: const TextStyle(
+                                                    color: Colors.black, // テキストの色を黒に変更
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -1291,96 +1359,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                             },
                           ),
                         ),
-                        IgnorePointer(
-                          child: Center(
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: selectedIndexNotifier,
-                              builder: (context, selectedIndex, child) {
-                                if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
-                                  return const SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
-                                }
-                                String centralDateString = groupedItemsList[0].first.localtime;
-                                return FutureBuilder<Map<String, String>>(
-                                  future: formatDateString(centralDateString), // 非同期関数を使用
-                                  builder: (BuildContext context, AsyncSnapshot<Map<String, String>> snapshot) {
-                                    if (snapshot.connectionState == ConnectionState.waiting) {
-                                      return const Center(child: CircularProgressIndicator());
-                                    } else if (snapshot.hasError) {
-                                      debugPrint('FutureBuilder error: ${snapshot.error}');
-                                      return Center(child: Text('Error: ${snapshot.error}'));
-                                    } else if (!snapshot.hasData) {
-                                      debugPrint('FutureBuilder no data');
-                                      return const Center(child: Text('No data'));
-                                    } else {
-                                      final centralFormattedDate = snapshot.data!;
-                                      return Stack(
-                                        children: [
-                                          Positioned(
-                                            top: widget.size.height * 0.1 + widget.size.width * 0.05 + 2, // テキスト全体の高さの半分を引く
-                                            left: widget.size.width * 0.18,
-                                            child: Container(
-                                              height: widget.size.height * 0.2 - widget.size.width * 0.1,
-                                              width: widget.size.width * 0.2,
-                                              alignment: Alignment.center,
-                                              padding: const EdgeInsets.all(0.0), // パディングを追加してテキストの周りに余白を確保
-                                              decoration: BoxDecoration(
-                                                color: Colors.white.withOpacity(0.8), // 背景色を白に設定
-                                                borderRadius: const BorderRadius.only(
-                                                  topRight: Radius.circular(12.0), // 右上の角を丸める
-                                                  bottomRight: Radius.circular(12.0), // 右下の角を丸める
-                                                ),
-                                              ),
-                                              child: Column(
-                                                mainAxisAlignment: MainAxisAlignment.center, // 縦中央に配置
-                                                crossAxisAlignment: CrossAxisAlignment.center,
-                                                children: [
-                                                  Text(
-                                                    centralFormattedDate['year']!,
-                                                    style: const TextStyle(
-                                                      color: Colors.black, // テキストの色を黒に変更
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    centralFormattedDate['month']!,
-                                                    style: const TextStyle(
-                                                      color: Colors.black, // テキストの色を黒に変更
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    centralFormattedDate['weekday']!,
-                                                    style: const TextStyle(
-                                                      color: Colors.black, // テキストの色を黒に変更
-                                                      fontSize: 14,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  Text(
-                                                    centralFormattedDate['day']!,
-                                                    style: const TextStyle(
-                                                      color: Colors.black, // テキストの色を黒に変更
-                                                      fontSize: 20,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                      ),
+
+                    ],
+                  ),
 
 
                 ),
@@ -1474,7 +1456,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     );
   }
 
-
   void scrollToTarget() {
     if (_pickerController.hasClients) {
       debugPrint("Callback from new_photo");
@@ -1509,7 +1490,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     });
 
     isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
-
 
     if (showAlbumWheelScrollView) {
       _loadAlbumData();
@@ -1640,9 +1620,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       }
     }
     debugPrint("groupedMapAAA = $groupedMap");
+
+    // キャッシュの初期化
+    for (var group in groupedMap.values) {
+      for (var item in group) {
+        formatDateString(item.createdAt);
+      }
+    }
+
+
     return groupedMap.values.toList();
   }
 }
+
 
 class HorizontalGroupedItems extends StatefulWidget {
   final List<TimelineItem> itemsInGroup;
