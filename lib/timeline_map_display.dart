@@ -1002,12 +1002,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
 
       debugPrint("formattedDate = $formattedDate, formattedTime = $formattedTime");
 
+      String formattedYear = DateFormat('yyyy', locale).format(dateTime);
+      String formattedMonth = DateFormat.MMM(locale).format(dateTime); // 短縮形の月名を取得
+      String formattedDay = DateFormat('dd', locale).format(dateTime);
+
       final formattedResult = {
-        'year': DateFormat('yyyy', locale).format(dateTime),
-        'month': DateFormat('MMMM', locale).format(dateTime),
-        'day': DateFormat('dd', locale).format(dateTime),
+        'year': formattedYear,
+        'month': formattedMonth,
+        'day': formattedDay,
         'time': formattedTime,
-        'weekday': DateFormat('EEE', locale).format(dateTime),
+        'weekday': DateFormat('EEEE', locale).format(dateTime),
       };
 
       // キャッシュに保存
@@ -1026,6 +1030,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
       };
     }
   }
+
+
 
 
 
@@ -1237,8 +1243,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                                 children: [
                                                   if (index != 0)
                                                     Positioned(
-                                                      left: widget.size.width * 0.4, // 画面中央からデバイス横幅40%
-                                                      top: MediaQuery.of(context).size.width * 0.10 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                                      left: widget.size.width * 0.4 + 30, // 画面中央からデバイス横幅40%
+                                                      top: MediaQuery.of(context).size.width * 0.1 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
                                                       child: Container(
                                                         alignment: Alignment.centerRight,
                                                         child: Text(
@@ -1297,39 +1303,46 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                     return Stack(
                                       children: [
                                         Positioned(
-                                          top: widget.size.height * 0.1 + widget.size.width * 0.05 + 2, // テキスト全体の高さの半分を引く
-                                          left: widget.size.width * 0.18,
+                                          top: widget.size.height * 0.2 - widget.size.width * 0.125,
+                                          left: widget.size.width * 0.2,
                                           child: Container(
-                                            height: widget.size.height * 0.2 - widget.size.width * 0.1,
-                                            width: widget.size.width * 0.2,
+                                            height: widget.size.width * 0.25,
+                                            width: widget.size.width * 0.25,
                                             alignment: Alignment.center,
                                             padding: const EdgeInsets.all(0.0), // パディングを追加してテキストの周りに余白を確保
                                             decoration: BoxDecoration(
                                               color: Colors.white.withOpacity(0.8), // 背景色を白に設定
-                                              borderRadius: const BorderRadius.only(
-                                                topRight: Radius.circular(12.0), // 右上の角を丸める
-                                                bottomRight: Radius.circular(12.0), // 右下の角を丸める
-                                              ),
+                                              borderRadius: const BorderRadius.all(Radius.circular(12.0)),
+                                              // borderRadius: const BorderRadius.only(
+                                              //   topRight: Radius.circular(12.0), // 右上の角を丸める
+                                              //   bottomRight: Radius.circular(12.0), // 右下の角を丸める
+                                              // ),
                                             ),
                                             child: Column(
                                               mainAxisAlignment: MainAxisAlignment.center, // 縦中央に配置
                                               crossAxisAlignment: CrossAxisAlignment.center,
                                               children: [
-                                                Text(
-                                                  centralFormattedDate['year']!,
-                                                  style: const TextStyle(
-                                                    color: Colors.black, // テキストの色を黒に変更
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  centralFormattedDate['month']!,
-                                                  style: const TextStyle(
-                                                    color: Colors.black, // テキストの色を黒に変更
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
+                                                Row(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Text(
+                                                      centralFormattedDate['year']!,
+                                                      style: const TextStyle(
+                                                        color: Colors.black, // テキストの色を黒に変更
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4), // 年と月の間にスペースを追加
+                                                    Text(
+                                                      centralFormattedDate['month']!,
+                                                      style: const TextStyle(
+                                                        color: Colors.black, // テキストの色を黒に変更
+                                                        fontSize: 14,
+                                                        fontWeight: FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ),
                                                 Text(
                                                   centralFormattedDate['weekday']!,
@@ -1343,7 +1356,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                                                   centralFormattedDate['day']!,
                                                   style: const TextStyle(
                                                     color: Colors.black, // テキストの色を黒に変更
-                                                    fontSize: 20,
+                                                    fontSize: 28,
                                                     fontWeight: FontWeight.bold,
                                                   ),
                                                 ),
