@@ -486,7 +486,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     //     : '+${localTime.timeZoneOffset.inHours.abs().toString().padLeft(2, '0')}:${(localTime.timeZoneOffset.inMinutes.remainder(60)).abs().toString().padLeft(2, '0')}';
 
     // 時差情報を付記したタイムスタンプ
-    _localTimestamp = '$localTimestamp';
+    _localTimestamp = localTimestamp;
 
     final String randomStr = _getRandomString(5);
 

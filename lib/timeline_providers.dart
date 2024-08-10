@@ -8,7 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/foundation.dart';
 // import 'chat_connection.dart';
-import 'package:intl/intl.dart';
+// import 'package:intl/intl.dart';
 
 int currentPage = 0; // これで現在のページを追跡します
 
@@ -167,32 +167,32 @@ Future<List<TimelineItem>> getTimelinePage(int page) async { // この行を変�
       List data = jsonDecode(response.body);
       debugPrint('取得したばかりのReceived data: ${data.length} items. Details: $data');
 
-      if (page == 0) { // 最初のページの場合のみ、現在地を取得
-        // // 現在の位置を取得します。
-        // Position devicePosition = await Geolocator.getCurrentPosition(
-        //     desiredAccuracy: LocationAccuracy.high);
-
-        double latitude = prefs.getDouble('latitude') ?? 0.0;
-        double longitude = prefs.getDouble('longitude') ?? 0.0;
-        String country = prefs.getString('country') ?? 'Unknown';
-        String city = prefs.getString('city') ?? 'Unknown';
-        // 現在のローカルタイムを取得し、フォーマット
-        DateTime now = DateTime.now();
-        String formattedLocaltime = DateFormat('EEE, dd MM, yyyy, HH:mm').format(now);
-
-
-        // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
-        Map<String, dynamic> firstTimelineItem = TimelineItem.empty(
-          lat: latitude,
-          lng: longitude,
-          geocodedCountry: country,
-          geocodedCity: city,
-          localtime: formattedLocaltime,
-        );
-
-        // 空の TimelineItem をリストの先頭に追加します。
-        data.insert(0, firstTimelineItem);
-      }
+      // if (page == 0) { // 最初のページの場合のみ、現在地を取得
+      //   // // 現在の位置を取得します。
+      //   // Position devicePosition = await Geolocator.getCurrentPosition(
+      //   //     desiredAccuracy: LocationAccuracy.high);
+      //
+      //   double latitude = prefs.getDouble('latitude') ?? 0.0;
+      //   double longitude = prefs.getDouble('longitude') ?? 0.0;
+      //   String country = prefs.getString('country') ?? 'Unknown';
+      //   String city = prefs.getString('city') ?? 'Unknown';
+      //   // 現在のローカルタイムを取得し、フォーマット
+      //   DateTime now = DateTime.now();
+      //   String formattedLocaltime = DateFormat('EEE, dd MM, yyyy, HH:mm').format(now);
+      //
+      //
+      //   // 現在地を表す空の TimelineItem を作成します。ただし、これは Map<String, dynamic> の形で返されます。
+      //   Map<String, dynamic> firstTimelineItem = TimelineItem.empty(
+      //     lat: latitude,
+      //     lng: longitude,
+      //     geocodedCountry: country,
+      //     geocodedCity: city,
+      //     localtime: formattedLocaltime,
+      //   );
+      //
+      //   // 空の TimelineItem をリストの先頭に追加します。
+      //   data.insert(0, firstTimelineItem);
+      // }
 
       // デバッグ情報として、取得したデータを出力
       debugPrint('Received data: ${data.length} items. Details: $data');

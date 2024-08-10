@@ -44,58 +44,6 @@ class TimelineCardState extends State<TimelineCard> {
     currentSelectedItem = widget.currentIndex;
   }
 
-  // void _showFullSizeImage(BuildContext context, String imageUrl) {
-  //   String imageFilename = imageUrl.split('/').last; // URLからファイル名を取得
-  //
-  //   showGeneralDialog(
-  //     context: context,
-  //     barrierDismissible: true,
-  //     barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
-  //     transitionDuration: const Duration(milliseconds: 200),
-  //     pageBuilder: (BuildContext buildContext, Animation animation, Animation secondaryAnimation) {
-  //       return Scaffold(
-  //         backgroundColor: Colors.transparent,
-  //         body: Center(
-  //           child: FutureBuilder<File>(
-  //             future: _getCachedImage(imageFilename),
-  //             builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-  //               if (snapshot.connectionState == ConnectionState.done && snapshot.hasData) {
-  //                 return LayoutBuilder(
-  //                   builder: (context, constraints) {
-  //                     double maxWidth = constraints.maxWidth;
-  //                     double maxHeight = constraints.maxHeight;
-  //                     return Center(
-  //                       child: ClipRRect(
-  //                         // borderRadius: BorderRadius.circular(20), // 角丸の半径を指定
-  //                         child: Image.file(
-  //                           snapshot.data!,
-  //                           fit: BoxFit.cover,
-  //                           width: maxWidth,
-  //                           height: maxHeight,
-  //                         ),
-  //                       ),
-  //                     );
-  //                   },
-  //                 );
-  //               } else {
-  //                 return const Center(
-  //                   child: CircularProgressIndicator(),
-  //                 );
-  //               }
-  //             },
-  //           ),
-  //         ),
-  //       );
-  //     },
-  //     transitionBuilder: (context, animation, secondaryAnimation, child) {
-  //       return FadeTransition(
-  //         opacity: CurvedAnimation(parent: animation, curve: Curves.easeInOut),
-  //         child: child,
-  //       );
-  //     },
-  //   );
-  // }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -103,54 +51,51 @@ class TimelineCardState extends State<TimelineCard> {
         if (widget.onTapCallback != null) {
           widget.onTapCallback!(widget.item);
         }
-        // _showFullSizeImage(context, 'https://photo5.world/${widget.item.imageFilename}');
       },
       child: Align(
         alignment: Alignment.center,
         child: Container(
           key: ValueKey(widget.item.thumbnailFilename),
-          width: widget.size.width * 0.2,
-          height: widget.size.width * 0.2,
+          // width: widget.size.width * 0.2,  // 正方形のサイズ
+          // height: widget.size.width * 0.2,  // 正方形のサイズ
+          // margin: EdgeInsets.symmetric(horizontal: 0.0),  // サムネイル同士の間隔を確保
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(widget.size.width * 0.04),
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-            child: widget.item.systemId == "shootbutton"
-                ? Stack(
-              children: <Widget>[
-                  Align(
-                  alignment: Alignment.center,
-                    child: SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.18,
-                    height: MediaQuery.of(context).size.width * 0.18,
-                      child: FloatingActionButton(
-                      backgroundColor: const Color(0xFFFFCC4D),
-                      foregroundColor: Colors.black,
-                      elevation: 0,
-                      shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-                      // onPressed: widget.onCameraButtonPressed,
-                      onPressed: () {  },
-                        child: const Center(
-                          child: Text(
-                          '\u{1F4F8}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 24,
-                            height: 1.0,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            )
+            child
+            //     ? Stack(
+            //   children: <Widget>[
+            //     Align(
+            //       alignment: Alignment.center,
+            //       child: SizedBox(
+            //         child: FloatingActionButton(
+            //           backgroundColor: const Color(0xFFFFCC4D),
+            //           // foregroundColor: Colors.black,
+            //           elevation: 0,
+            //           shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
+            //           onPressed: () { },
+            //           child: const Center(
+            //             child: Text(
+            //               '\u{1F4F8}',
+            //               textAlign: TextAlign.center,
+            //               style: TextStyle(
+            //                 fontSize: 24,
+            //                 height: 1.0,
+            //               ),
+            //             ),
+            //           ),
+            //         ),
+            //       ),
+            //     ),
+            //   ],
+            // )
                 : _buildImageWidget(context, widget.item.thumbnailFilename),
-            ),
           ),
         ),
-      );
+      ),
+    );
   }
 }
 
@@ -162,19 +107,17 @@ Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
     future: _getCachedImage(thumbnailFilename),
     builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
       if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
-        return Stack(
-          children: [
-            _imageContainer(imageSize, _buildGreyThumbnail(imageSize)),
-            _imageContainer(
-              imageSize,
-              FadeInImage(
-                placeholder: const AssetImage('assets/placeholder_thumb_transparent.png'),
-                image: FileImage(snapshot.data!),
-                fit: BoxFit.cover,
-                fadeInDuration: const Duration(milliseconds: 300),
-              ),
+        return _imageContainer(
+          imageSize,
+          AspectRatio(
+            aspectRatio: 1, // 正方形に固定
+            child: FadeInImage(
+              placeholder: const AssetImage('assets/placeholder_thumb_transparent.png'),
+              image: FileImage(snapshot.data!),
+              fit: BoxFit.cover, // ここはカバーのままでも良い
+              fadeInDuration: const Duration(milliseconds: 300),
             ),
-          ],
+          ),
         );
       } else {
         return _imageContainer(imageSize, _buildGreyThumbnail(imageSize));
@@ -182,6 +125,7 @@ Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
     },
   );
 }
+
 
 Widget _buildGreyThumbnail(double size) {
   return Container(
@@ -197,8 +141,9 @@ Widget _buildGreyThumbnail(double size) {
 
 Widget _imageContainer(double size, Widget child) {
   return Container(
-    width: size,
-    height: size,
+    // width: size,
+    // height: size,
+    // margin: const EdgeInsets.symmetric(horizontal: 8.0), // サムネイル同士の間隔を設定
     decoration: BoxDecoration(
       borderRadius: BorderRadius.circular(size * 0.1),
     ),
