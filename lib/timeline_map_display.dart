@@ -554,7 +554,7 @@ class MapDisplayStateful extends ConsumerStatefulWidget {
   MapDisplayState createState() => MapDisplayState();
 }
 
-class MapDisplayState extends ConsumerState<MapDisplayStateful> {
+class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTickerProviderStateMixin {
   late FixedExtentScrollController _scrollController;
   List<CameraDescription>? _cameras;
   late CameraController _controller;
@@ -585,6 +585,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
   ValueNotifier<int> selectedIndexNotifier = ValueNotifier<int>(0); // 中央行のインデックスを保持するためのValueNotifier
 
   Map<String, Map<String, String>> formattedDateCache = {};
+
+  late AnimationController _animationController;
+
+  File? previousImage;
 
   @override
   void initState() {
@@ -618,6 +622,12 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialImageIfNecessary();
     });
+
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
   }
 
   void _loadInitialImageIfNecessary() {
@@ -640,6 +650,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
     selectedItemNotifier.removeListener(_loadNextImage);
     currentImageNotifier.dispose();
     selectedIndexNotifier.dispose(); // ValueNotifierの破棄
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -1092,7 +1103,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                 return Positioned.fill(
                   child: isMapVisible && !showAlbumWheelScrollView
                       ? Container(
-                    color: Colors.black,
+                    color: const Color(0xFFFFCC4D),
                   )
                       : const SizedBox.shrink(),
                 );
@@ -1107,18 +1118,38 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                   child: ValueListenableBuilder<File?>(
                     valueListenable: currentImageNotifier,
                     builder: (context, currentImage, child) {
-                      return AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 500),
-                        child: currentImage != null
-                            ? Container(
-                          decoration: BoxDecoration(
-                            image: DecorationImage(
-                              image: FileImage(currentImage),
-                              fit: BoxFit.cover,
+                      return Stack(
+                        children: [
+                          if (previousImage != null)
+                            Opacity(
+                              opacity: 1.0,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  image: DecorationImage(
+                                    image: FileImage(previousImage!),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
                             ),
+                          AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 500),
+                            transitionBuilder: (Widget child, Animation<double> animation) {
+                              return FadeTransition(opacity: animation, child: child);
+                            },
+                            child: currentImage != null
+                                ? Container(
+                              key: ValueKey(currentImage.path),
+                              decoration: BoxDecoration(
+                                image: DecorationImage(
+                                  image: FileImage(currentImage),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            )
+                                : const SizedBox(),
                           ),
-                        )
-                            : const SizedBox(),
+                        ],
                       );
                     },
                   ),
@@ -1126,6 +1157,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                     : const SizedBox.shrink();
               },
             ),
+
+
+
+
 
             // if (showAlbumWheelScrollView)
             //   Positioned.fill(
@@ -1136,31 +1171,25 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                if (isMapVisible) {
-                  return Positioned(
-                    // top: widget.size.height * 0,
-                    // bottom: widget.size.height * 0,
-                    // left: widget.size.width * 0,
-                    // right: widget.size.width * 0,
+                return Positioned.fill(
+                  child: AnimatedOpacity(
+                    opacity: isMapVisible ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 500), // フェードの速さを調整
                     child: BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // ぼかし効果を追加
                       child: Container(
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(0),
                           color: Colors.white.withOpacity(0), // 透明度を調整
-                          // border: Border.all(
-                          //   color: Colors.white,
-                          //   width: 1,
-                          // ),
                         ),
                       ),
                     ),
-                  );
-                } else {
-                  return const SizedBox.shrink(); // ウィジェットを表示しない場合は空のウィジェットを返す
-                }
+                  ),
+                );
               },
             ),
+
+
             if (!showAlbumWheelScrollView)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -1298,104 +1327,88 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> {
                         ),
                       ),
                       IgnorePointer(
-                        child: Center(
-                          child: ValueListenableBuilder<int>(
-                            valueListenable: selectedIndexNotifier,
-                            builder: (context, selectedIndex, child) {
-                              // if (selectedIndex == 0 || selectedIndex >= groupedItemsList.length) {
-                              //   return const SizedBox.shrink(); // インデックス0または無効なインデックスは空のウィジェットを返す
-                              // }
-                              String centralDateString = groupedItemsList[selectedIndex].first.createdAt; // UNIXタイムの文字列
-                              return FutureBuilder<Map<String, String>>(
-                                future: formatDateString(centralDateString), // 非同期関数を使用
-                                builder: (BuildContext context, AsyncSnapshot<Map<String, String>> snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return const Center(child: CircularProgressIndicator());
-                                  } else if (snapshot.hasError) {
-                                    debugPrint('FutureBuilder error: ${snapshot.error}');
-                                    return Center(child: Text('Error: ${snapshot.error}'));
-                                  } else if (!snapshot.hasData) {
-                                    debugPrint('FutureBuilder no data');
-                                    return const Center(child: Text('No data'));
-                                  } else {
-                                    final centralFormattedDate = snapshot.data!;
-                                    return Stack(
-                                      children: [
-                                        Positioned(
-                                          top: widget.size.height * 0.2 - widget.size.width * 0.125,
-                                          left: widget.size.width * 0.225,
-                                          child: Container(
-                                            height: widget.size.width * 0.25,
-                                            width: widget.size.width * 0.25,
-                                            alignment: Alignment.center,
-                                            padding: const EdgeInsets.all(0.0), // パディングを追加してテキストの周りに余白を確保
-                                            decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.8), // 背景色を白に設定
-                                              borderRadius: const BorderRadius.all(Radius.circular(12.0)),
-                                              // borderRadius: const BorderRadius.only(
-                                              //   topRight: Radius.circular(12.0), // 右上の角を丸める
-                                              //   bottomRight: Radius.circular(12.0), // 右下の角を丸める
-                                              // ),
-                                            ),
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center, // 縦中央に配置
-                                              crossAxisAlignment: CrossAxisAlignment.center,
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment: MainAxisAlignment.center,
-                                                  children: [
-                                                    Text(
-                                                      centralFormattedDate['year']!,
-                                                      style: const TextStyle(
-                                                        color: Colors.black, // テキストの色を黒に変更
-                                                        fontSize: 14,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4), // 年と月の間にスペースを追加
-                                                    Text(
-                                                      centralFormattedDate['month']!,
-                                                      style: const TextStyle(
-                                                        color: Colors.black, // テキストの色を黒に変更
-                                                        fontSize: 14,
-                                                        fontWeight: FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                Text(
-                                                  centralFormattedDate['weekday']!,
-                                                  style: const TextStyle(
-                                                    color: Colors.black, // テキストの色を黒に変更
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  centralFormattedDate['day']!,
-                                                  style: const TextStyle(
-                                                    color: Colors.black, // テキストの色を黒に変更
-                                                    fontSize: 28,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ],
+                        child: Align(
+                          alignment: const Alignment(-0.6, 0.0), // 左端から少し内側に寄せる
+                          child: Container(
+                            key: const ValueKey('DateContainer'),
+                            height: widget.size.width * 0.25,
+                            width: widget.size.width * 0.25,
+                            alignment: Alignment.center,
+                            padding: const EdgeInsets.all(0.0),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.8),
+                              borderRadius: const BorderRadius.all(Radius.circular(12.0)),
+                            ),
+                            child: ValueListenableBuilder<int>(
+                              valueListenable: selectedIndexNotifier,
+                              builder: (context, selectedIndex, child) {
+                                // ここで FutureBuilder を使わず、データをキャッシュや直接利用できるようにする
+                                String centralDateString = groupedItemsList[selectedIndex].first.createdAt;
+
+                                if (formattedDateCache.containsKey(centralDateString)) {
+                                  final centralFormattedDate = formattedDateCache[centralDateString]!;
+                                  return Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            centralFormattedDate['year']!,
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            centralFormattedDate['month']!,
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      Text(
+                                        centralFormattedDate['weekday']!,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                      ],
-                                    );
-                                  }
-                                },
-                              );
-                            },
+                                      ),
+                                      Text(
+                                        centralFormattedDate['day']!,
+                                        style: const TextStyle(
+                                          color: Colors.black,
+                                          fontSize: 28,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                } else {
+                                  // フォーマットされていない場合は仮のテキストを表示し、その後バックグラウンドでフォーマットを実行
+                                  formatDateString(centralDateString).then((formattedDate) {
+                                    // フォーマットが完了したら、通知して再描画をトリガーする
+                                    setState(() {
+                                      formattedDateCache[centralDateString] = formattedDate;
+                                    });
+                                  });
+
+                                  return const CircularProgressIndicator(); // ローディングインジケーターを表示
+                                }
+                              },
+                            ),
                           ),
                         ),
                       ),
-
                     ],
                   ),
-
 
                 ),
               ),

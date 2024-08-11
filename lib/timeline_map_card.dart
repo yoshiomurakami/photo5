@@ -100,31 +100,47 @@ class TimelineCardState extends State<TimelineCard> {
 }
 
 
+Widget _imageContainer(double size, Widget child) {
+  return Container(
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(size * 0.1),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(size * 0.1),
+      child: Stack(
+        children: [
+          _buildGreyThumbnail(size), // デフォルトでグレーのサムネイルを背景として配置
+          child, // 実際の画像を上に配置
+        ],
+      ),
+    ),
+  );
+}
+
 Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
   double imageSize = MediaQuery.of(context).size.width * 0.2;
 
   return FutureBuilder<File>(
     future: _getCachedImage(thumbnailFilename),
     builder: (BuildContext context, AsyncSnapshot<File> snapshot) {
-      if (snapshot.connectionState == ConnectionState.done && snapshot.data != null) {
-        return _imageContainer(
-          imageSize,
-          AspectRatio(
-            aspectRatio: 1, // 正方形に固定
-            child: FadeInImage(
-              placeholder: const AssetImage('assets/placeholder_thumb_transparent.png'),
-              image: FileImage(snapshot.data!),
-              fit: BoxFit.cover, // ここはカバーのままでも良い
-              fadeInDuration: const Duration(milliseconds: 300),
-            ),
-          ),
-        );
-      } else {
-        return _imageContainer(imageSize, _buildGreyThumbnail(imageSize));
-      }
+      return _imageContainer(
+        imageSize,
+        AnimatedOpacity(
+          opacity: snapshot.connectionState == ConnectionState.done && snapshot.data != null ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 300),
+          child: snapshot.connectionState == ConnectionState.done && snapshot.data != null
+              ? Image.file(
+            snapshot.data!,
+            fit: BoxFit.cover,
+          )
+              : const SizedBox.shrink(), // データがない場合は空のウィジェットを表示
+        ),
+      );
     },
   );
 }
+
+
 
 
 Widget _buildGreyThumbnail(double size) {
@@ -134,22 +150,6 @@ Widget _buildGreyThumbnail(double size) {
     decoration: BoxDecoration(
       color: Colors.grey.withOpacity(0.5),  // 半透明に設定
       borderRadius: BorderRadius.circular(size * 0.1),
-    ),
-  );
-}
-
-
-Widget _imageContainer(double size, Widget child) {
-  return Container(
-    // width: size,
-    // height: size,
-    // margin: const EdgeInsets.symmetric(horizontal: 8.0), // サムネイル同士の間隔を設定
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(size * 0.1),
-    ),
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.1),
-      child: child,
     ),
   );
 }
