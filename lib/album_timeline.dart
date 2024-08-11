@@ -8,6 +8,7 @@ import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flag/flag.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:intl/intl.dart';
 
 
 final selectedAlbumItemProvider = StateProvider<AlbumTimeLine?>((ref) {
@@ -107,6 +108,8 @@ Future<List<AlbumTimeLine>> fetchAlbumDataFromDB() async {
   return albumList;
 }
 
+
+
 class AlbumTimeLineView extends ConsumerStatefulWidget {
   final Size size;
   final List<AlbumTimeLine> albumList;
@@ -134,6 +137,10 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
   ValueNotifier<AlbumTimeLine?> selectedAlbumItemNotifier = ValueNotifier<AlbumTimeLine?>(null);
   bool isRestoringPosition = true;
   // AlbumTimeLine? _lastTappedAlbum;
+  Map<String, Map<String, String>> formattedDateCache = {}; // 追加
+
+  Map<String, String>? previousFormattedDate;
+
 
   @override
   void initState() {
@@ -155,6 +162,53 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       _restoreScrollPosition();
     });
   }
+
+
+  Future<Map<String, String>> _formatDateString(String unixTimestampString) async {
+    if (formattedDateCache.containsKey(unixTimestampString)) {
+      return Future.value(formattedDateCache[unixTimestampString]);
+    }
+
+    try {
+      final int timestamp = int.parse(unixTimestampString);
+      final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
+
+      final dateFormat = DateFormat.yMMMMEEEEd(); // 曜日を含めた日付形式
+      final timeFormat = DateFormat.Hm(); // 時間形式
+
+      String formattedDate = dateFormat.format(dateTime);
+      String formattedTime = timeFormat.format(dateTime);
+
+      String formattedYear = DateFormat('yyyy').format(dateTime);
+      String formattedMonth = DateFormat.MMM().format(dateTime); // 短縮形の月名を取得
+      String formattedDay = DateFormat('dd').format(dateTime);
+
+      final formattedResult = {
+        'year': formattedYear,
+        'month': formattedMonth,
+        'day': formattedDay,
+        'time': formattedTime,
+        'weekday': DateFormat('EEEE').format(dateTime),
+      };
+
+      // キャッシュに保存
+      formattedDateCache[unixTimestampString] = formattedResult;
+
+      return formattedResult;
+    } catch (e) {
+      debugPrint('Error parsing date string: $unixTimestampString');
+      return {
+        'year': 'N/A',
+        'month': 'N/A',
+        'day': 'N/A',
+        'time': 'N/A',
+        'weekday': 'N/A',
+      };
+    }
+  }
+
+
+
 
   @override
   void didUpdateWidget(covariant AlbumTimeLineView oldWidget) {
@@ -214,6 +268,8 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       });
     });
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -289,6 +345,98 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                 ),
               ),
             ),
+            ValueListenableBuilder<AlbumTimeLine?>(
+              valueListenable: selectedAlbumItemNotifier,
+              builder: (context, selectedItem, child) {
+                if (selectedItem == null) {
+                  return const SizedBox.shrink();
+                }
+
+                String centralDateString = selectedItem.createdAt;
+
+                if (formattedDateCache.containsKey(centralDateString)) {
+                  final centralFormattedDate = formattedDateCache[centralDateString]!;
+                  previousFormattedDate = centralFormattedDate;
+                } else {
+                  _formatDateString(centralDateString).then((formattedDate) {
+                    setState(() {
+                      formattedDateCache[centralDateString] = formattedDate;
+                      previousFormattedDate = formattedDate;
+                    });
+                  });
+                }
+
+                return IgnorePointer(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 0),
+                    child: previousFormattedDate != null
+                        ? Align(
+                      key: ValueKey(previousFormattedDate),
+                      alignment: const Alignment(-0.92, 0.0),
+                      child: Container(
+                        key: const ValueKey('DateContainer'),
+                        height: widget.size.width * 0.25,
+                        width: widget.size.width * 0.25,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.all(0.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: const BorderRadius.all(Radius.circular(12.0)),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  previousFormattedDate!['year']!,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  previousFormattedDate!['month']!,
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            Text(
+                              previousFormattedDate!['weekday']!,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              previousFormattedDate!['day']!,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 28,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                        : const CircularProgressIndicator(),
+                  ),
+                );
+              },
+            ),
+
+
+
             ValueListenableBuilder<AlbumTimeLine?>(
               valueListenable: selectedAlbumItemNotifier,
               builder: (context, selectedItem, child) {
