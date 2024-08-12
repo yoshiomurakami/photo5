@@ -1298,7 +1298,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                             height: widget.size.width * 0.3,
                             width: widget.size.width * 0.3,
                             alignment: Alignment.center,
-                            padding: const EdgeInsets.all(0.0),
+                            padding: const EdgeInsets.only(left: 14.0, top: 0.0, right: 0.0, bottom: 0.0),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.8),
                               borderRadius: const BorderRadius.all(Radius.circular(18.0)),
@@ -1312,10 +1312,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                   final centralFormattedDate = formattedDateCache[centralDateString]!;
                                   return Column(
                                     mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.start,
                                         children: [
                                           Text(
                                             centralFormattedDate['year']!,
@@ -1336,8 +1336,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                           ),
                                         ],
                                       ),
+                                      SizedBox(height: 4),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment: MainAxisAlignment.start,
                                         children: [
                                           Text(
                                             centralFormattedDate['day']!,
@@ -1349,7 +1350,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                           ),
                                           const SizedBox(width: 4),
                                           Text(
-                                            centralFormattedDate['weekday']!,
+                                            '(${centralFormattedDate['weekday']!})',
                                             style: const TextStyle(
                                               color: Colors.black,
                                               fontSize: 14,
@@ -1358,22 +1359,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                           ),
                                         ],
                                       ),
-                                      // Text(
-                                      //   centralFormattedDate['weekday']!,
-                                      //   style: const TextStyle(
-                                      //     color: Colors.black,
-                                      //     fontSize: 14,
-                                      //     fontWeight: FontWeight.bold,
-                                      //   ),
-                                      // ),
-                                      // Text(
-                                      //   centralFormattedDate['day']!,
-                                      //   style: const TextStyle(
-                                      //     color: Colors.black,
-                                      //     fontSize: 28,
-                                      //     fontWeight: FontWeight.bold,
-                                      //   ),
-                                      // ),
+                                      SizedBox(height: 0),
                                       Text(
                                         centralFormattedDate['time']!,
                                         style: const TextStyle(
@@ -1399,36 +1385,36 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                         ),
                       ),
                       // Positionedを使わず、Alignを使って位置を指定
-                      Align(
-                        alignment: Alignment.center,
-                        child: IgnorePointer(
-                          child: Container(
-                            // margin: EdgeInsets.only(top: MediaQuery.of(context).size.width * 0.1 - 10),
-                            alignment: Alignment.center,
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: selectedIndexNotifier,
-                              builder: (context, selectedIndex, child) {
-                                final formattedDate = formattedDateCache[groupedItemsList[selectedIndex].first.createdAt];
-                                return Text(
-                                  formattedDate != null ? formattedDate['time']! : '',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 24, // 時:分のフォントサイズを大きく
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        offset: Offset(2.0, 2.0),
-                                        blurRadius: 3.0,
-                                        color: Color.fromARGB(150, 0, 0, 0),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
+                      // Align(
+                      //   alignment: Alignment.center,
+                      //   child: IgnorePointer(
+                      //     child: Container(
+                      //       // margin: EdgeInsets.only(top: MediaQuery.of(context).size.width * 0.1 - 10),
+                      //       alignment: Alignment.center,
+                      //       child: ValueListenableBuilder<int>(
+                      //         valueListenable: selectedIndexNotifier,
+                      //         builder: (context, selectedIndex, child) {
+                      //           final formattedDate = formattedDateCache[groupedItemsList[selectedIndex].first.createdAt];
+                      //           return Text(
+                      //             formattedDate != null ? formattedDate['time']! : '',
+                      //             style: const TextStyle(
+                      //               color: Colors.white,
+                      //               fontSize: 24, // 時:分のフォントサイズを大きく
+                      //               fontWeight: FontWeight.bold,
+                      //               shadows: [
+                      //                 Shadow(
+                      //                   offset: Offset(2.0, 2.0),
+                      //                   blurRadius: 3.0,
+                      //                   color: Color.fromARGB(150, 0, 0, 0),
+                      //                 ),
+                      //               ],
+                      //             ),
+                      //           );
+                      //         },
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),

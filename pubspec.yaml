@@ -59,6 +59,7 @@ dependencies:
   transparent_image: ^2.0.1
   flutter_hooks: ^0.20.5
   hooks_riverpod: ^2.4.10
+  auto_size_text: ^3.0.0
 
 
 

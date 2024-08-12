@@ -43,8 +43,8 @@ class AlbumTimeLine {
   final double lng;
   final String groupID;
   final String localtime;
-  final String? geocodedCountry;
-  final String? geocodedCity;
+  final String geocodedCountry;
+  final String geocodedCity;
   final int statement; // 追加
 
   AlbumTimeLine({
@@ -61,8 +61,8 @@ class AlbumTimeLine {
     required this.lng,
     required this.groupID,
     required this.localtime,
-    this.geocodedCountry,
-    this.geocodedCity,
+    required this.geocodedCountry,
+    required this.geocodedCity,
     required this.statement, // 追加
   });
 

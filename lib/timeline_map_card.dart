@@ -6,6 +6,7 @@ import 'timeline_providers.dart';
 // import 'chat_connection.dart';
 import 'dart:async';
 import 'package:flag/flag.dart';
+import 'package:auto_size_text/auto_size_text.dart';
 
 class TimelineCard extends StatefulWidget {
   final TimelineItem item;
@@ -72,9 +73,7 @@ class TimelineCardState extends State<TimelineCard> {
             ),
             Positioned(
               top: flagSize * 0.2, // サムネイルの上に少し重なるように配置
-              // right: widget.size.width * 0.1 - flagSize * 0.5,
-              right: flagSize * 0.2,
-
+              left: flagSize * 0.2,
               child: ClipOval(
                 child: Container(
                   width: flagSize, // サムネイルの8%のサイズ
@@ -90,9 +89,32 @@ class TimelineCardState extends State<TimelineCard> {
                 ),
               ),
             ),
+            Positioned(
+              top: widget.size.width * 0.1,
+              // bottom: 0, // top と bottom を使って中央に配置
+              left: flagSize * 0.2,
+              right: flagSize * 0.2,
+              child: AutoSizeText(
+                widget.item.geocodedCity ?? '',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 24, // 初期フォントサイズ
+                  height: 0.8, // 行間を指定
+                ),
+                maxLines: 3,
+                minFontSize: 20, // 最小フォントサイズを指定
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+
+
+
+
           ],
         ),
       ),
+
     );
   }
 }

@@ -42,8 +42,8 @@ class TimelineItem {
     required this.thumbnailFilename,
     required this.localtime,
     required this.groupID,
-    this.geocodedCountry,
-    this.geocodedCity,
+    this.geocodedCountry,  // ここを required から this に変更
+    this.geocodedCity,  // ここを required から this に変更
     required this.statement,
   });
 
@@ -74,7 +74,7 @@ class TimelineItem {
 
   factory TimelineItem.fromJson(Map<String, dynamic> json) {
     return TimelineItem(
-      key: ValueKey(json['_key'] ?? '0'), // この行を追加
+      key: ValueKey(json['_key'] ?? '0'),
       systemId: json['_id'] ?? 'shootbutton',
       sequenceNumber: int.tryParse(json['sequenceNumber'].toString()) ?? 0,
       createdAt: json['createdAt'] ?? 'dummy',
@@ -86,11 +86,12 @@ class TimelineItem {
       thumbnailFilename: json['thumbnailFilename'] ?? '03.png',
       localtime: json['localtime'] ?? 'dummy',
       groupID: json['groupID'] ?? 'dummy',
-      geocodedCountry: json['geocodedCountry'] as String?,  // デフォルト値としてnullを返す
-      geocodedCity: json['geocodedCity'] as String?,  // デフォルト値としてnullを返す
+      geocodedCountry: json['geocodedCountry'] ?? '',  // null の場合は空文字列を設定
+      geocodedCity: json['geocodedCity'] ?? '',  // null の場合は空文字列を設定
       statement: int.tryParse(json['statement'].toString()) ?? 0,
     );
   }
+
 
   @override
   String toString() {
