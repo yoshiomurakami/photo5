@@ -1189,7 +1189,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
               },
             ),
 
-
+            const ConnectionWidgetsDisplay(),
+            const ConnectionNumber(),
             if (!showAlbumWheelScrollView)
               Positioned(
                 top: widget.size.height * 0.2,
@@ -1502,6 +1503,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                 ),
               ),
             ),
+
             Positioned(
               bottom: widget.size.width * 0.05, // ボタンの直径に基づいて中央に配置
               left: (widget.size.width / 2) - (widget.size.width * 0.2) / 2, // 画面中央に揃えるため、ボタンの横幅の半分を引く

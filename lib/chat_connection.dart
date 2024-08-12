@@ -328,29 +328,39 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
       left: 0,
       right: 0,
       bottom: MediaQuery.of(context).size.height * 0.1,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.22,
-        decoration: BoxDecoration(
-          color: Colors.grey[200]!.withOpacity(0.0),
-          // borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.all(10),
-        child: SingleChildScrollView(
-          reverse: true, // スクロールを反転させる
-          child: Column(
-            children: connectionWidgetsData.map((data) {
-              return Row(
-                mainAxisAlignment: data.isRightAligned ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [Container(
-                  margin: const EdgeInsets.only(bottom: 5, left: 15, right: 10), // 適切なマージンを設定
-                  child: data.widget,
-                )],
-              );
-            }).toList(),
+      child: GestureDetector(
+        onTap: () {}, // これにより親のタップイベントを無効化
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.9,
+          decoration: BoxDecoration(
+            color: Colors.grey[200]!.withOpacity(0.0),
+          ),
+          padding: const EdgeInsets.all(10),
+          child: SingleChildScrollView(
+            reverse: true, // スクロールを反転させる
+            child: Column(
+              children: connectionWidgetsData.map((data) {
+                return GestureDetector(
+                  onTap: data.onTap, // 子ウィジェットのタップイベントを有効にする
+                  child: Row(
+                    mainAxisAlignment: data.isRightAligned ? MainAxisAlignment.end : MainAxisAlignment.start,
+                    children: [
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 5, left: 15, right: 10), // 適切なマージンを設定
+                        child: data.widget,
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
           ),
         ),
       ),
     );
+
+
+
   }
 }
 
@@ -377,6 +387,8 @@ class ConnectionWidgetData {
   final bool isRightAligned;
 
   ConnectionWidgetData({required this.widget, required this.isRightAligned});
+
+  get onTap => null;
 }
 
 // final connectionChangeProvider = StateProvider<int>((ref) => 0);
@@ -570,6 +582,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
       }
 
         if (action == 'connected' && distance >= 10000) {
+        // if (action == 'connected') {
 
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
 
@@ -591,11 +604,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
       }
       else if (action == 'connected' && distance <= 10000) {
+      // else if (action == 'connected') {
         debugPrint("distance = $distance /chachacha");
 
       }
       else if (action == 'disconnected' && distance >= 10000) {
-
+        // else if (action == 'disconnected') {
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
 
 
@@ -614,7 +628,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         }
       }
       else if (action == 'disconnected' && distance <= 10000) {
-
+        // else if (action == 'disconnected') {
 
 
       }
@@ -794,23 +808,23 @@ class ConnectionWidgetsManager extends ChangeNotifier {
     if (commonMsg == 'shotTogether' || commonMsg == 'new_photo' || commonMsg == 'sayhello') {
       backgroundColor = const Color(0xFFFFCC4D); // 両方の条件に一致する場合の色
     } else {
-      backgroundColor = Colors.white; // それ以外の場合は白色を適用
+      backgroundColor = Colors.white.withOpacity(0.5); // それ以外の場合は白色を適用
     }
 
 
-    Widget tail = Container(
-      width: 10,
-      height: 10,
-      decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.only(
-          // メッセージウィジェットが右側の時は右下の角を丸くする
-          bottomRight: isRightAligned ? const Radius.circular(10) : Radius.zero,
-          // メッセージウィジェットが左側の時は左下の角を丸くする
-          bottomLeft: !isRightAligned ? const Radius.circular(10) : Radius.zero,
-        ),
-      ),
-    );
+    // Widget tail = Container(
+    //   width: 10,
+    //   height: 10,
+    //   decoration: BoxDecoration(
+    //     color: backgroundColor,
+    //     borderRadius: BorderRadius.only(
+    //       // メッセージウィジェットが右側の時は右下の角を丸くする
+    //       bottomRight: isRightAligned ? const Radius.circular(10) : Radius.zero,
+    //       // メッセージウィジェットが左側の時は左下の角を丸くする
+    //       bottomLeft: !isRightAligned ? const Radius.circular(10) : Radius.zero,
+    //     ),
+    //   ),
+    // );
 
 
     List<Widget> rowChildren = [];
@@ -892,7 +906,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         messageWidget = Container(
           padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-              color: Colors.white,
+              color: Colors.white.withOpacity(0.5),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.black, width: 0.5)
           ),
@@ -1058,12 +1072,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
                     children: rowChildren,
                   ),
                 ),
-                Positioned(
-                  left: isRightAligned ? null : -5,
-                  right: isRightAligned ? -5 : null,
-                  top: 10,
-                  child: tail,
-                ),
+                // Positioned(
+                //   left: isRightAligned ? null : -5,
+                //   right: isRightAligned ? -5 : null,
+                //   top: 10,
+                //   child: tail,
+                // ),
               ],
             ),
           ),

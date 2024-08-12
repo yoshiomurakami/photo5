@@ -66,9 +66,10 @@ class _MainScreenState extends State<_MainScreenContent> {
       return Scaffold(
         body: Stack(
           children: <Widget>[
-            timelineMapWidget,
+
             const ConnectionNumber(),
             const ConnectionWidgetsDisplay(),
+            timelineMapWidget,
             // タイトル画像の表示
             Positioned(
               top: size.height * 0.1, // タイトル画像を画面の上端から10%の位置に設定
