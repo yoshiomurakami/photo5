@@ -1041,7 +1041,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
         'month': formattedMonth,
         'day': formattedDay,
         'time': formattedTime,
-        'weekday': DateFormat('EEEE', locale).format(dateTime),
+        'weekday': DateFormat('EEE', locale).format(dateTime),
       };
 
       // キャッシュに保存
@@ -1192,8 +1192,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
             if (!showAlbumWheelScrollView)
               Positioned(
-                top: widget.size.height * 0.3,
-                bottom: widget.size.height * 0.3,
+                top: widget.size.height * 0.2,
+                bottom: widget.size.height * 0.2,
                 left: widget.size.width * -0.2,
                 right: widget.size.width * -0.2,
                 child: NotificationListener<ScrollNotification>(
@@ -1224,7 +1224,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                     children: [
                       ListWheelScrollView(
                         controller: _pickerController,
-                        itemExtent: MediaQuery.of(context).size.width * 0.2,
+                        itemExtent: MediaQuery.of(context).size.width * 0.25,
                         diameterRatio: 1.25,
                         onSelectedItemChanged: (int index) async {
                           if (index + 1 == groupKeys.length) {
@@ -1241,81 +1241,45 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                               (int index) {
                             String groupID = groupedItemsList[index].first.groupID;
                             int currentIndex = selectedItemsMap[groupID] ?? 0;
-                            String dateString = groupedItemsList[index].first.createdAt; // 日付情報を取得
-                            debugPrint("String dateString = $dateString");
+                            String dateString = groupedItemsList[index].first.createdAt;
 
                             return FutureBuilder<Map<String, String>>(
-                              future: formatDateString(dateString), // 非同期関数を使用
+                              future: formatDateString(dateString),
                               builder: (BuildContext context, AsyncSnapshot<Map<String, String>> snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
                                   return const Center(child: CircularProgressIndicator());
                                 } else if (snapshot.hasError) {
-                                  debugPrint('FutureBuilder error: ${snapshot.error}');
                                   return Center(child: Text('Error: ${snapshot.error}'));
                                 } else if (!snapshot.hasData) {
-                                  debugPrint('FutureBuilder no data');
                                   return const Center(child: Text('No data'));
                                 } else {
                                   final formattedDate = snapshot.data!;
                                   return Stack(
                                     children: [
                                       Center(
-                                        child: Stack(
-                                          children: [
-                                            HorizontalGroupedItems(
-                                              itemsInGroup: groupedItemsList[index],
-                                              size: MediaQuery.of(context).size,
-                                              controller: _scrollController,
-                                              currentIndex: currentIndex,
-                                              pickerController: _pickerController,
-                                              items: items,
-                                              onTapCallback: (TimelineItem item) {
-                                                ScrollToCenterService.scrollToCenter(_pickerController, index);
-                                                if (_pickerController.selectedItem == index) {
-                                                  Future.delayed(const Duration(milliseconds: 100), () {
-                                                    onThumbnailTap(item);
-                                                  });
-                                                }
-                                              },
-                                              centralRowIndex: centralRowIndex,
-                                              chatNotifier: chatNotifier,
-                                              onHorizontalIndexChanged: (int newIndex) {
-                                                if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
-                                                  selectedItemsMap[groupID] = newIndex;
-                                                  selectedItemNotifier.value = groupedItemsList[index][newIndex];
-                                                }
-                                              },
-                                            ),
-                                            IgnorePointer(
-                                              child: Stack(
-                                                children: [
-                                                  // if (index != 0)
-                                                    Positioned(
-                                                      left: widget.size.width * 0.4 + 35, // 画面中央からデバイス横幅40%
-                                                      top: MediaQuery.of(context).size.width * 0.1 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
-                                                      child: Container(
-                                                        alignment: Alignment.centerRight,
-                                                        child: Text(
-                                                          formattedDate['time']!,
-                                                          style: const TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 20, // 時:分のフォントサイズを大きく
-                                                            fontWeight: FontWeight.bold,
-                                                            shadows: [
-                                                              Shadow(
-                                                                offset: Offset(2.0, 2.0),
-                                                                blurRadius: 3.0,
-                                                                color: Color.fromARGB(150, 0, 0, 0),
-                                                              ),
-                                                            ],
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
+                                        child: HorizontalGroupedItems(
+                                          itemsInGroup: groupedItemsList[index],
+                                          size: MediaQuery.of(context).size,
+                                          controller: _scrollController,
+                                          currentIndex: currentIndex,
+                                          pickerController: _pickerController,
+                                          items: items,
+                                          onTapCallback: (TimelineItem item) {
+                                            ScrollToCenterService.scrollToCenter(_pickerController, index);
+                                            if (_pickerController.selectedItem == index) {
+                                              Future.delayed(const Duration(milliseconds: 100), () {
+                                                onThumbnailTap(item);
+                                              });
+                                            }
+                                          },
+                                          centralRowIndex: centralRowIndex,
+                                          chatNotifier: chatNotifier,
+                                          onHorizontalIndexChanged: (int newIndex) {
+                                            if (groupedItemsList[index] == groupedItemsList[_pickerController.selectedItem]) {
+                                              selectedItemsMap[groupID] = newIndex;
+                                              selectedItemNotifier.value = groupedItemsList[index][newIndex];
+                                            }
+                                          },
                                         ),
                                       ),
                                     ],
@@ -1328,21 +1292,20 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       ),
                       IgnorePointer(
                         child: Align(
-                          alignment: const Alignment(-0.6, 0.0), // 左端から少し内側に寄せる
+                          alignment: const Alignment(-0.6, 0.0),
                           child: Container(
                             key: const ValueKey('DateContainer'),
-                            height: widget.size.width * 0.25,
-                            width: widget.size.width * 0.25,
+                            height: widget.size.width * 0.3,
+                            width: widget.size.width * 0.3,
                             alignment: Alignment.center,
                             padding: const EdgeInsets.all(0.0),
                             decoration: BoxDecoration(
                               color: Colors.white.withOpacity(0.8),
-                              borderRadius: const BorderRadius.all(Radius.circular(12.0)),
+                              borderRadius: const BorderRadius.all(Radius.circular(18.0)),
                             ),
                             child: ValueListenableBuilder<int>(
                               valueListenable: selectedIndexNotifier,
                               builder: (context, selectedIndex, child) {
-                                // ここで FutureBuilder を使わず、データをキャッシュや直接利用できるようにする
                                 String centralDateString = groupedItemsList[selectedIndex].first.createdAt;
 
                                 if (formattedDateCache.containsKey(centralDateString)) {
@@ -1373,16 +1336,46 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                           ),
                                         ],
                                       ),
-                                      Text(
-                                        centralFormattedDate['weekday']!,
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            centralFormattedDate['day']!,
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 28,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            centralFormattedDate['weekday']!,
+                                            style: const TextStyle(
+                                              color: Colors.black,
+                                              fontSize: 14,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                      // Text(
+                                      //   centralFormattedDate['weekday']!,
+                                      //   style: const TextStyle(
+                                      //     color: Colors.black,
+                                      //     fontSize: 14,
+                                      //     fontWeight: FontWeight.bold,
+                                      //   ),
+                                      // ),
+                                      // Text(
+                                      //   centralFormattedDate['day']!,
+                                      //   style: const TextStyle(
+                                      //     color: Colors.black,
+                                      //     fontSize: 28,
+                                      //     fontWeight: FontWeight.bold,
+                                      //   ),
+                                      // ),
                                       Text(
-                                        centralFormattedDate['day']!,
+                                        centralFormattedDate['time']!,
                                         style: const TextStyle(
                                           color: Colors.black,
                                           fontSize: 28,
@@ -1392,16 +1385,45 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                     ],
                                   );
                                 } else {
-                                  // フォーマットされていない場合は仮のテキストを表示し、その後バックグラウンドでフォーマットを実行
                                   formatDateString(centralDateString).then((formattedDate) {
-                                    // フォーマットが完了したら、通知して再描画をトリガーする
                                     setState(() {
                                       formattedDateCache[centralDateString] = formattedDate;
                                     });
                                   });
 
-                                  return const CircularProgressIndicator(); // ローディングインジケーターを表示
+                                  return const CircularProgressIndicator();
                                 }
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Positionedを使わず、Alignを使って位置を指定
+                      Align(
+                        alignment: Alignment.center,
+                        child: IgnorePointer(
+                          child: Container(
+                            // margin: EdgeInsets.only(top: MediaQuery.of(context).size.width * 0.1 - 10),
+                            alignment: Alignment.center,
+                            child: ValueListenableBuilder<int>(
+                              valueListenable: selectedIndexNotifier,
+                              builder: (context, selectedIndex, child) {
+                                final formattedDate = formattedDateCache[groupedItemsList[selectedIndex].first.createdAt];
+                                return Text(
+                                  formattedDate != null ? formattedDate['time']! : '',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 24, // 時:分のフォントサイズを大きく
+                                    fontWeight: FontWeight.bold,
+                                    shadows: [
+                                      Shadow(
+                                        offset: Offset(2.0, 2.0),
+                                        blurRadius: 3.0,
+                                        color: Color.fromARGB(150, 0, 0, 0),
+                                      ),
+                                    ],
+                                  ),
+                                );
                               },
                             ),
                           ),
@@ -1409,7 +1431,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       ),
                     ],
                   ),
-
                 ),
               ),
             if (showAlbumWheelScrollView && _albumList.isNotEmpty)
@@ -1496,7 +1517,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
               ),
             ),
             Positioned(
-              bottom: widget.size.height * 0.1 - (widget.size.width * 0.2) / 2, // ボタンの直径に基づいて中央に配置
+              bottom: widget.size.width * 0.05, // ボタンの直径に基づいて中央に配置
               left: (widget.size.width / 2) - (widget.size.width * 0.2) / 2, // 画面中央に揃えるため、ボタンの横幅の半分を引く
               child: SizedBox(
                 width: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
@@ -1506,32 +1527,27 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   elevation: 0,
                   shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
                   onPressed: () {
-                    // if (_jumpToTopKey.currentState!.isCentered) {
-                      if (_cameras != null && _cameras!.isNotEmpty) {
-                        chatConnection.emitEvent("enter_shooting_room");
-                        _waitForGroupIdAndTimestamp().then((cameraData) {
-                          if (cameraData != null) {
-                            _openCamera(_cameras![0], cameraData);
-                            debugPrint("cameraData['shootingRoomCount'] = $cameraData");
-                          } else {
-                            debugPrint("Failed to get the group ID and timestamp.");
-                          }
-                        }).catchError((error) {
-                          debugPrint("Error fetching group ID and timestamp: $error");
-                        });
-                      } else {
-                        debugPrint("No available cameras found.");
-                      }
-                    // } else {
-                    //   _pickerController.animateToItem(
-                    //     0,
-                    //     duration: const Duration(milliseconds: 300),
-                    //     curve: Curves.easeInOut,
-                    //   );
-                    // }
+                    if (_cameras != null && _cameras!.isNotEmpty) {
+                      chatConnection.emitEvent("enter_shooting_room");
+                      _waitForGroupIdAndTimestamp().then((cameraData) {
+                        if (cameraData != null) {
+                          _openCamera(_cameras![0], cameraData);
+                          debugPrint("cameraData['shootingRoomCount'] = $cameraData");
+                        } else {
+                          debugPrint("Failed to get the group ID and timestamp.");
+                        }
+                      }).catchError((error) {
+                        debugPrint("Error fetching group ID and timestamp: $error");
+                      });
+                    } else {
+                      debugPrint("No available cameras found.");
+                    }
                   },
-                  child: const Center(
-                    child: Text(
+                  child: Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    alignment: Alignment.center,
+                    child: const Text(
                       '\u{1F4F8}',
                       textAlign: TextAlign.center,
                       style: TextStyle(
@@ -1543,9 +1559,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                 ),
               ),
             ),
-
-
-
           ],
         );
       },
@@ -1556,7 +1569,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     if (_pickerController.hasClients) {
       debugPrint("Callback from new_photo");
       _pickerController.animateToItem(
-        1,
+        0,
         duration: const Duration(milliseconds: 500),
         curve: Curves.easeInOut,
       );
@@ -1803,7 +1816,7 @@ class HorizontalGroupedItemsState extends State<HorizontalGroupedItems> {
 
     _scrollController = PageController(
       initialPage: initialPageIndex,
-      viewportFraction: 0.165,
+      viewportFraction: 0.2,
     );
     _scrollController.addListener(_onScrollChange);
 

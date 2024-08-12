@@ -313,32 +313,66 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                   setState(() {
                     centralRowIndex = index;
                     selectedIndexes[groupAlbumKeys[index]] = selectedAlbumIndexes['itemIndex_${groupAlbumKeys[index]}'] ?? 0;
-                    // _lastTappedAlbum = groupedAlbums[groupAlbumKeys[index]]?[selectedIndexes[groupAlbumKeys[index]] ?? 0];
                   });
                 },
                 childDelegate: ListWheelChildBuilderDelegate(
                   builder: (context, index) {
-                    return HorizontalAlbumGroup(
-                      albumsInGroup: groupedAlbums[groupAlbumKeys[index]]!,
-                      size: MediaQuery.of(context).size,
-                      currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
-                      onHorizontalIndexChanged: (newIndex) {
-                        setState(() {
-                          selectedIndexes[groupAlbumKeys[index]] = newIndex;
-                          ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
-                            state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
-                            return state;
-                          });
-                        });
-                      },
-                      onTapCallback: (album, albumIndex) {
-                        int groupIndex = groupAlbumKeys.indexOf(album.groupID);
-                        if (_scrollController.hasClients) {
-                          _scrollController.animateToItem(groupIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-                        }
-                        selectedAlbumItemNotifier.value = album;
-                      },
-                      ref: ref,
+                    List<AlbumTimeLine> selectedGroup = groupedAlbums[groupAlbumKeys[index]]!;
+                    String timeString = selectedGroup.isNotEmpty ? selectedGroup.first.localtime.split(' ')[4] : '';
+
+                    return Stack(
+                      children: [
+                        HorizontalAlbumGroup(
+                          albumsInGroup: selectedGroup,
+                          size: MediaQuery.of(context).size,
+                          currentIndex: selectedIndexes[groupAlbumKeys[index]] ?? 0,
+                          onHorizontalIndexChanged: (newIndex) {
+                            setState(() {
+                              selectedIndexes[groupAlbumKeys[index]] = newIndex;
+                              ref.read(selectedAlbumIndexesProvider.notifier).update((state) {
+                                state['itemIndex_${groupAlbumKeys[index]}'] = newIndex;
+                                return state;
+                              });
+                            });
+                          },
+                          onTapCallback: (album, albumIndex) {
+                            int groupIndex = groupAlbumKeys.indexOf(album.groupID);
+                            if (_scrollController.hasClients) {
+                              _scrollController.animateToItem(groupIndex, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+                            }
+                            selectedAlbumItemNotifier.value = album;
+                          },
+                          ref: ref,
+                        ),
+                        IgnorePointer(
+                          child: Stack(
+                            children: [
+                              Positioned(
+                                left: widget.size.width * 0.3, // 画面中央からデバイス横幅40%
+                                top: MediaQuery.of(context).size.width * 0.1 - 10, // Positionedの上端からデバイス横幅10% - テキスト高さの半分(8)
+                                child: Container(
+                                  alignment: Alignment.centerRight,
+                                  child: Text(
+                                    timeString, // 行ごとの先頭アイテムの時間を表示
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 20, // 時:分のフォントサイズを大きく
+                                      fontWeight: FontWeight.bold,
+                                      shadows: [
+                                        Shadow(
+                                          offset: Offset(2.0, 2.0),
+                                          blurRadius: 3.0,
+                                          color: Color.fromARGB(150, 0, 0, 0),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     );
                   },
                   childCount: groupedAlbums.length,
@@ -434,17 +468,12 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                 );
               },
             ),
-
-
-
             ValueListenableBuilder<AlbumTimeLine?>(
               valueListenable: selectedAlbumItemNotifier,
               builder: (context, selectedItem, child) {
                 if (selectedItem == null || selectedItem.localtime.split(' ').length < 5) {
                   return const SizedBox();
                 }
-
-                // final timeParts = selectedItem.localtime.split(' ');
 
                 return Positioned(
                   bottom: widget.size.height * 0.25 + 5,
@@ -500,6 +529,8 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
       ),
     );
   }
+
+
 }
 
 class HorizontalAlbumGroup extends StatefulWidget {
@@ -537,7 +568,7 @@ class HorizontalAlbumGroupState extends State<HorizontalAlbumGroup> {
     currentPageIndex = widget.currentIndex;
     _pageController = PageController(
       initialPage: widget.currentIndex,
-      viewportFraction: 0.23,
+      viewportFraction: 0.2,
     );
     _pageController.addListener(() {
       int newIndex = _pageController.page!.round();

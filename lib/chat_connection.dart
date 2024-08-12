@@ -1238,7 +1238,7 @@ class ChatNotifier extends ChangeNotifier {
       bool isNewRow = !timelineItems.any((item) => item.groupID == newItem.groupID);
 
       if (isNewRow) {
-        timelineItems.insert(1, newItem);
+        timelineItems.insert(0, newItem);
         if (newItem.userID == myUserId) {
           notifyListeners();
         }

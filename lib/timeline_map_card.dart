@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'timeline_providers.dart';
 // import 'chat_connection.dart';
 import 'dart:async';
+import 'package:flag/flag.dart';
 
 class TimelineCard extends StatefulWidget {
   final TimelineItem item;
@@ -35,8 +36,8 @@ class TimelineCard extends StatefulWidget {
 class TimelineCardState extends State<TimelineCard> {
   bool isDialogShown = false;
   int? currentSelectedItem;
-  TimelineItem? centerItem;  // 追加
-  bool isFullScreenMode = false;  // デフォルトは非表示
+  TimelineItem? centerItem;
+  bool isFullScreenMode = false;
 
   @override
   void initState() {
@@ -46,6 +47,8 @@ class TimelineCardState extends State<TimelineCard> {
 
   @override
   Widget build(BuildContext context) {
+    double flagSize = widget.size.width * 0.2 * 0.2;
+
     return GestureDetector(
       onTap: () {
         if (widget.onTapCallback != null) {
@@ -54,51 +57,45 @@ class TimelineCardState extends State<TimelineCard> {
       },
       child: Align(
         alignment: Alignment.center,
-        child: Container(
-          key: ValueKey(widget.item.thumbnailFilename),
-          // width: widget.size.width * 0.2,  // 正方形のサイズ
-          // height: widget.size.width * 0.2,  // 正方形のサイズ
-          // margin: EdgeInsets.symmetric(horizontal: 0.0),  // サムネイル同士の間隔を確保
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(widget.size.width * 0.04),
-            child
-            //     ? Stack(
-            //   children: <Widget>[
-            //     Align(
-            //       alignment: Alignment.center,
-            //       child: SizedBox(
-            //         child: FloatingActionButton(
-            //           backgroundColor: const Color(0xFFFFCC4D),
-            //           // foregroundColor: Colors.black,
-            //           elevation: 0,
-            //           shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-            //           onPressed: () { },
-            //           child: const Center(
-            //             child: Text(
-            //               '\u{1F4F8}',
-            //               textAlign: TextAlign.center,
-            //               style: TextStyle(
-            //                 fontSize: 24,
-            //                 height: 1.0,
-            //               ),
-            //             ),
-            //           ),
-            //         ),
-            //       ),
-            //     ),
-            //   ],
-            // )
-                : _buildImageWidget(context, widget.item.thumbnailFilename),
-          ),
+        child: Stack(
+          clipBehavior: Clip.none, // これにより、はみ出した部分も表示される
+          children: [
+            Container(
+              key: ValueKey(widget.item.thumbnailFilename),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+                child: _buildImageWidget(context, widget.item.thumbnailFilename),
+              ),
+            ),
+            Positioned(
+              top: flagSize * 0.2, // サムネイルの上に少し重なるように配置
+              // right: widget.size.width * 0.1 - flagSize * 0.5,
+              right: flagSize * 0.2,
+
+              child: ClipOval(
+                child: Container(
+                  width: flagSize, // サムネイルの8%のサイズ
+                  height: flagSize, // サムネイルの8%のサイズ
+                  color: Colors.white, // 背景色を白に設定（縁取り効果）
+                  child: Flag.fromString(
+                    widget.item.country,
+                    height: flagSize,
+                    width: flagSize,
+                    fit: BoxFit.cover,
+                    flagSize: FlagSize.size_1x1,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 }
-
 
 Widget _imageContainer(double size, Widget child) {
   return Container(
@@ -118,7 +115,7 @@ Widget _imageContainer(double size, Widget child) {
 }
 
 Widget _buildImageWidget(BuildContext context, String thumbnailFilename) {
-  double imageSize = MediaQuery.of(context).size.width * 0.2;
+  double imageSize = MediaQuery.of(context).size.width * 0.25;
 
   return FutureBuilder<File>(
     future: _getCachedImage(thumbnailFilename),
