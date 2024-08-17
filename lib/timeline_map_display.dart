@@ -494,9 +494,9 @@ class MapUpdateService {
 
   static void updateMapLocation(dynamic selectedItem, bool isMapVisible) {
     // showAlbumWheelScrollViewがtrueの場合は、マップの移動をさせない
-    if (!isMapVisible) {
-      return;
-    }
+    // if (!isMapVisible) {
+    //   return;
+    // }
 
 
     double lat, lng;
@@ -581,7 +581,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   bool isDialogShowing = false;
   bool isMapVisible = false;
   ValueNotifier<File?> currentImageNotifier = ValueNotifier<File?>(null);
-  ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(false); // 追加
+  ValueNotifier<String?> currentDateTimeNotifier = ValueNotifier<String?>(null);
+  ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(true); // 追加
   ValueNotifier<int> selectedIndexNotifier = ValueNotifier<int>(0); // 中央行のインデックスを保持するためのValueNotifier
 
   Map<String, Map<String, String>> formattedDateCache = {};
@@ -649,6 +650,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     isScrollingNotifier.dispose();
     selectedItemNotifier.removeListener(_loadNextImage);
     currentImageNotifier.dispose();
+    currentDateTimeNotifier.dispose();
     selectedIndexNotifier.dispose(); // ValueNotifierの破棄
     _animationController.dispose();
     super.dispose();
@@ -911,11 +913,9 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   }
 
   String _formatDateTime(String dateTimeString) {
-    // Custom parsing logic for the given format: "Sat, 3 08, 2024, 21:48"
     try {
       final parts = dateTimeString.split(', ');
       if (parts.length == 4) {
-        // final dayOfWeek = parts[0]; // 曜日を取り出す
         final datePart = parts[1].split(' ');
         final day = int.parse(datePart[0]);
         final month = int.parse(datePart[1]);
@@ -925,7 +925,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
         final minute = int.parse(timePart[1]);
 
         final dateTime = DateTime(year, month, day, hour, minute);
-        final locale = Intl.defaultLocale; // デフォルトロケールを使用
+
+        // デバイスのロケールを取得
+        final locale = WidgetsBinding.instance.window.locale.toString();
+
         final dateFormat = DateFormat.yMMMMEEEEd(locale); // 曜日を含めた日付形式
         final timeFormat = DateFormat.Hm(locale); // デバイスのロケールに応じた時間形式
 
@@ -937,6 +940,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       return 'N/A';
     }
   }
+
 
   Future<File> _getCachedImage(String filename) async {
     String cacheDirPath = (await getTemporaryDirectory()).path;
@@ -957,7 +961,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   }
 
   void onThumbnailTap(TimelineItem tappedItem) {
-    if (isMapVisibleNotifier.value == true && !showAlbumWheelScrollView) {
+    // if (isMapVisibleNotifier.value == true && !showAlbumWheelScrollView) {
       final chatNotifier = ref.read(chatNotifierProvider);
       final selectedItemsMap = chatNotifier.selectedItemsMap;
 
@@ -970,10 +974,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       } else {
         lastTappedItem = tappedItem;
       }
-    } else {
-      debugPrint("tappedItem");
-      // isWhiteBoxVisibleNotifier.value = !isWhiteBoxVisibleNotifier.value;
-    }
+    // } else {
+    //   debugPrint("tappedItem");
+    //   // isWhiteBoxVisibleNotifier.value = !isWhiteBoxVisibleNotifier.value;
+    // }
   }
 
   void _loadNextImage() async {
@@ -981,13 +985,13 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     if (selectedItem != null && selectedItem.systemId != "shootbutton") {
       final imageFile = await _getCachedImage(selectedItem.imageFilename.split('/').last);
       if (mounted) {
-        isMapVisibleNotifier.value = true;
         currentImageNotifier.value = imageFile;
+        currentDateTimeNotifier.value = _formatDateTime(selectedItem.localtime); // localtimeを更新
       }
     } else {
       if (mounted) {
-        isMapVisibleNotifier.value = false;
         currentImageNotifier.value = null;
+        currentDateTimeNotifier.value = null; // localtimeをクリア
       }
     }
   }
@@ -995,8 +999,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   void _loadInitialImage(TimelineItem item) async {
     final imageFile = await _getCachedImage(item.imageFilename.split('/').last);
     if (mounted) {
-      isMapVisibleNotifier.value = true;
       currentImageNotifier.value = imageFile;
+      currentDateTimeNotifier.value = _formatDateTime(item.localtime); // localtimeを更新
     }
   }
 
@@ -1016,7 +1020,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       final database = await openDatabase(path);
 
       final List<Map<String, dynamic>> metadata = await database.query('android_metadata');
-      String locale = 'en_US'; // デフォルトのロケール
+      late String locale; // デフォルトのロケール
       if (metadata.isNotEmpty) {
         locale = metadata.first['locale'] as String;
       }
@@ -1085,23 +1089,12 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
         return Stack(
           children: [
-            GoogleMap(
-              onMapCreated: MapController.instance.onMapCreated,
-              initialCameraPosition: CameraPosition(
-                target: widget.currentLocation,
-                zoom: MapController.instance.zoomLevel,
-              ),
-              markers: MapController.instance._markers,
-              zoomControlsEnabled: false,
-              zoomGesturesEnabled: false,
-              scrollGesturesEnabled: false,
-              padding: const EdgeInsets.only(bottom: 0),
-            ),
+
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
                 return Positioned.fill(
-                  child: isMapVisible && !showAlbumWheelScrollView
+                  child: !showAlbumWheelScrollView
                       ? Container(
                     color: const Color(0xFFFFCC4D),
                   )
@@ -1113,7 +1106,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                return isMapVisible && !showAlbumWheelScrollView
+                return !showAlbumWheelScrollView
                     ? Positioned.fill(
                   child: ValueListenableBuilder<File?>(
                     valueListenable: currentImageNotifier,
@@ -1158,45 +1151,31 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
               },
             ),
 
-
-
-
-
-            // if (showAlbumWheelScrollView)
-            //   Positioned.fill(
-            //     child: Container(
-            //       color: Colors.red, // デバッグ用の背景色
-            //     ),
-            //   ),
-            ValueListenableBuilder<bool>(
-              valueListenable: isMapVisibleNotifier,
-              builder: (context, isMapVisible, child) {
-                return Positioned.fill(
-                  child: AnimatedOpacity(
-                    opacity: isMapVisible ? 1.0 : 0.0,
-                    duration: const Duration(milliseconds: 500), // フェードの速さを調整
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // ぼかし効果を追加
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(0),
-                          color: Colors.white.withOpacity(0), // 透明度を調整
-                        ),
+            if (!showAlbumWheelScrollView)
+              Positioned.fill(
+                child: AnimatedOpacity(
+                  opacity: 1.0, // ここでは直接 isMapVisibleNotifier の値を使用
+                  duration: const Duration(milliseconds: 500), // フェードの速さを調整
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0), // ぼかし効果を追加
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(0),
+                        color: Colors.white.withOpacity(0), // 透明度を調整
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              ),
 
             const ConnectionWidgetsDisplay(),
             const ConnectionNumber(),
             if (!showAlbumWheelScrollView)
               Positioned(
-                top: widget.size.height * 0.2,
-                bottom: widget.size.height * 0.2,
-                left: widget.size.width * -0.2,
-                right: widget.size.width * -0.2,
+                top: MediaQuery.of(context).size.height * 0.2,
+                bottom: MediaQuery.of(context).size.height * 0.2,
+                left: MediaQuery.of(context).size.width * -0.2,
+                right: MediaQuery.of(context).size.width * -0.2,
                 child: NotificationListener<ScrollNotification>(
                   onNotification: (ScrollNotification notification) {
                     if (notification is ScrollStartNotification) {
@@ -1254,7 +1233,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                 } else if (!snapshot.hasData) {
                                   return const Center(child: Text('No data'));
                                 } else {
-                                  final formattedDate = snapshot.data!;
+                                  // final formattedDate = snapshot.data!;
                                   return Stack(
                                     children: [
                                       Center(
@@ -1420,6 +1399,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   ),
                 ),
               ),
+            //アルバム表示ボタン
             if (showAlbumWheelScrollView && _albumList.isNotEmpty)
               Positioned(
                 top: widget.size.height * 0.3,
@@ -1433,63 +1413,112 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   updateAlbumGroupIDCallback: updateLastSelectedAlbumGroupID,
                 ),
               ),
+            //マップの表示ボタン
             Positioned(
-              right: widget.size.width * 0.05,
-              top: widget.size.height * 0.2,
-              child: ElevatedButton(
-                onPressed: _isDatabaseEmpty ? null : toggleTimelineAndAlbum,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _isDatabaseEmpty ? Colors.grey : Colors.blue,
+              top: MediaQuery.of(context).size.height / 2 - MediaQuery.of(context).size.width * 0.075, // 縦を画面中央に配置
+              right: MediaQuery.of(context).size.width * 0.025, // 横を画面右端に配置
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.15, // ボタンの直径を画面横幅の20%に設定
+                height: MediaQuery.of(context).size.width * 0.15, // ボタンの直径を画面横幅の20%に設定
+                child: FloatingActionButton(
+                  backgroundColor:Colors.white.withOpacity(0.8),
+                  shape: const CircleBorder(),
+                  onPressed: () {
+                    isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
+                  },
+                  child: const Icon(
+                    Icons.location_on, // マップアイコン
+                    size: 30,
+                    color: Colors.black,
+                  ),
                 ),
-                child: Text(showAlbumWheelScrollView ? 'タイムライン' : 'アルバム'),
               ),
             ),
-            // if (!showAlbumWheelScrollView)
-            //   JumpToTop(
-            //     key: _jumpToTopKey,
-            //     size: Size(widget.size.width, widget.size.height),
-            //     onPressed: () {
-            //       if (_jumpToTopKey.currentState!.isCentered) {
-            //         if (_cameras != null && _cameras!.isNotEmpty) {
-            //           chatConnection.emitEvent("enter_shooting_room");
-            //           _waitForGroupIdAndTimestamp().then((cameraData) {
-            //             if (cameraData != null) {
-            //               _openCamera(_cameras![0], cameraData);
-            //               debugPrint("cameraData['shootingRoomCount'] = $cameraData");
-            //             } else {
-            //               debugPrint("Failed to get the group ID and timestamp.");
-            //             }
-            //           }).catchError((error) {
-            //             debugPrint("Error fetching group ID and timestamp: $error");
-            //           });
-            //         } else {
-            //           debugPrint("No available cameras found.");
-            //         }
-            //       } else {
-            //         _pickerController.animateToItem(
-            //           0,
-            //           duration: const Duration(milliseconds: 300),
-            //           curve: Curves.easeInOut,
-            //         );
-            //       }
-            //     },
-            //     scrollController: _pickerController,
-            //   ),
+
+// GoogleMapを表示するウィジェット
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
-                if (!isMapVisible || showAlbumWheelScrollView) {
-                  return ZoomControl(
-                    size: Size(widget.size.width * 0.1, widget.size.height * 0.15),
-                    right: widget.size.width * 0.05,
-                    top: (widget.size.height) - (widget.size.height * 0.5) - (widget.size.height * 0.075),
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
+                return AnimatedPositioned(
+                  duration: const Duration(milliseconds: 500), // アニメーションの長さを設定
+                  curve: Curves.easeInOut, // アニメーションのカーブを設定
+                  bottom: MediaQuery.of(context).size.height * 0.5 +
+                      MediaQuery.of(context).size.width * 0.125 +
+                      15, // 画面縦幅の10%に配置
+                  right: isMapVisible
+                      ? MediaQuery.of(context).size.width * 0.025 // 画面中央に配置するための計算
+                      : -MediaQuery.of(context).size.width * 1, // 画面外に退避
+                  child: Stack(
+                    children: [
+                      Container(
+                        width: MediaQuery.of(context).size.width * 0.95, // 横幅：画面横幅の95%
+                        height: MediaQuery.of(context).size.width * 0.4, // 縦幅：画面縦幅の40%
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.5), // 背景色に50%の白を適用
+                          borderRadius: BorderRadius.circular(16.0), // 角丸
+                          border: Border.all(
+                            color: Colors.white.withOpacity(1.0), // 白100%の太線
+                            width: 4.0,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12.0), // 内側の角丸
+                          child: GoogleMap(
+                            onMapCreated: MapController.instance.onMapCreated,
+                            initialCameraPosition: CameraPosition(
+                              target: widget.currentLocation,
+                              zoom: MapController.instance.zoomLevel,
+                            ),
+                            markers: MapController.instance._markers,
+                            zoomControlsEnabled: true,
+                            zoomGesturesEnabled: true,
+                            scrollGesturesEnabled: true,
+                            padding: const EdgeInsets.only(bottom: 0),
+                          ),
+                        ),
+                      ),
+                      // 撮影日時の表示
+                      ValueListenableBuilder<String?>(
+                        valueListenable: currentDateTimeNotifier,
+                        builder: (context, dateTime, child) {
+                          if (dateTime != null) {
+                            return Positioned(
+                              bottom: 16.0,
+                              right: 16.0,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: Text(
+                                  dateTime, // フォーマットした日時を表示
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16.0,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            );
+                          } else {
+                            return const SizedBox.shrink();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                );
               },
             ),
-            // if (!showAlbumWheelScrollView)
+
+
+
+
+
+
+
+
             Positioned(
               top: widget.size.height * 0.1,
               left: widget.size.width * 0.2,

@@ -52,11 +52,15 @@ class _MainScreenState extends State<_MainScreenContent> {
       Widget timelineMapWidget;
       if (timelineItems.isNotEmpty) {
         final currentLocation = LatLng(timelineItems[0].lat, timelineItems[0].lng);
-        timelineMapWidget = MapDisplayStateful(
-          size: size,
-          currentLocation: currentLocation,
-          timelineItems: timelineItems,
-          pageController: _pageController,
+        timelineMapWidget = Container(
+          width: MediaQuery.of(context).size.width,
+          height: MediaQuery.of(context).size.height, // 明示的な高さを設定
+          child: MapDisplayStateful(
+            size: size,
+            currentLocation: currentLocation,
+            timelineItems: timelineItems,
+            pageController: _pageController,
+          ),
         );
       } else {
         // リストが空の場合、ローディングインジケーターを表示
