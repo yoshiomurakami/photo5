@@ -929,10 +929,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
         // デバイスのロケールを取得
         final locale = WidgetsBinding.instance.window.locale.toString();
 
-        final dateFormat = DateFormat.yMMMMEEEEd(locale); // 曜日を含めた日付形式
+        // フル日付形式でフォーマット
+        final fullDateFormat = DateFormat.yMMMMEEEEd(locale);
+        String fullFormattedDate = fullDateFormat.format(dateTime);
+
+        // 年を含む部分を削除し、日付と曜日だけにする
+        final dateTimeWithoutYear = fullFormattedDate.replaceAll(RegExp(r'\b\d{4}\b'), '').trim();
+
         final timeFormat = DateFormat.Hm(locale); // デバイスのロケールに応じた時間形式
 
-        return '${dateFormat.format(dateTime)}_${timeFormat.format(dateTime)}';
+        return '$dateTimeWithoutYear @ ${timeFormat.format(dateTime)}';
       } else {
         throw const FormatException("Invalid date format");
       }
@@ -1015,40 +1021,32 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       final int timestamp = int.parse(unixTimestampString);
       final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
 
-      final dbPath = await getDatabasesPath();
-      final path = p.join(dbPath, 'images_database.db');
-      final database = await openDatabase(path);
-
-      final List<Map<String, dynamic>> metadata = await database.query('android_metadata');
-      late String locale; // デフォルトのロケール
-      if (metadata.isNotEmpty) {
-        locale = metadata.first['locale'] as String;
-      }
-      Intl.defaultLocale = locale;
-
+      final locale = WidgetsBinding.instance.window.locale.toString();
+      // const String locale = 'FR';
       debugPrint("Locale set to: $locale");
 
-      final dateFormat = DateFormat.yMMMMEEEEd(locale); // 曜日を含めた日付形式
-      final timeFormat = DateFormat.Hm(locale); // デバイスのロケールに応じた時間形式
+
+
+
+      final dateFormat = DateFormat.MMMMEEEEd(locale);
+      final timeFormat = DateFormat.Hm(locale);
 
       String formattedDate = dateFormat.format(dateTime);
       String formattedTime = timeFormat.format(dateTime);
 
-      debugPrint("formattedDate = $formattedDate, formattedTime = $formattedTime");
-
       String formattedYear = DateFormat('yyyy', locale).format(dateTime);
-      String formattedMonth = DateFormat.MMM(locale).format(dateTime); // 短縮形の月名を取得
-      String formattedDay = DateFormat('dd', locale).format(dateTime);
+      // 「8/17」の形式で表示するためのカスタムフォーマット
+      String formattedMonthDay = DateFormat('MMMd', locale).format(dateTime);
+      String formattedWeekday = DateFormat('EEEE', locale).format(dateTime);
 
       final formattedResult = {
+        'all': formattedDate,
         'year': formattedYear,
-        'month': formattedMonth,
-        'day': formattedDay,
+        'monthDay': formattedMonthDay, // 「8/17」の形式
         'time': formattedTime,
-        'weekday': DateFormat('EEE', locale).format(dateTime),
+        'weekday': formattedWeekday,
       };
 
-      // キャッシュに保存
       formattedDateCache[unixTimestampString] = formattedResult;
 
       return formattedResult;
@@ -1057,13 +1055,15 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       debugPrint(e.toString());
       return {
         'year': 'N/A',
-        'month': 'N/A',
-        'day': 'N/A',
+        'monthDay': 'N/A',
         'time': 'N/A',
         'weekday': 'N/A',
       };
     }
   }
+
+
+
 
 
 
@@ -1273,97 +1273,124 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       IgnorePointer(
                         child: Align(
                           alignment: const Alignment(-0.6, 0.0),
-                          child: Container(
-                            key: const ValueKey('DateContainer'),
-                            height: widget.size.width * 0.3,
-                            width: widget.size.width * 0.3,
-                            alignment: Alignment.center,
-                            padding: const EdgeInsets.only(left: 14.0, top: 0.0, right: 0.0, bottom: 0.0),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
-                              borderRadius: const BorderRadius.all(Radius.circular(18.0)),
-                            ),
-                            child: ValueListenableBuilder<int>(
-                              valueListenable: selectedIndexNotifier,
-                              builder: (context, selectedIndex, child) {
-                                String centralDateString = groupedItemsList[selectedIndex].first.createdAt;
+                          child: Stack(
+                            clipBehavior: Clip.none, // これにより、はみ出した部分も表示される
+                            children: [
+                              Container(
+                                key: const ValueKey('DateContainer'),
+                                height: widget.size.width * 0.3,
+                                width: widget.size.width * 0.3,
+                                alignment: Alignment.center,
+                                padding: const EdgeInsets.only(left: 0.0, top: 0.0, right: 0.0, bottom: 0.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.8),
+                                  borderRadius: const BorderRadius.all(Radius.circular(18.0)),
+                                ),
+                                child: ValueListenableBuilder<int>(
+                                  valueListenable: selectedIndexNotifier,
+                                  builder: (context, selectedIndex, child) {
+                                    String centralDateString = groupedItemsList[selectedIndex].first.createdAt;
 
-                                if (formattedDateCache.containsKey(centralDateString)) {
-                                  final centralFormattedDate = formattedDateCache[centralDateString]!;
-                                  return Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.start,
+                                    if (formattedDateCache.containsKey(centralDateString)) {
+                                      final centralFormattedDate = formattedDateCache[centralDateString]!;
+
+                                      // ロケールに応じてDateFormatを生成
+                                      final locale = WidgetsBinding.instance.window.locale.toString();
+                                      final dateFormatPattern = DateFormat.MMMMEEEEd(locale).pattern;
+
+                                      // パターンに基づいて順序を判断
+                                      bool isMonthDayFirst = dateFormatPattern!.indexOf('M') < dateFormatPattern.indexOf('E');
+
+                                      return Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        crossAxisAlignment: CrossAxisAlignment.start, // すべてのテキストを左寄せにする
                                         children: [
+                                          if (isMonthDayFirst)
+                                            ...[
+                                              Text(
+                                                centralFormattedDate['monthDay']!,
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                centralFormattedDate['weekday']!,
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ]
+                                          else
+                                            ...[
+                                              Text(
+                                                centralFormattedDate['weekday']!,
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                centralFormattedDate['monthDay']!,
+                                                style: const TextStyle(
+                                                  color: Colors.black,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          const SizedBox(height: 4),
                                           Text(
-                                            centralFormattedDate['year']!,
+                                            centralFormattedDate['time']!,
                                             style: const TextStyle(
                                               color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            centralFormattedDate['month']!,
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 14,
+                                              fontSize: 24,
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
                                         ],
-                                      ),
-                                      SizedBox(height: 4),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            centralFormattedDate['day']!,
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            '(${centralFormattedDate['weekday']!})',
-                                            style: const TextStyle(
-                                              color: Colors.black,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      SizedBox(height: 0),
-                                      Text(
-                                        centralFormattedDate['time']!,
-                                        style: const TextStyle(
-                                          color: Colors.black,
-                                          fontSize: 28,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                } else {
-                                  formatDateString(centralDateString).then((formattedDate) {
-                                    setState(() {
-                                      formattedDateCache[centralDateString] = formattedDate;
-                                    });
-                                  });
+                                      );
+                                    } else {
+                                      formatDateString(centralDateString).then((formattedDate) {
+                                        setState(() {
+                                          formattedDateCache[centralDateString] = formattedDate;
+                                        });
+                                      });
 
-                                  return const CircularProgressIndicator();
-                                }
-                              },
-                            ),
+                                      return const CircularProgressIndicator();
+                                    }
+                                  },
+                                ),
+                              ),
+                              Positioned(
+                                top: widget.size.width * 0.2 * 0.2 * 0.3,
+                                left: widget.size.width * 0.2 * 0.2 * 0.3,
+                                child: ClipOval(
+                                  child: Container(
+                                    // width: widget.size.width * 0.2 * 0.2,
+                                    // height: widget.size.width * 0.2 * 0.2,
+                                    color: Colors.white,
+                                    child: Flag.fromString(
+                                      WidgetsBinding.instance.window.locale.countryCode ?? '',
+                                      height: widget.size.width * 0.2 * 0.2,
+                                      width: widget.size.width * 0.2 * 0.2,
+                                      fit: BoxFit.cover,
+                                      flagSize: FlagSize.size_1x1,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
+
+
+
                       // Positionedを使わず、Alignを使って位置を指定
                       // Align(
                       //   alignment: Alignment.center,
@@ -1478,10 +1505,19 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                         ),
                       ),
                       // 撮影日時の表示
-                      ValueListenableBuilder<String?>(
-                        valueListenable: currentDateTimeNotifier,
-                        builder: (context, dateTime, child) {
-                          if (dateTime != null) {
+                      ValueListenableBuilder<TimelineItem?>(
+                        valueListenable: selectedItemNotifier,
+                        builder: (context, selectedItem, child) {
+                          // selectedItemがnullの場合、リストの先頭のアイテムを取得
+                          final TimelineItem? itemToDisplay = selectedItem ??
+                              (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty
+                                  ? groupedItemsList[0][0]
+                                  : null);
+
+                          if (itemToDisplay != null) {
+                            // localtimeをフォーマット
+                            final String formattedDateTime = _formatDateTime(itemToDisplay.localtime ?? '');
+
                             return Positioned(
                               bottom: 16.0,
                               right: 16.0,
@@ -1492,7 +1528,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                   borderRadius: BorderRadius.circular(8.0),
                                 ),
                                 child: Text(
-                                  dateTime, // フォーマットした日時を表示
+                                  formattedDateTime, // フォーマットされた日時を表示
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16.0,
@@ -1506,6 +1542,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           }
                         },
                       ),
+
+
+
+
                     ],
                   ),
                 );

@@ -48,7 +48,21 @@ class TimelineCardState extends State<TimelineCard> {
 
   @override
   Widget build(BuildContext context) {
-    double flagSize = widget.size.width * 0.2 * 0.2;
+    // サムネイルサイズを基準に計算
+    double thumbnailWidth = widget.size.width * 0.2;
+    double borderRadius = thumbnailWidth * 0.04;
+    double flagSize = thumbnailWidth * 0.25; // サムネイルの20%のサイズ
+    double flagPosition = flagSize * 0.2;
+    double textPosition = thumbnailWidth * 0.1;
+
+    // localtimeから時間:分を抽出
+    String time = '';
+    if (widget.item.localtime != null && widget.item.localtime!.isNotEmpty) {
+      List<String> parts = widget.item.localtime!.split(', ');
+      if (parts.length == 4) {
+        time = parts[3]; // '時間:分' 部分を取得
+      }
+    }
 
     return GestureDetector(
       onTap: () {
@@ -64,20 +78,20 @@ class TimelineCardState extends State<TimelineCard> {
             Container(
               key: ValueKey(widget.item.thumbnailFilename),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+                borderRadius: BorderRadius.circular(borderRadius),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(widget.size.width * 0.04),
+                borderRadius: BorderRadius.circular(borderRadius),
                 child: _buildImageWidget(context, widget.item.thumbnailFilename),
               ),
             ),
             Positioned(
-              top: flagSize * 0.2, // サムネイルの上に少し重なるように配置
-              left: flagSize * 0.2,
+              top: flagPosition, // サムネイルの上に少し重なるように配置
+              left: flagPosition,
               child: ClipOval(
                 child: Container(
-                  width: flagSize, // サムネイルの8%のサイズ
-                  height: flagSize, // サムネイルの8%のサイズ
+                  width: flagSize,
+                  height: flagSize,
                   color: Colors.white, // 背景色を白に設定（縁取り効果）
                   child: Flag.fromString(
                     widget.item.country,
@@ -90,34 +104,34 @@ class TimelineCardState extends State<TimelineCard> {
               ),
             ),
             Positioned(
-              top: widget.size.width * 0.1,
-              // bottom: 0, // top と bottom を使って中央に配置
-              left: flagSize * 0.2,
-              right: flagSize * 0.2,
-              child: AutoSizeText(
-                widget.item.geocodedCity ?? '',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 24, // 初期フォントサイズ
-                  height: 0.8, // 行間を指定
+              bottom: textPosition,
+              left: 0,
+              right: 0,
+              child: Align(
+                alignment: Alignment.center,
+                child: AutoSizeText(
+                  time, // 抽出した'時間:分'部分を表示
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 24, // 初期フォントサイズ
+                    height: 0.8, // 行間を指定
+                  ),
+                  maxLines: 1,
+                  minFontSize: 20, // 最小フォントサイズを指定
+                  overflow: TextOverflow.ellipsis,
                 ),
-                maxLines: 3,
-                minFontSize: 20, // 最小フォントサイズを指定
-                overflow: TextOverflow.ellipsis,
               ),
             ),
-
-
-
-
           ],
         ),
       ),
-
     );
   }
 }
+
+
+
 
 Widget _imageContainer(double size, Widget child) {
   return Container(
