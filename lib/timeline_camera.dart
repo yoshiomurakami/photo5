@@ -567,8 +567,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
     // 疑似的な位置情報を生成
     Position fakePosition = Position(
-      latitude: 21.308123936307684,
-      longitude: -157.85814244747237,
+      latitude: 50.549997062751174,
+      longitude: 43.10223953287802,
       timestamp: DateTime.now(), // 現在時刻を設定
       accuracy: 0, // 精度を適宜設定
       altitude: 0, // 標高を適宜設定
@@ -578,8 +578,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();

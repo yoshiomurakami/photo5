@@ -17,6 +17,7 @@ import 'album_timeline.dart';
 import 'package:flag/flag.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
+import 'package:geocoding/geocoding.dart';
 
 // class LocaleCache {
 //   static String? _cachedLocale;
@@ -1063,7 +1064,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   }
 
 
-
+  bool _isCityFirst(String countryCode) {
+    // 国名を先に表示する国のリスト（少数派）
+    const countryFirstList = ['JP', 'CN', 'KR', 'SA', 'AE']; // 国名が先の国コードリスト
+    return !countryFirstList.contains(countryCode.toUpperCase());
+  }
 
 
 
@@ -1471,7 +1476,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   curve: Curves.easeInOut, // アニメーションのカーブを設定
                   bottom: MediaQuery.of(context).size.height * 0.5 +
                       MediaQuery.of(context).size.width * 0.125 +
-                      15, // 画面縦幅の10%に配置
+                      MediaQuery.of(context).size.width * 0.08, // 画面縦幅の位置に配置
                   right: isMapVisible
                       ? MediaQuery.of(context).size.width * 0.025 // 画面中央に配置するための計算
                       : -MediaQuery.of(context).size.width * 1, // 画面外に退避
@@ -1508,27 +1513,32 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       ValueListenableBuilder<TimelineItem?>(
                         valueListenable: selectedItemNotifier,
                         builder: (context, selectedItem, child) {
-                          // selectedItemがnullの場合、リストの先頭のアイテムを取得
                           final TimelineItem? itemToDisplay = selectedItem ??
                               (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty
                                   ? groupedItemsList[0][0]
                                   : null);
 
                           if (itemToDisplay != null) {
-                            // localtimeをフォーマット
-                            final String formattedDateTime = _formatDateTime(itemToDisplay.localtime ?? '');
+                            final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
+
+                            String formattedAddress;
+                            if (deviceCountryCode != null && _isCityFirst(deviceCountryCode)) {
+                              formattedAddress = '${itemToDisplay.geocodedCity}, ${itemToDisplay.geocodedCountry}';
+                            } else {
+                              formattedAddress = '${itemToDisplay.geocodedCountry}, ${itemToDisplay.geocodedCity}';
+                            }
 
                             return Positioned(
-                              bottom: 16.0,
-                              right: 16.0,
+                              top: widget.size.height * 0.01,
+                              left: widget.size.width * 0.02,
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
                                 decoration: BoxDecoration(
                                   color: Colors.black.withOpacity(0.5),
                                   borderRadius: BorderRadius.circular(8.0),
                                 ),
                                 child: Text(
-                                  formattedDateTime, // フォーマットされた日時を表示
+                                  formattedAddress, // フォーマットされた住所を表示
                                   style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16.0,
@@ -1542,15 +1552,45 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           }
                         },
                       ),
+                      // 翻訳ボタンの配置
+                      Positioned(
+                        bottom: MediaQuery.of(context).size.width * 0.02,
+                        right: MediaQuery.of(context).size.width * 0.02,
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final TimelineItem? itemToDisplay = selectedItemNotifier.value ??
+                                (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty
+                                    ? groupedItemsList[0][0]
+                                    : null);
 
+                            if (itemToDisplay != null) {
+                              List<Placemark> placemarks = await placemarkFromCoordinates(
+                                itemToDisplay.lat,
+                                itemToDisplay.lng,
+                              );
+                              String country = placemarks.first.country ?? 'Unknown';
+                              String city = placemarks.first.administrativeArea ?? 'Unknown';
 
+                              final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
+                              bool isCityFirst = deviceCountryCode != null && _isCityFirst(deviceCountryCode);
 
-
+                              setState(() {
+                                // 翻訳された住所を表示するためにUIを更新
+                                String translatedAddress = isCityFirst ? '$city, $country' : '$country, $city';
+                                itemToDisplay.geocodedCountry = translatedAddress;
+                              });
+                            }
+                          },
+                          child: const Text('翻訳'),
+                        ),
+                      ),
                     ],
                   ),
                 );
               },
             ),
+
+
 
 
 
