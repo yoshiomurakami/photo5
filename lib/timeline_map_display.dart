@@ -580,10 +580,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
   TimelineItem? lastTappedItem;
   bool isDialogShowing = false;
-  bool isMapVisible = false;
+  // bool isMapVisible = true;
   ValueNotifier<File?> currentImageNotifier = ValueNotifier<File?>(null);
   ValueNotifier<String?> currentDateTimeNotifier = ValueNotifier<String?>(null);
-  ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(true); // 追加
+  ValueNotifier<bool> isMapVisibleNotifier = ValueNotifier<bool>(false); // 追加
   ValueNotifier<int> selectedIndexNotifier = ValueNotifier<int>(0); // 中央行のインデックスを保持するためのValueNotifier
 
   Map<String, Map<String, String>> formattedDateCache = {};
@@ -1381,8 +1381,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                     color: Colors.white,
                                     child: Flag.fromString(
                                       WidgetsBinding.instance.window.locale.countryCode ?? '',
-                                      height: widget.size.width * 0.2 * 0.22,
-                                      width: widget.size.width * 0.2 * 0.22,
+                                      height: widget.size.width * 0.2 * 0.23,
+                                      width: widget.size.width * 0.2 * 0.23,
                                       fit: BoxFit.cover,
                                       flagSize: FlagSize.size_1x1,
                                     ),
@@ -1445,29 +1445,32 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   updateAlbumGroupIDCallback: updateLastSelectedAlbumGroupID,
                 ),
               ),
+
+
             //マップの表示ボタン
             Positioned(
-              top: MediaQuery.of(context).size.height / 2 - MediaQuery.of(context).size.width * 0.075, // 縦を画面中央に配置
-              right: MediaQuery.of(context).size.width * 0.025, // 横を画面右端に配置
+              bottom: MediaQuery.of(context).size.height * 0.5, // サムネイルの上に配置
+              left: MediaQuery.of(context).size.width * 0.5 - 25, // サムネイルの右側に配置
               child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.15, // ボタンの直径を画面横幅の20%に設定
-                height: MediaQuery.of(context).size.width * 0.15, // ボタンの直径を画面横幅の20%に設定
+                width: 50, // ボタンの直径を画面横幅の15%に設定
+                height: 50, // ボタンの直径を画面横幅の15%に設定
                 child: FloatingActionButton(
-                  backgroundColor:Colors.white.withOpacity(0.8),
+                  backgroundColor: Colors.transparent, // 背景を透明に設定
                   shape: const CircleBorder(),
+                  elevation: 0, // 影を取り除く
+                  highlightElevation: 0, // タップ時の影も取り除く
                   onPressed: () {
                     isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
                   },
-                  child: const Icon(
+                  child: Icon(
                     Icons.location_on, // マップアイコン
-                    size: 30,
-                    color: Colors.black,
+                    size: 50,
+                    color: Colors.white.withOpacity(1.0), // アイコンの色を白で透明度0.8に設定
                   ),
                 ),
               ),
             ),
-
-// GoogleMapを表示するウィジェット
+            // GoogleMapを表示するウィジェット
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
               builder: (context, isMapVisible, child) {
@@ -1589,6 +1592,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                 );
               },
             ),
+
+
+
+
 
 
 
