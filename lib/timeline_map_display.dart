@@ -1372,7 +1372,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                 ),
                               ),
                               Positioned(
-                                top: widget.size.width * 0.2 * 0.2 * 0.3,
+                                top: widget.size.width * 0.2 * 0.2 * 0.35,
                                 left: widget.size.width * 0.2 * 0.2 * 0.3,
                                 child: ClipOval(
                                   child: Container(
@@ -1381,8 +1381,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                     color: Colors.white,
                                     child: Flag.fromString(
                                       WidgetsBinding.instance.window.locale.countryCode ?? '',
-                                      height: widget.size.width * 0.2 * 0.2,
-                                      width: widget.size.width * 0.2 * 0.2,
+                                      height: widget.size.width * 0.2 * 0.22,
+                                      width: widget.size.width * 0.2 * 0.22,
                                       fit: BoxFit.cover,
                                       flagSize: FlagSize.size_1x1,
                                     ),
@@ -1620,6 +1620,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                 width: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
                 height: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
                 child: FloatingActionButton(
+                  heroTag: 'cameraScreenUniqueTag', // ユニークなタグを設定
                   backgroundColor: const Color(0xFFFFCC4D),
                   elevation: 0,
                   shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
@@ -1787,6 +1788,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
           takePictureStartTime: cameraData['timestamp'],
           shootingRoomCount: cameraData['shootingRoomCount'],
         ),
+        settings: RouteSettings(name: 'CameraScreen'),
+        maintainState: true,
       ),
     );
 

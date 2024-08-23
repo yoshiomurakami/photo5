@@ -1312,6 +1312,8 @@ class CameraHelper {
           takePictureStartTime: cameraData['timestamp'],
           shootingRoomCount: shootingRoomCount,
         ),
+        settings: RouteSettings(name: 'CameraScreen'),
+        maintainState: true,
       ),
     );
   }

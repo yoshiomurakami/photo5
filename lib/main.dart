@@ -635,8 +635,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
     // 疑似的な位置情報を生成
     Position fakePosition = Position(
-      latitude: 50.549997062751174,
-      longitude: 43.10223953287802,
+      latitude: 48.862959685874486,
+      longitude: 2.3129526537635354,
       timestamp: DateTime.now(), // 現在時刻を設定
       accuracy: 0, // 精度を適宜設定
       altitude: 0, // 標高を適宜設定
