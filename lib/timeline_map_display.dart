@@ -594,6 +594,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
   final ValueNotifier<String> translatedAddressNotifier = ValueNotifier<String>('');
 
+  int _latestRequestId = 0; // リクエストIDを追跡
+
   @override
   void initState() {
     super.initState();
@@ -995,7 +997,15 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   void _loadNextImage() async {
     final selectedItem = selectedItemNotifier.value;
     if (selectedItem != null && selectedItem.systemId != "shootbutton") {
+      // 新しいリクエストIDを生成
+      final int requestId = ++_latestRequestId;
+
       final imageFile = await _getCachedImage(selectedItem.imageFilename.split('/').last);
+
+      debugPrint("check : $requestId and $_latestRequestId");
+      // リクエストが最新のものでない場合は処理をキャンセル
+      if (requestId != _latestRequestId) return;
+
       if (mounted) {
         currentImageNotifier.value = imageFile;
         currentDateTimeNotifier.value = _formatDateTime(selectedItem.localtime); // localtimeを更新
@@ -1008,13 +1018,22 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     }
   }
 
+
   void _loadInitialImage(TimelineItem item) async {
+    // 新しいリクエストIDを生成
+    final int requestId = ++_latestRequestId;
+
     final imageFile = await _getCachedImage(item.imageFilename.split('/').last);
+
+    // リクエストが最新のものでない場合は処理をキャンセル
+    if (requestId != _latestRequestId) return;
+
     if (mounted) {
       currentImageNotifier.value = imageFile;
       currentDateTimeNotifier.value = _formatDateTime(item.localtime); // localtimeを更新
     }
   }
+
 
   Future<Map<String, String>> formatDateString(String unixTimestampString) async {
     if (formattedDateCache.containsKey(unixTimestampString)) {
