@@ -1514,7 +1514,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                             return Positioned(
                               top: widget.size.height * 0.01,
                               left: widget.size.width * 0.02,
-                              child: GestureDetector( // GestureDetectorをPositionedの内部に配置
+                              child: GestureDetector(
                                 onTap: () async {
                                   debugPrint("Text container tapped");
 
@@ -1534,15 +1534,24 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                   for (Placemark placemark in placemarks) {
                                     if (placemark.country != null && placemark.country!.contains(RegExp(r'[^\x00-\x7F]'))) {
                                       country = placemark.country!;
+                                    } else if (placemark.country != null && country == 'Unknown') {
+                                      country = placemark.country!; // 配列の先頭の文字列を設定
                                     }
+
                                     if (placemark.administrativeArea != null && placemark.administrativeArea!.contains(RegExp(r'[^\x00-\x7F]'))) {
                                       area = placemark.administrativeArea!;
+                                    } else if (placemark.administrativeArea != null && area == 'Unknown') {
+                                      area = placemark.administrativeArea!; // 配列の先頭の文字列を設定
                                     }
+
                                     if (placemark.locality != null && placemark.locality!.contains(RegExp(r'[^\x00-\x7F]'))) {
                                       city = placemark.locality!;
+                                    } else if (placemark.locality != null && city == 'Unknown') {
+                                      city = placemark.locality!; // 配列の先頭の文字列を設定
                                     }
                                   }
 
+                                  final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
                                   bool isCityFirst = deviceCountryCode != null && _isCityFirst(deviceCountryCode);
 
                                   String translatedAddress = isCityFirst
@@ -1593,6 +1602,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                 ),
                               ),
                             );
+
                           } else {
                             return const SizedBox.shrink();
                           }
