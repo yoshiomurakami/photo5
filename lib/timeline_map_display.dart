@@ -592,6 +592,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
   File? previousImage;
 
+  final ValueNotifier<String> translatedAddressNotifier = ValueNotifier<String>('');
+
   @override
   void initState() {
     super.initState();
@@ -630,6 +632,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       duration: const Duration(milliseconds: 500),
     );
 
+    selectedItemNotifier.addListener(_resetTranslatedAddress);
   }
 
   void _loadInitialImageIfNecessary() {
@@ -654,6 +657,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     currentDateTimeNotifier.dispose();
     selectedIndexNotifier.dispose(); // ValueNotifierの破棄
     _animationController.dispose();
+    selectedItemNotifier.removeListener(_resetTranslatedAddress);
+    translatedAddressNotifier.dispose();
     super.dispose();
   }
 
@@ -810,7 +815,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                           Stack(
                                             children: [
                                               Text(
-                                                "${selectedItem.geocodedCity} ${selectedItem.geocodedCountry}",
+                                                "${selectedItem.geocodedArea} ${selectedItem.geocodedCity} ${selectedItem.geocodedCountry}",
                                                 style: const TextStyle(
                                                   fontSize: 16,
                                                   color: Colors.white,
@@ -1071,7 +1076,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   }
 
 
-
+  void _resetTranslatedAddress() {
+    // アイテムが変更された場合、翻訳された住所をリセット
+    translatedAddressNotifier.value = '';
+  }
 
 
 
@@ -1381,8 +1389,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                     color: Colors.white,
                                     child: Flag.fromString(
                                       WidgetsBinding.instance.window.locale.countryCode ?? '',
-                                      height: widget.size.width * 0.2 * 0.23,
-                                      width: widget.size.width * 0.2 * 0.23,
+                                      height: widget.size.width * 0.2 * 0.25,
+                                      width: widget.size.width * 0.2 * 0.25,
                                       fit: BoxFit.cover,
                                       flagSize: FlagSize.size_1x1,
                                     ),
@@ -1450,10 +1458,10 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
             //マップの表示ボタン
             Positioned(
               bottom: MediaQuery.of(context).size.height * 0.5, // サムネイルの上に配置
-              left: MediaQuery.of(context).size.width * 0.5 - 25, // サムネイルの右側に配置
+              left: MediaQuery.of(context).size.width * 0.5 - MediaQuery.of(context).size.width * 0.2 * 0.5 * 0.5, // サムネイルの右側に配置
               child: SizedBox(
-                width: 50, // ボタンの直径を画面横幅の15%に設定
-                height: 50, // ボタンの直径を画面横幅の15%に設定
+                width: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
+                height: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
                 child: FloatingActionButton(
                   backgroundColor: Colors.transparent, // 背景を透明に設定
                   shape: const CircleBorder(),
@@ -1464,7 +1472,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   },
                   child: Icon(
                     Icons.location_on, // マップアイコン
-                    size: 50,
+                    size: MediaQuery.of(context).size.width * 0.2 * 0.5,
                     color: Colors.white.withOpacity(1.0), // アイコンの色を白で透明度0.8に設定
                   ),
                 ),
@@ -1524,38 +1532,48 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           if (itemToDisplay != null) {
                             final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
 
-                            String formattedAddress;
-                            if (deviceCountryCode != null && _isCityFirst(deviceCountryCode)) {
-                              formattedAddress = '${itemToDisplay.geocodedCity}, ${itemToDisplay.geocodedCountry}';
-                            } else {
-                              formattedAddress = '${itemToDisplay.geocodedCountry}, ${itemToDisplay.geocodedCity}';
-                            }
+                            return ValueListenableBuilder<String>(
+                              valueListenable: translatedAddressNotifier,
+                              builder: (context, translatedAddress, child) {
+                                String formattedAddress;
+                                if (translatedAddress.isNotEmpty) {
+                                  // 翻訳された住所を表示
+                                  formattedAddress = translatedAddress;
+                                } else {
+                                  // デフォルトの住所を表示
+                                  if (deviceCountryCode != null && _isCityFirst(deviceCountryCode)) {
+                                    formattedAddress = '${itemToDisplay.geocodedCity} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCountry}';
+                                  } else {
+                                    formattedAddress = '${itemToDisplay.geocodedCountry} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCity}';
+                                  }
+                                }
 
-                            return Positioned(
-                              top: widget.size.height * 0.01,
-                              left: widget.size.width * 0.02,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                                decoration: BoxDecoration(
-                                  color: Colors.black.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                child: Text(
-                                  formattedAddress, // フォーマットされた住所を表示
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16.0,
-                                    fontWeight: FontWeight.bold,
+                                return Positioned(
+                                  top: widget.size.height * 0.01,
+                                  left: widget.size.width * 0.02,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.5),
+                                      borderRadius: BorderRadius.circular(8.0),
+                                    ),
+                                    child: Text(
+                                      formattedAddress,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16.0,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              },
                             );
                           } else {
                             return const SizedBox.shrink();
                           }
                         },
                       ),
-                      // 翻訳ボタンの配置
                       Positioned(
                         bottom: MediaQuery.of(context).size.width * 0.02,
                         right: MediaQuery.of(context).size.width * 0.02,
@@ -1572,16 +1590,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                 itemToDisplay.lng,
                               );
                               String country = placemarks.first.country ?? 'Unknown';
-                              String city = placemarks.first.administrativeArea ?? 'Unknown';
+                              String area = placemarks.first.administrativeArea ?? 'Unknown';
+                              String city = placemarks.first.locality ?? 'Unknown';
 
                               final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
                               bool isCityFirst = deviceCountryCode != null && _isCityFirst(deviceCountryCode);
 
-                              setState(() {
-                                // 翻訳された住所を表示するためにUIを更新
-                                String translatedAddress = isCityFirst ? '$city, $country' : '$country, $city';
-                                itemToDisplay.geocodedCountry = translatedAddress;
-                              });
+                              String translatedAddress = isCityFirst
+                                  ? '$city $area $country'
+                                  : '$country $area $city';
+
+                              translatedAddressNotifier.value = translatedAddress;
                             }
                           },
                           child: const Text('翻訳'),

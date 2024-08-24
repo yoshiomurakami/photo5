@@ -64,6 +64,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   String _timestamp ='';
   String _localTimestamp='';
   String _geocodedCountry='';
+  String _geocodedArea='';
   String _geocodedCity='';
 
   // 新しい状態変数
@@ -316,6 +317,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           'localtime': data['localtime'],
           'groupID': data['groupID'],
           'geocodedCountry': data['geocodedCountry'],
+          'geocodedArea': data['geocodedArea'],
           'geocodedCity': data['geocodedCity'],
           'statement': data['statement']
         };
@@ -348,6 +350,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           'localtime': photoData['localtime'],
           'groupID': photoData['groupID'],
           'geocodedCountry': photoData['geocodedCountry'],
+          'geocodedArea': photoData['geocodedArea'],
           'geocodedCity': photoData['geocodedCity'],
           'statement': photoData['statement']
         },
@@ -544,6 +547,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           _imageLng ?? '',
           widget.groupID,
           _geocodedCountry,
+          _geocodedArea,
           _geocodedCity,
         );
 
@@ -589,7 +593,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
     _imageCountry = placemarks.first.isoCountryCode ?? 'Unknown';
     _geocodedCountry = placemarks.first.country ?? 'Unknown'; // 国名
-    _geocodedCity = placemarks.first.administrativeArea ?? 'Unknown'; // 都市名
+    _geocodedArea = placemarks.first.administrativeArea ?? 'Unknown'; // 都市名
+    _geocodedCity = placemarks.first.locality ?? 'Unknown'; // 都市名
     debugPrint('Placemarks: $placemarks');
 
     // Update _locationAvailable state
@@ -649,7 +654,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   }
 
 // _progressUpload メソッドを修正
-  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userID, String localtimestamp, String imageCountry, String imageLat, String imageLng, String groupID, String geocodedCountry, String geocodedCity) async {
+  Future<void> _progressUpload(String imagePath, String thumbnailPath, String userID, String localtimestamp, String imageCountry, String imageLat, String imageLng, String groupID, String geocodedCountry, String geocodedArea, String geocodedCity) async {
     Map<String, dynamic> newPhotoInfo = await _uploadImage(imagePath, thumbnailPath, groupID);
 
     if (newPhotoInfo!= {}) {  // 正しい sequenceNumber が取得できた場合
@@ -710,6 +715,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     request.fields['localtime'] = _localTimestamp;
     request.fields['groupID'] = widget.groupID;
     request.fields['geocodedCountry'] = _geocodedCountry;
+    request.fields['geocodedArea'] = _geocodedArea;
     request.fields['geocodedCity'] = _geocodedCity;
 
 
@@ -758,6 +764,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           'localtime': responseBody['photo']['localtime'],
           'groupID': responseBody['photo']['groupID'],
           'geocodedCountry': responseBody['photo']['geocodedCountry'],
+          'geocodedArea': responseBody['photo']['geocodedArea'],
           'geocodedCity': responseBody['photo']['geocodedCity'],
           'statement': responseBody['photo']['statement'],
         };
@@ -837,6 +844,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         'localtime': newPhotoInfo['localtime'],
         'groupID': newPhotoInfo['groupID'],
         'geocodedCountry': newPhotoInfo['geocodedCountry'],
+        'geocodedArea': newPhotoInfo['geocodedArea'],
         'geocodedCity': newPhotoInfo['geocodedCity'],
         'statement': newPhotoInfo['statement'],
       },

@@ -765,7 +765,7 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
         version: 1,
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, systemId TEXT, sequenceNumber INTEGER, createdAt TEXT, userID TEXT, country TEXT, lat TEXT, lng TEXT, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedCity TEXT, statement INTEGER)",
+            "CREATE TABLE IF NOT EXISTS images(id INTEGER PRIMARY KEY, systemId TEXT, sequenceNumber INTEGER, createdAt TEXT, userID TEXT, country TEXT, lat TEXT, lng TEXT, imageFilename TEXT, thumbnailFilename TEXT, localtime TEXT, groupID TEXT, geocodedCountry TEXT, geocodedArea TEXT, geocodedCity TEXT, statement INTEGER)",
           );
           // await db.execute(
           //   "CREATE TABLE IF NOT EXISTS timelineItems(id INTEGER PRIMARY KEY, imagePath TEXT, thumbnailPath TEXT, userID TEXT, localtimestamp TEXT, imageCountry TEXT, imageLat TEXT, imageLng TEXT, groupID TEXT, sequenceNumber INTEGER, geocodedCountry TEXT, geocodedCity TEXT, statement INTEGER, systemId INTEGER)",

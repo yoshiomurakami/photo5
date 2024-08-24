@@ -44,6 +44,7 @@ class AlbumTimeLine {
   final String groupID;
   final String localtime;
   final String geocodedCountry;
+  final String geocodedArea;
   final String geocodedCity;
   final int statement; // 追加
 
@@ -62,6 +63,7 @@ class AlbumTimeLine {
     required this.groupID,
     required this.localtime,
     required this.geocodedCountry,
+    required this.geocodedArea,
     required this.geocodedCity,
     required this.statement, // 追加
   });
@@ -82,6 +84,7 @@ class AlbumTimeLine {
       groupID: json['groupID'] ?? '', // デフォルト値を空文字列に設定
       localtime: json['localtime'] ?? DateTime.now().toString(), // デフォルト値設定
       geocodedCountry: json['geocodedCountry'], // null許容
+      geocodedArea: json['geocodedArea'], // null許容
       geocodedCity: json['geocodedCity'], // null許容
       statement: json['statement'] ?? 0, // デフォルト値設定
     );
@@ -496,7 +499,7 @@ class AlbumTimeLineViewState extends ConsumerState<AlbumTimeLineView> {
                               children: [
                                 const SizedBox(height: 5),
                                 Text(
-                                  '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
+                                  '${selectedItem.geocodedCity ?? ''} ${selectedItem.geocodedArea ?? ''} ${selectedItem.geocodedCountry ?? 'N/A'}',
                                   style: const TextStyle(
                                     fontSize: 16,
                                     color: Colors.black,
