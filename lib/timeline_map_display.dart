@@ -1455,29 +1455,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
               ),
 
 
-            //マップの表示ボタン
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * 0.5, // サムネイルの上に配置
-              left: MediaQuery.of(context).size.width * 0.5 - MediaQuery.of(context).size.width * 0.2 * 0.5 * 0.5, // サムネイルの右側に配置
-              child: SizedBox(
-                width: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
-                height: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
-                child: FloatingActionButton(
-                  backgroundColor: Colors.transparent, // 背景を透明に設定
-                  shape: const CircleBorder(),
-                  elevation: 0, // 影を取り除く
-                  highlightElevation: 0, // タップ時の影も取り除く
-                  onPressed: () {
-                    isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
-                  },
-                  child: Icon(
-                    Icons.location_on, // マップアイコン
-                    size: MediaQuery.of(context).size.width * 0.2 * 0.5,
-                    color: Colors.white.withOpacity(1.0), // アイコンの色を白で透明度0.8に設定
-                  ),
-                ),
-              ),
-            ),
+
+
             // GoogleMapを表示するウィジェット
             ValueListenableBuilder<bool>(
               valueListenable: isMapVisibleNotifier,
@@ -1490,7 +1469,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       MediaQuery.of(context).size.width * 0.08, // 画面縦幅の位置に配置
                   right: isMapVisible
                       ? MediaQuery.of(context).size.width * 0.025 // 画面中央に配置するための計算
-                      : -MediaQuery.of(context).size.width * 1, // 画面外に退避
+                      : -MediaQuery.of(context).size.width * 1.0, // 画面外に退避
                   child: Stack(
                     children: [
                       Container(
@@ -1520,7 +1499,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           ),
                         ),
                       ),
-                      // 撮影日時の表示
+                      // 撮影日時の表示エリアをタップ可能にする
                       ValueListenableBuilder<TimelineItem?>(
                         valueListenable: selectedItemNotifier,
                         builder: (context, selectedItem, child) {
@@ -1532,99 +1511,127 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           if (itemToDisplay != null) {
                             final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
 
-                            return ValueListenableBuilder<String>(
-                              valueListenable: translatedAddressNotifier,
-                              builder: (context, translatedAddress, child) {
-                                String formattedAddress;
-                                if (translatedAddress.isNotEmpty) {
-                                  // 翻訳された住所を表示
-                                  formattedAddress = translatedAddress;
-                                } else {
-                                  // デフォルトの住所を表示
-                                  if (deviceCountryCode != null && _isCityFirst(deviceCountryCode)) {
-                                    formattedAddress = '${itemToDisplay.geocodedCity} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCountry}';
-                                  } else {
-                                    formattedAddress = '${itemToDisplay.geocodedCountry} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCity}';
-                                  }
-                                }
+                            return Positioned(
+                              top: widget.size.height * 0.01,
+                              left: widget.size.width * 0.02,
+                              child: GestureDetector( // GestureDetectorをPositionedの内部に配置
+                                onTap: () async {
+                                  debugPrint("Text container tapped");
 
-                                return Positioned(
-                                  top: widget.size.height * 0.01,
-                                  left: widget.size.width * 0.02,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.5),
-                                      borderRadius: BorderRadius.circular(8.0),
-                                    ),
-                                    child: Text(
-                                      formattedAddress,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16.0,
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                                  // 位置情報から住所を取得
+                                  List<Placemark> placemarks = await placemarkFromCoordinates(
+                                    itemToDisplay.lat,
+                                    itemToDisplay.lng,
+                                  );
+
+                                  debugPrint("placemarks = $placemarks");
+
+                                  // デバイスの言語に基づいて最適な住所情報を選択
+                                  String country = 'Unknown';
+                                  String area = 'Unknown';
+                                  String city = 'Unknown';
+
+                                  for (Placemark placemark in placemarks) {
+                                    if (placemark.country != null && placemark.country!.contains(RegExp(r'[^\x00-\x7F]'))) {
+                                      country = placemark.country!;
+                                    }
+                                    if (placemark.administrativeArea != null && placemark.administrativeArea!.contains(RegExp(r'[^\x00-\x7F]'))) {
+                                      area = placemark.administrativeArea!;
+                                    }
+                                    if (placemark.locality != null && placemark.locality!.contains(RegExp(r'[^\x00-\x7F]'))) {
+                                      city = placemark.locality!;
+                                    }
+                                  }
+
+                                  bool isCityFirst = deviceCountryCode != null && _isCityFirst(deviceCountryCode);
+
+                                  String translatedAddress = isCityFirst
+                                      ? '$city $area $country'
+                                      : '$country $area $city';
+
+                                  translatedAddressNotifier.value = translatedAddress;
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                                  constraints: BoxConstraints(
+                                    maxWidth: MediaQuery.of(context).size.width * 0.9, // 親ウィジェットの横幅を超えない
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withOpacity(0.5),
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal, // 水平方向にスクロール可能にする
+                                    child: ValueListenableBuilder<String>(
+                                      valueListenable: translatedAddressNotifier,
+                                      builder: (context, translatedAddress, child) {
+                                        String formattedAddress;
+                                        if (translatedAddress.isNotEmpty) {
+                                          // 翻訳された住所を表示
+                                          formattedAddress = translatedAddress;
+                                        } else {
+                                          // デフォルトの住所を表示
+                                          if (deviceCountryCode != null && _isCityFirst(deviceCountryCode)) {
+                                            formattedAddress = '${itemToDisplay.geocodedCity} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCountry}';
+                                          } else {
+                                            formattedAddress = '${itemToDisplay.geocodedCountry} ${itemToDisplay.geocodedArea} ${itemToDisplay.geocodedCity}';
+                                          }
+                                        }
+
+                                        return Text(
+                                          formattedAddress,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14.0,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.2, // 縦幅を固定
+                                          ),
+                                        );
+                                      },
                                     ),
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             );
                           } else {
                             return const SizedBox.shrink();
                           }
                         },
                       ),
-                      Positioned(
-                        bottom: MediaQuery.of(context).size.width * 0.02,
-                        right: MediaQuery.of(context).size.width * 0.02,
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final TimelineItem? itemToDisplay = selectedItemNotifier.value ??
-                                (groupedItemsList.isNotEmpty && groupedItemsList[0].isNotEmpty
-                                    ? groupedItemsList[0][0]
-                                    : null);
-
-                            if (itemToDisplay != null) {
-                              List<Placemark> placemarks = await placemarkFromCoordinates(
-                                itemToDisplay.lat,
-                                itemToDisplay.lng,
-                              );
-                              String country = placemarks.first.country ?? 'Unknown';
-                              String area = placemarks.first.administrativeArea ?? 'Unknown';
-                              String city = placemarks.first.locality ?? 'Unknown';
-
-                              final String? deviceCountryCode = WidgetsBinding.instance.window.locale.countryCode;
-                              bool isCityFirst = deviceCountryCode != null && _isCityFirst(deviceCountryCode);
-
-                              String translatedAddress = isCityFirst
-                                  ? '$city $area $country'
-                                  : '$country $area $city';
-
-                              translatedAddressNotifier.value = translatedAddress;
-                            }
-                          },
-                          child: const Text('翻訳'),
-                        ),
-                      ),
                     ],
                   ),
+
                 );
               },
             ),
 
+            //マップの表示ボタン
+            Positioned(
+              bottom: MediaQuery.of(context).size.height * 0.5, // サムネイルの上に配置
+              left: MediaQuery.of(context).size.width * 0.5 - MediaQuery.of(context).size.width * 0.2 * 0.5 * 0.5, // サムネイルの右側に配置
+              // bottom: MediaQuery.of(context).size.height * 0.7 - MediaQuery.of(context).size.width * 0.05, // サムネイルの上に配置
+              // left: MediaQuery.of(context).size.width * 0.9,
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
+                height: MediaQuery.of(context).size.width * 0.2 * 0.5, // ボタンの直径を画面横幅の15%に設定
+                child: FloatingActionButton(
+                  backgroundColor: Colors.transparent, // 背景を透明に設定
+                  shape: const CircleBorder(),
+                  elevation: 0, // 影を取り除く
+                  highlightElevation: 0, // タップ時の影も取り除く
+                  onPressed: () {
+                    isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
+                  },
+                  child: Icon(
+                    Icons.location_on, // マップアイコン
+                    size: MediaQuery.of(context).size.width * 0.2 * 0.5,
+                    color: Colors.white.withOpacity(1.0), // アイコンの色を白で透明度0.8に設定
+                  ),
+                ),
+              ),
+            ),
 
-
-
-
-
-
-
-
-
-
-
-
-
+            // タイトル画像を表示するウィジェット
             Positioned(
               top: widget.size.height * 0.1,
               left: widget.size.width * 0.2,
