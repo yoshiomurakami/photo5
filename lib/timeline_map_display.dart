@@ -1490,7 +1490,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       ? MediaQuery.of(context).size.width * 0.025 // 画面中央に配置するための計算
                       : -MediaQuery.of(context).size.width * 1.0, // 画面外に退避
                   child: Stack(
-                    children: [
+                    children: <Widget>[
                       Container(
                         width: MediaQuery.of(context).size.width * 0.95, // 横幅：画面横幅の95%
                         height: MediaQuery.of(context).size.width * 0.4, // 縦幅：画面縦幅の40%
@@ -1506,15 +1506,29 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                           borderRadius: BorderRadius.circular(12.0), // 内側の角丸
                           child: GoogleMap(
                             onMapCreated: MapController.instance.onMapCreated,
+                            minMaxZoomPreference: const MinMaxZoomPreference(0, 15),
                             initialCameraPosition: CameraPosition(
                               target: widget.currentLocation,
-                              zoom: MapController.instance.zoomLevel,
+                              zoom: 10,
                             ),
                             markers: MapController.instance._markers,
-                            zoomControlsEnabled: true,
-                            zoomGesturesEnabled: true,
-                            scrollGesturesEnabled: true,
+                            zoomControlsEnabled: true,  // ズームボタンを無効にする
+                            zoomGesturesEnabled: false,  // ユーザーによるズーム操作を無効にする
+                            scrollGesturesEnabled: false, // ユーザーによるスクロール操作を無効にする
+                            rotateGesturesEnabled: false, // 回転ジェスチャーを無効にする
+                            tiltGesturesEnabled: false,   // チルトジェスチャーを無効にする
                             padding: const EdgeInsets.only(bottom: 0),
+                          ),
+                        ),
+                      ),
+                      // マップの中央にカメラの絵文字を配置
+                      Positioned(
+                        left: (MediaQuery.of(context).size.width * 0.95) / 2 - 14, // 絵文字を中央に配置（-18は絵文字サイズの半分）
+                        top: (MediaQuery.of(context).size.width * 0.4) / 2 - 14, // 絵文字を中央に配置（-18は絵文字サイズの半分）
+                        child: const Text(
+                          '\u{1F4F8}', // カメラの絵文字
+                          style: TextStyle(
+                            fontSize: 28, // 絵文字のサイズを指定
                           ),
                         ),
                       ),
@@ -1621,7 +1635,6 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                                 ),
                               ),
                             );
-
                           } else {
                             return const SizedBox.shrink();
                           }
@@ -1629,10 +1642,11 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       ),
                     ],
                   ),
-
                 );
               },
             ),
+
+
 
             //マップの表示ボタン
             Positioned(
