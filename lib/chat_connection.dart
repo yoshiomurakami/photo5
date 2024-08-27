@@ -1119,9 +1119,12 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         int timestamp = data['timestamp'];
         int shootingRoomCount = data['shootingRoomCount'];
 
-        // groupIDとtimestampをCompleterを通じて返す
-        completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
-
+        // timestampがnullの場合、1台目のカメラ起動であるためカウントダウンを開始しない
+        if (timestamp != null) {
+          completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
+        } else {
+          completer.complete({'groupID': groupID, 'timestamp': null, 'shootingRoomCount': shootingRoomCount});
+        }
         // イベントリスナーを解除
         chatConnection.off('assign_group_id');
       } else {

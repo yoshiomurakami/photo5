@@ -95,7 +95,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   // late Animation<double> _scaleAnimation; // スケールアニメーション用の変数を追加
 
-
+  bool showTimer = false;
 
   //タイマーシャッターを組み込んだinitstate
   @override
@@ -144,6 +144,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
     _showImage = false;
+    showTimer = false; // 初期状態ではタイマーを非表示
 
     // eventHandlerを初期化
     eventHandler = (Map<String, dynamic> data) {
@@ -251,24 +252,28 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           if (remainingSeconds > 30) remainingSeconds = 10;
         });
 
-        countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-          if (mounted && remainingSeconds > 1) {
-            setState(() {
-              remainingSeconds--;
-            });
-          } else {
-            timer.cancel();
-          }
-        });
+        // shootingRoomCountが2以上の場合のみ_takePictureを実行
+        if (widget.shootingRoomCount > 1) {
+          countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (mounted && remainingSeconds > 1) {
+              setState(() {
+                remainingSeconds--;
+              });
+            } else {
+              timer.cancel();
+            }
+          });
 
-        Future.delayed(Duration(milliseconds: delay), () async {
-          if (mounted && remainingSeconds > 0) {
-            await _takePicture();
-          }
-        });
+          Future.delayed(Duration(milliseconds: delay), () async {
+            if (mounted && remainingSeconds > 0) {
+              await _takePicture();
+            }
+          });
+        }
       }
     });
   }
+
 
   void setupEventBusListener() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -372,8 +377,54 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         emojiPositions.add(Offset(x, y));  // 新しい位置をリストに追加
       });
     });
-  }
 
+    // assign_group_id イベントのリスナーを追加
+    socket?.on('assign_group_id', (data) {
+      if (mounted && data['shootingRoomCount'] == 2) {
+        setState(() {
+          showTimer = true; // 2台目がカメラを起動したときにタイマーを表示
+          now = DateTime.now().millisecondsSinceEpoch;
+          triggerTime = data['timestamp'] + 10000;
+          delay = triggerTime - now;
+          if (delay < 0) delay = 0;
+          remainingSeconds = (delay / 1000).ceil();
+          if (remainingSeconds > 30) remainingSeconds = 10;
+
+          // タイマーを開始
+          countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (mounted && remainingSeconds > 1) {
+              setState(() {
+                remainingSeconds--;
+              });
+            } else {
+              timer.cancel();
+            }
+          });
+
+          Future.delayed(Duration(milliseconds: delay), () async {
+            if (mounted && remainingSeconds > 0) {
+              await _takePicture();
+            }
+          });
+        });
+      }
+    });
+
+    socket?.on('camera_event', (data) {
+      if (data['event'] == 'someone_leave_camera') {
+        int shootingRoomCount = data['shootingRoomCount'];
+
+        if (shootingRoomCount == 1 && mounted) {
+          setState(() {
+            // タイマーを停止し、カウントダウンを非表示にする
+            countdownTimer.cancel();
+            remainingSeconds = 0;
+          });
+        }
+      }
+    });
+
+  }
 
   Future<bool> saveOtherUserImage(String imageUrl, String imageName) async {
     try {
@@ -867,6 +918,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     } else if (event == "someone_leave_camera") {
       handleUpdateUserShootingList(data);
       debugPrint("check_leave_camera in camera ${data['userID']} from ${data['countryCode']}");
+
+      // shootingRoomCountが1になった場合の処理を追加
+      if (data['shootingRoomCount'] == 1) {
+        setState(() {
+          // タイマーを停止し、カウントダウンを非表示にする
+          countdownTimer.cancel();
+          remainingSeconds = 0;
+        });
+      }
     } else if (event == "existingUserLocations") {
       debugPrint("existingUserLocations in camera is $data");
     } else if (event == "update_user_shootinglist") {
@@ -880,6 +940,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       userShootingListCount = data['shootingRoomCount'] - 1;
     });
   }
+
 
   Widget buildThumbnail(Map<String, dynamic> thumbnailData, Size screenSize) {
     final thumbnailUrl = "https://photo5.world/${thumbnailData['thumbnailFilename']}";
@@ -979,25 +1040,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         Positioned.fill(
                           child: Container(color: Colors.white),
                         ),
-                      // Time and Delay Info
-                      // Positioned(
-                      //   top: 10,
-                      //   left: 10,
-                      //   child: Container(
-                      //     padding: const EdgeInsets.all(8),
-                      //     color: Colors.black.withOpacity(0.5),
-                      //     child: Text(
-                      //       'Now: $now\nTrigger Time: $triggerTime\nDelay: $delay',
-                      //       style: const TextStyle(
-                      //         fontSize: 16,
-                      //         color: Colors.white,
-                      //         fontWeight: FontWeight.bold,
-                      //       ),
-                      //     ),
-                      //   ),
-                      // ),
+
                       // Countdown Timer in the Center
-                      if (!_showImage)
+                      if (!_showImage && widget.shootingRoomCount > 1) // shootingRoomCountが1の場合は非表示
                         Center(
                           child: Container(
                             width: MediaQuery.of(context).size.width * 0.5,
@@ -1015,6 +1060,25 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           ),
                         ),
 
+                      if (!_showImage && showTimer && remainingSeconds > 0) // タイマーが有効な場合のみ表示
+                        Center(
+                          child: Container(
+                            width: MediaQuery.of(context).size.width * 0.5,
+                            height: MediaQuery.of(context).size.width * 0.5,
+                            alignment: Alignment.center,
+                            color: Colors.black.withOpacity(0.5),
+                            child: Text(
+                              '$remainingSeconds',
+                              style: const TextStyle(
+                                fontSize: 48,
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+
+
                       // ここにBackボタンの位置を追加
                       if (!_showImage) // 撮影前の状態でのみ表示
                         Positioned(
@@ -1028,34 +1092,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           ),
                         ),
                       // The controls should be outside the scaled preview
-                      // if (_showImage)  // Only show the buttons if _showImage is false
-                      //画面タップでシャッター
-                      // Positioned.fill(
-                      //   child: GestureDetector(
-                      //     onTap: _takePicture,
-                      //     child: Container(color: Colors.transparent),
-                      //   ),
-                      // ),
-                      // Positioned(
-                      //   top: 50,
-                      //   left: 0,
-                      //   child: Row(
-                      //     children: [
-                      //       // ElevatedButton(
-                      //       //   onPressed: _takePicture,
-                      //       //   child: Text('Take Picture'),
-                      //       // ),
-                      //       ElevatedButton(
-                      //         onPressed: () {
-                      //           chatConnection.emitEvent("leave_shooting_room");
-                      //           _navigateBack(context);
-                      //         },
-                      //         child: const Text('Back'),
-                      //       ),
-                      //
-                      //     ],
-                      //   ),
-                      // ),
+
                       _showImage && _imagePath != null
                           ? Positioned.fill(
                         child: Stack(
@@ -1162,13 +1199,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                               left: 0,
                               child: Row(
                                 children: [
-                                  // ElevatedButton(
-                                  //   onPressed: _takePicture,
-                                  //   child: Text('Take Picture'),
-                                  // ),
                                   ElevatedButton(
                                     onPressed: () {
-                                      // chatConnection.emitEvent("leave_shooting_room");
                                       _navigateBack(context);
                                     },
                                     child: const Text('Back'),
@@ -1177,31 +1209,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                               ),
                             ),
 
-                            // if (_showEmoji)  // 絵文字表示条件
-                            for (var position in emojiPositions)  // 絵文字の位置リストをループ
-                            // Positioned(
-                            //   left: position.dx,
-                            //   top: position.dy,
-                            //   child: Container(
-                            //     width: screenSize.width * 0.2,
-                            //     height: screenSize.width * 0.2,
-                            //     decoration: BoxDecoration(
-                            //       // color: const Color(0xFFFFCC4D),
-                            //       color: Colors.white,
-                            //       border: Border.all(color: Colors.black, width: 2),
-                            //       shape: BoxShape.circle,
-                            //     ),
-                            //     child: Center(
-                            //       child: Text("\u{1F590}", style: TextStyle(fontSize: 36)),
-                            //     ),
-                            //   ),
-                            // ),
+                            for (var position in emojiPositions)
                               Positioned(
                                 left: position.dx,
                                 top: position.dy,
                                 child: IntrinsicWidth(
-                                  // stepWidth: screenSize.width * 0.2,
-                                  // stepHeight: screenSize.width * 0.1,
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 5), // テキストの周囲に余白を追加
                                     decoration: BoxDecoration(
@@ -1220,11 +1232,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           ],
                         ),
                       )
-
                           : const SizedBox(),
-
-
-
 
                       if (userShootingListCount >= 1)
                         Positioned(
