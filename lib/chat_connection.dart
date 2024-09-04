@@ -127,7 +127,12 @@ class ChatConnection {
       debugPrint('Received existingUserLocations with data: $data');
       callback(data);
     });
+    socket?.on('existingCameraUser', (data) {
+      debugPrint('Received existingCameraUser with data: $data');
+      callback(data);
+    });
   }
+
 
   // void listenToLeaveShootingRoomEvent(BuildContext context, void Function() callback) {
   //   socket?.on('leave_shooting_room', (data) {
@@ -1112,21 +1117,23 @@ class ConnectionWidgetsManager extends ChangeNotifier {
   Future<Map<String, dynamic>?> _waitForGroupIdAndTimestamp() async {
     Completer<Map<String, dynamic>?> completer = Completer();
 
-    // 'assign_group_id' イベントのリスナーを設定
     chatConnection.on('assign_group_id', (data) {
       if (data is Map<String, dynamic>) {
         String groupID = data['groupID'];
         int timestamp = data['timestamp'];
         int shootingRoomCount = data['shootingRoomCount'];
+        List<dynamic> shootingRoomData = data['usersInShootingRoom']; // shootingRoomDataを取得
 
-        // timestampがnullの場合、1台目のカメラ起動であるためカウントダウンを開始しない
-        if (timestamp != null) {
-          completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
-        } else {
-          completer.complete({'groupID': groupID, 'timestamp': null, 'shootingRoomCount': shootingRoomCount});
-        }
-        // イベントリスナーを解除
-        chatConnection.off('assign_group_id');
+        debugPrint("timestamp in map Display = $timestamp");
+
+        completer.complete({
+          'groupID': groupID,
+          'timestamp': timestamp,
+          'shootingRoomCount': shootingRoomCount,
+          'shootingRoomData': shootingRoomData, // shootingRoomDataを返す
+        });
+
+        chatConnection.off('assign_group_id'); // リスナーを解除
       } else {
         debugPrint('Received data is not in the expected format');
         completer.completeError('Invalid data format');

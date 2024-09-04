@@ -105,47 +105,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   @override
   void initState() {
     super.initState();
-    // userShootingListCount = widget.shootingRoomCount - 1;
-    // _controller = CameraController(
-    //   widget.camera,
-    //   ResolutionPreset.high,
-    // );
-    // _initializeControllerFuture = _controller.initialize().then((_) {
-    //   setState(() {  // setStateを使用してUIの更新をトリガー
-    //     now = DateTime.now().millisecondsSinceEpoch;
-    //     triggerTime = widget.takePictureStartTime + 10000;  // デバイスAのタイムスタンプから10秒後
-    //     delay = triggerTime - now;  // 残り時間を計算
-    //     if (delay < 0) delay = 0;  // 遅延が負の場合は即時実行
-    //     remainingSeconds = (delay / 1000).ceil(); // 残り時間を秒単位に変換して整数値に
-    //     if (remainingSeconds > 30) remainingSeconds = 10; // 11秒以上にならないように制限
-    //   });
-    //
-    //   // カウントダウンタイマーのセットアップ
-    //   countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-    //     if (remainingSeconds > 1) {
-    //       setState(() {
-    //         remainingSeconds--;
-    //       });
-    //     } else {
-    //       timer.cancel();
-    //     }
-    //   });
-    //
-    //   Future.delayed(Duration(milliseconds: delay), () async {
-    //     if (mounted && remainingSeconds > 0) {
-    //       await _takePicture();
-    //     }
-    //   });
-    // });
-
-
-
 
     setupCamera();
     setupSocketListeners();
     setupEventBusListener();
-
-
 
     _showImage = false;
     showTimer = false; // 初期状態ではタイマーを非表示
@@ -160,7 +123,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
     });
 
-
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // ここで自分の国旗を追加し、既存のuserFlagsと競合しないように処理する
+      await _addMyCountryFlag();
+    });
 
     WidgetsBinding.instance.addObserver(this);
 
@@ -170,23 +136,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
       return;
     });
-
-    // _photoEventSubscription = eventBus.stream.listen((data) {
-    //   if (mounted) {
-    //     // ScaffoldMessenger.of(context).showSnackBar(
-    //     //     SnackBar(content: Text('新しい写真が追加されました！'), duration: Duration(seconds: 2))
-    //     // );
-    //     // debugPrint("Received photo data: $data");
-    //
-    //     // サムネイルデータをリストに追加
-    //     setState(() {
-    //       thumbnailData.add(data);
-    //     });
-    //   }
-    // });
-
-    // Socketイベントリスナーを設定
-    // setupSocketListeners();
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 500),
@@ -226,24 +175,31 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
 
-
-
-    // スケールアニメーションの定義
-    // _scaleAnimation = Tween<double>(begin: 2.0, end: 1.0).animate(
-    //   CurvedAnimation(
-    //     parent: _animationController,
-    //     curve: Curves.easeOut, // イーズアウトカーブでスムーズに縮小
-    //   ),
-    // );
-
     _animationController.forward(); // アニメーションの開始
 
 
 
   }
 
+  Future<void> _addMyCountryFlag() async {
+    // SharedPreferencesからuserIDを取得
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String userID = prefs.getString('userID') ?? "";
+
+    // 自分の位置情報や国コードを取得
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+    String myCountryCode = placemarks.first.isoCountryCode ?? 'Unknown';
+
+    // 自分の国旗を userFlags に追加 (userIDを使用)
+    setState(() {
+      userFlags[userID] = myCountryCode; // SharedPreferencesから取得したuserIDを利用
+    });
+  }
+
+
   void setupCamera() {
-    userShootingListCount = widget.shootingRoomCount - 1;
+    userShootingListCount = widget.shootingRoomCount;
     _controller = CameraController(widget.camera, ResolutionPreset.high);
     _initializeControllerFuture = _controller.initialize().then((_) {
       if (mounted) {
@@ -666,8 +622,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -945,24 +901,49 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     if (!mounted) return;
 
     String event = data['event'];
-    String userID = data['userID'];
+    String? userID = data['userID'];
 
-    if (event == "someone_start_camera") {
+    debugPrint("Event received: $event");
+
+    if (event == "someone_start_camera" || event == "existingCameraUser") {
       debugPrint("check_start_camera in camera $userID from ${data['countryCode']} total ${data['shootingRoomCount']}");
 
-      setState(() {
-        // userFlagsにuserIDをキーにしてcountryCodeを保存します
-        userFlags[userID] = data['countryCode'];
-      });
+      // 追加された部分: usersInShootingRoomデータを処理
+      if (data.containsKey('usersInShootingRoom')) {
+        List<dynamic> usersInShootingRoom = data['usersInShootingRoom'];
+        debugPrint("usersInShootingRoom: $usersInShootingRoom");
+        setState(() {
+          userFlags.clear(); // 以前のデータをクリア
+
+          for (var user in usersInShootingRoom) {
+            String userID = user['userID'];
+            String countryCode = user['countryCode'];
+            debugPrint("Adding flag for userID: $userID with countryCode: $countryCode");
+            // すでにuserIDがuserFlagsに存在しない場合のみ追加する
+            if (!userFlags.containsKey(userID)) {
+              userFlags[userID] = countryCode;
+            }
+          }
+        });
+      }
 
       handleUpdateUserShootingList(data);
     } else if (event == "someone_leave_camera") {
       debugPrint("check_leave_camera in camera $userID from ${data['countryCode']}");
 
-      setState(() {
-        // userFlagsからuserIDを削除します
-        userFlags.remove(userID);
-      });
+      // ここでも`usersInShootingRoom`をチェックし、表示を更新
+      if (data.containsKey('usersInShootingRoom')) {
+        List<dynamic> usersInShootingRoom = data['usersInShootingRoom'];
+        setState(() {
+          userFlags.clear(); // 以前のデータをクリア
+
+          for (var user in usersInShootingRoom) {
+            String userID = user['userID'];
+            String countryCode = user['countryCode'];
+            userFlags[userID] = countryCode;
+          }
+        });
+      }
 
       handleUpdateUserShootingList(data);
 
@@ -975,14 +956,44 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     } else if (event == "existingUserLocations") {
       debugPrint("existingUserLocations in camera is $data");
+
+      List<dynamic> userLocations = data['userLocations'];
+
+      setState(() {
+        userFlags.clear(); // 以前のデータをクリア
+
+        for (var user in userLocations) {
+          String userID = user['userID'];
+          String countryCode = user['countryCode'];
+          userFlags[userID] = countryCode;
+        }
+      });
+    } else if (event == "existingCameraUser") {
+      debugPrint("existingCameraUser in camera is $data");
+
+      List<dynamic> usersInShootingRoom = data['usersInShootingRoom'];
+
+      setState(() {
+        userFlags.clear(); // 以前のデータをクリア
+
+        for (var user in usersInShootingRoom) {
+          String userID = user['userID'];
+          String countryCode = user['countryCode'];
+          userFlags[userID] = countryCode;
+        }
+      });
     } else if (event == "update_user_shootinglist") {
       debugPrint("handleUpdateUserShootingList(data) = $data");
     }
   }
 
+
+
+
+
   void handleUpdateUserShootingList(Map<String, dynamic> data) {
     setState(() {
-      userShootingListCount = data['shootingRoomCount'] - 1;
+      userShootingListCount = data['shootingRoomCount'];
     });
   }
 
@@ -1087,7 +1098,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         ),
 
                       // Countdown Timer in the Center
-                      if (!_showImage && showTimer && remainingSeconds > 0 && userShootingListCount > 0) // タイマーが有効な場合のみ表示
+                      if (!_showImage && showTimer && remainingSeconds > 0 && userShootingListCount > 1) // タイマーが有効な場合のみ表示
                         Center(
                           child: Container(
                             width: MediaQuery.of(context).size.width * 0.5,
@@ -1106,31 +1117,33 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         ),
 
                       // メッセージを表示するコンテナ
-                      if (!_showImage && !showTimer && userShootingListCount == 0)
-                        Positioned(
-                          bottom: MediaQuery.of(context).size.height * 0.2,
-                          left: MediaQuery.of(context).size.width * 0.05,
-                          child: Container(
-                            height: MediaQuery.of(context).size.width * 0.2,
-                            width: MediaQuery.of(context).size.width * 0.9,
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.7),
-                              borderRadius: BorderRadius.circular(10),
+                      if (!_showImage)
+                      Positioned(
+                        bottom: MediaQuery.of(context).size.height * 0.2,
+                        left: MediaQuery.of(context).size.width * 0.05,
+                        child: Container(
+                          height: MediaQuery.of(context).size.width * 0.2,
+                          width: MediaQuery.of(context).size.width * 0.9,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Text(
+                            userShootingListCount == 1
+                                ? '待機中...\n画面タップでソロ撮影できます'
+                                : '$userShootingListCount ショット',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
-                            child: const Text(
-                              '待機中\n画面タップで撮影できます',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
+                            textAlign: TextAlign.center,
                           ),
                         ),
+                      ),
 
-                      // 国旗の表示
+// 国旗の表示
                       if (!_showImage && userFlags.isNotEmpty)
                         Positioned(
                           top: 50,
@@ -1149,6 +1162,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                             }).toList(),
                           ),
                         ),
+
 
                       // Backボタン
                       if (!_showImage) // 撮影前の状態でのみ表示
@@ -1305,35 +1319,65 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                       )
                           : const SizedBox(),
 
-                      if (userShootingListCount >= 1)
-                        Positioned(
-                          bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
-                          left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
-                          height: MediaQuery.of(context).size.height * 0.04,
-                          child: Container(
-                            padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              border: Border.all(color: Colors.black, width: 1.5),
-                              borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
-                                const SizedBox(width: 10),
-                                Text(
-                                  '+$userShootingListCount',
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
+                      // if (userShootingListCount >= 1)
+                      //   Positioned(
+                      //     bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
+                      //     left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
+                      //     height: MediaQuery.of(context).size.height * 0.04,
+                      //     child: Container(
+                      //       padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
+                      //       decoration: BoxDecoration(
+                      //         color: Colors.white,
+                      //         border: Border.all(color: Colors.black, width: 1.5),
+                      //         borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
+                      //       ),
+                      //       child: Row(
+                      //         mainAxisSize: MainAxisSize.min,
+                      //         children: <Widget>[
+                      //           const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
+                      //           const SizedBox(width: 10),
+                      //           Text(
+                      //             '+$userShootingListCount',
+                      //             style: const TextStyle(
+                      //               color: Colors.black,
+                      //               fontSize: 16,
+                      //               fontWeight: FontWeight.bold,
+                      //             ),
+                      //           ),
+                      //         ],
+                      //       ),
+                      //     ),
+                      //   ),
+
+                      // if (userShootingListCount >= 1)
+                      //   Positioned(
+                      //     bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
+                      //     left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
+                      //     height: MediaQuery.of(context).size.height * 0.1,
+                      //     child: Container(
+                      //       padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
+                      //       // decoration: BoxDecoration(
+                      //       //   color: Colors.white,
+                      //       //   border: Border.all(color: Colors.black, width: 1.5),
+                      //       //   borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
+                      //       // ),
+                      //       child: Row(
+                      //         mainAxisSize: MainAxisSize.min,
+                      //         children: <Widget>[
+                      //           // const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
+                      //           // const SizedBox(width: 10),
+                      //           Text(
+                      //             '$userShootingListCount ショット',
+                      //             style: const TextStyle(
+                      //               color: Colors.black,
+                      //               fontSize: 30,
+                      //               fontWeight: FontWeight.bold,
+                      //             ),
+                      //           ),
+                      //         ],
+                      //       ),
+                      //     ),
+                      //   )
                     ],
                   );
                 } else {

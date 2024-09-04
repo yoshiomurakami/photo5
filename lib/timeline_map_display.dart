@@ -1706,7 +1706,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       _waitForGroupIdAndTimestamp().then((cameraData) {
                         if (cameraData != null) {
                           _openCamera(_cameras![0], cameraData);
-                          debugPrint("cameraData['shootingRoomCount'] = $cameraData");
+
+                          // shootingRoomDataの内容をプリント
+                          List<dynamic> shootingRoomData = cameraData['shootingRoomData'];
+                          if (shootingRoomData.isNotEmpty) {
+                            debugPrint("shootingRoomData contains ${shootingRoomData.length} users:");
+                            for (var user in shootingRoomData) {
+                              debugPrint("User ID: ${user['userID']}, Country Code: ${user['countryCode']}, Lat: ${user['lat']}, Lng: ${user['lng']}");
+                            }
+                          } else {
+                            debugPrint("No users found in shootingRoomData.");
+                          }
                         } else {
                           debugPrint("Failed to get the group ID and timestamp.");
                         }
@@ -1717,6 +1727,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                       debugPrint("No available cameras found.");
                     }
                   },
+
                   child: Container(
                     width: double.infinity,
                     height: double.infinity,
@@ -1880,11 +1891,18 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
         String groupID = data['groupID'];
         int timestamp = data['timestamp'];
         int shootingRoomCount = data['shootingRoomCount'];
+        List<dynamic> shootingRoomData = data['usersInShootingRoom']; // shootingRoomDataを取得
+
         debugPrint("timestamp in map Display = $timestamp");
 
-        completer.complete({'groupID': groupID, 'timestamp': timestamp, 'shootingRoomCount': shootingRoomCount});
+        completer.complete({
+          'groupID': groupID,
+          'timestamp': timestamp,
+          'shootingRoomCount': shootingRoomCount,
+          'shootingRoomData': shootingRoomData, // shootingRoomDataを返す
+        });
 
-        chatConnection.off('assign_group_id');
+        chatConnection.off('assign_group_id'); // リスナーを解除
       } else {
         debugPrint('Received data is not in the expected format');
         completer.completeError('Invalid data format');
