@@ -1321,6 +1321,7 @@ class CameraHelper {
           groupID: cameraData['groupID'],
           takePictureStartTime: cameraData['timestamp'],
           shootingRoomCount: shootingRoomCount,
+          usersInShootingRoom: cameraData['shootingRoomData'],  // ここで追加
         ),
         settings: RouteSettings(name: 'CameraScreen'),
         maintainState: true,

@@ -1874,6 +1874,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
           groupID: cameraData['groupID'],
           takePictureStartTime: cameraData['timestamp'],
           shootingRoomCount: cameraData['shootingRoomCount'],
+          usersInShootingRoom:cameraData['shootingRoomData'],
         ),
         settings: RouteSettings(name: 'CameraScreen'),
         maintainState: true,

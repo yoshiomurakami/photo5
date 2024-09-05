@@ -33,6 +33,7 @@ class CameraScreen extends ConsumerStatefulWidget {
   final String groupID;
   final int takePictureStartTime;
   final int shootingRoomCount;  // shootingRoomCount を追加
+  final List<dynamic> usersInShootingRoom;  // usersInShootingRoom を追加
 
   CameraScreen({
     Key? key,
@@ -40,6 +41,7 @@ class CameraScreen extends ConsumerStatefulWidget {
     required this.groupID,
     required this.takePictureStartTime,  // コンストラクタでtimestampを要求
     required this.shootingRoomCount,  // コンストラクタでshootingRoomCountを要求
+    required this.usersInShootingRoom,  // コンストラクタに追加
   }) : super(key: ValueKey(takePictureStartTime));  // ValueKey を使って key を更新
 
   @override
@@ -110,6 +112,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     setupSocketListeners();
     setupEventBusListener();
 
+    // shootingRoomData から userFlags を初期化
+    for (var user in widget.usersInShootingRoom) {
+      userFlags[user['userID']] = user['countryCode'];
+    }
+
     _showImage = false;
     showTimer = false; // 初期状態ではタイマーを非表示
 
@@ -121,11 +128,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // eventHandlerが初期化された後で使用する
       ref.read(connectionWidgetsManagerProvider).chatConnection.listenToCameraEvent(context, eventHandler);
-    });
-
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      // ここで自分の国旗を追加し、既存のuserFlagsと競合しないように処理する
-      await _addMyCountryFlag();
     });
 
     WidgetsBinding.instance.addObserver(this);
@@ -181,21 +183,21 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
   }
 
-  Future<void> _addMyCountryFlag() async {
-    // SharedPreferencesからuserIDを取得
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String userID = prefs.getString('userID') ?? "";
-
-    // 自分の位置情報や国コードを取得
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-    List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
-    String myCountryCode = placemarks.first.isoCountryCode ?? 'Unknown';
-
-    // 自分の国旗を userFlags に追加 (userIDを使用)
-    setState(() {
-      userFlags[userID] = myCountryCode; // SharedPreferencesから取得したuserIDを利用
-    });
-  }
+  // Future<void> _addMyCountryFlag() async {
+  //   // SharedPreferencesからuserIDを取得
+  //   SharedPreferences prefs = await SharedPreferences.getInstance();
+  //   String userID = prefs.getString('userID') ?? "";
+  //
+  //   // 自分の位置情報や国コードを取得
+  //   Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+  //   List<Placemark> placemarks = await placemarkFromCoordinates(position.latitude, position.longitude);
+  //   String myCountryCode = placemarks.first.isoCountryCode ?? 'Unknown';
+  //
+  //   // 自分の国旗を userFlags に追加 (userIDを使用)
+  //   setState(() {
+  //     userFlags[userID] = myCountryCode; // SharedPreferencesから取得したuserIDを利用
+  //   });
+  // }
 
 
   void setupCamera() {
@@ -622,8 +624,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
