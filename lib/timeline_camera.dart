@@ -101,7 +101,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   bool showTimer = false;
 
   // 他の変数と同じように国旗を保持するためのMapを定義します
-  Map<String, String> userFlags = {};
+  // Map<String, String> userFlags = {};
+  Map<String, String> userFlags = {
+    for (var i = 0; i < 30; i++) 'dummy$i': 'FR',
+  };
 
   //タイマーシャッターを組み込んだinitstate
   @override
@@ -357,7 +360,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     socket?.on('receive_tap_message', (data) {
       debugPrint('get!! receive_tap_message');
       debugPrint('Message: ${data['message']} from ${data['fromUserID']}');
-      // 絵文字表示のためのランダム位置を設定
       final screenSize = MediaQuery.of(context).size;
       final double x = math.Random().nextDouble() * screenSize.width;
       final double y = math.Random().nextDouble() * (screenSize.height * 0.5); // 画面の上半分でランダム
@@ -367,11 +369,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       });
     });
 
-    // assign_group_id イベントのリスナーを追加
+    // サーバーからの 'assign_group_id' イベントリスナーを追加
     socket?.on('assign_group_id', (data) {
       if (mounted && data['shootingRoomCount'] > 1) {
         setState(() {
-          showTimer = true; // 2台目がカメラを起動したときにタイマーを表示
+          showTimer = true;
           now = DateTime.now().millisecondsSinceEpoch;
           triggerTime = data['timestamp'] + 10000;
           delay = triggerTime - now;
@@ -379,8 +381,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           remainingSeconds = (delay / 1000).ceil();
           if (remainingSeconds > 30) remainingSeconds = 10;
 
-          // タイマーを開始
-          startCountdownTimer(); // カウントダウンタイマーの開始を関数化
+          // カウントダウンタイマーのリセット処理
+          if (countdownTimer != null && countdownTimer!.isActive) {
+            countdownTimer!.cancel(); // 前のタイマーをキャンセル
+            countdownTimer = null;
+            remainingSeconds = 10; // タイマーをリセット
+          }
+
+          // 新しいタイマーの開始
+          startCountdownTimer();
 
           Future.delayed(Duration(milliseconds: delay), () async {
             if (mounted && remainingSeconds > 0) {
@@ -391,21 +400,23 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     });
 
+    // サーバーから 'camera_event' の処理
     socket?.on('camera_event', (data) {
       if (data['event'] == 'someone_leave_camera') {
         int shootingRoomCount = data['shootingRoomCount'];
 
+        // 1台のみになったときはカウントダウンをキャンセル
         if (shootingRoomCount == 1 && mounted) {
           setState(() {
-            // タイマーを停止し、カウントダウンを非表示にする
             countdownTimer?.cancel(); // Timerが初期化されている場合のみキャンセル
-            remainingSeconds = 0;
+            countdownTimer = null;
+            remainingSeconds = 0; // タイマーリセット
           });
         }
       }
     });
-
   }
+
 
   Future<bool> saveOtherUserImage(String imageUrl, String imageName) async {
     try {
@@ -452,6 +463,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     });
     countdownTimer?.cancel(); // Timerが初期化されている場合のみキャンセル
+    countdownTimer = null;
+
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     _photoEventSubscription.cancel();
     socket?.off('receive_tap_message');
@@ -1120,50 +1133,64 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
                       // メッセージを表示するコンテナ
                       if (!_showImage)
-                      Positioned(
-                        bottom: MediaQuery.of(context).size.height * 0.2,
-                        left: MediaQuery.of(context).size.width * 0.05,
-                        child: Container(
-                          height: MediaQuery.of(context).size.width * 0.2,
-                          width: MediaQuery.of(context).size.width * 0.9,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            userShootingListCount == 1
-                                ? '待機中...\n画面タップでソロ撮影できます'
-                                : '$userShootingListCount ショット',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-
-// 国旗の表示
-                      if (!_showImage && userFlags.isNotEmpty)
                         Positioned(
-                          top: 50,
-                          right: 20,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: userFlags.entries.map((entry) {
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                child: Flag.fromString(
-                                  entry.value,
-                                  height: 30,
-                                  width: 45,
+                          bottom: MediaQuery.of(context).size.height * 0.2,
+                          left: MediaQuery.of(context).size.width * 0.05,
+                          child: Container(
+                            padding: const EdgeInsets.all(8.0),  // パディングを追加して内容を調整
+                            width: MediaQuery.of(context).size.width * 0.9,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min, // コンテンツのサイズに合わせる
+                              children: [
+                                Text(
+                                  userShootingListCount == 1
+                                      ? '待機中...\n画面タップでソロ撮影できます'
+                                      : '同時に撮影します',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
                                 ),
-                              );
-                            }).toList(),
+                                // メッセージと国旗の間にスペースを追加
+                                const SizedBox(height: 12.0), // 高さ12.0のスペースを追加
+                                // 国旗の表示
+                                if (userShootingListCount != 1 && userFlags.isNotEmpty)
+                                  Wrap(
+                                    alignment: WrapAlignment.center, // 中央揃え
+                                    spacing: 8.0, // 横のスペース
+                                    runSpacing: 8.0, // 縦のスペース
+                                    children: userFlags.entries.map((entry) {
+                                      return Container(
+                                        margin: const EdgeInsets.symmetric(horizontal: 2.0), // 横方向に間隔を追加
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle, // 丸型にする
+                                          border: Border.all(color: Colors.white, width: 1), // 白い枠線を追加
+                                        ),
+                                        child: ClipOval( // 丸型に切り抜く
+                                          child: Flag.fromString(
+                                            entry.value,
+                                            height: 28, // 高さ28
+                                            width: 28,  // 幅28
+                                            fit: BoxFit.cover,
+                                            flagSize: FlagSize.size_1x1, // 1x1サイズを指定
+                                          ),
+                                        ),
+                                      );
+                                    }).toList(),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
+
+
 
 
                       // Backボタン
@@ -1320,66 +1347,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                         ),
                       )
                           : const SizedBox(),
-
-                      // if (userShootingListCount >= 1)
-                      //   Positioned(
-                      //     bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
-                      //     left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
-                      //     height: MediaQuery.of(context).size.height * 0.04,
-                      //     child: Container(
-                      //       padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
-                      //       decoration: BoxDecoration(
-                      //         color: Colors.white,
-                      //         border: Border.all(color: Colors.black, width: 1.5),
-                      //         borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
-                      //       ),
-                      //       child: Row(
-                      //         mainAxisSize: MainAxisSize.min,
-                      //         children: <Widget>[
-                      //           const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
-                      //           const SizedBox(width: 10),
-                      //           Text(
-                      //             '+$userShootingListCount',
-                      //             style: const TextStyle(
-                      //               color: Colors.black,
-                      //               fontSize: 16,
-                      //               fontWeight: FontWeight.bold,
-                      //             ),
-                      //           ),
-                      //         ],
-                      //       ),
-                      //     ),
-                      //   ),
-
-                      // if (userShootingListCount >= 1)
-                      //   Positioned(
-                      //     bottom: MediaQuery.of(context).size.height * 0.05, // 画面の高さの5%
-                      //     left: MediaQuery.of(context).size.width * 0.05, // 画面の幅の5%
-                      //     height: MediaQuery.of(context).size.height * 0.1,
-                      //     child: Container(
-                      //       padding: const EdgeInsets.only(left: 5, top: 0, right: 15, bottom: 0),
-                      //       // decoration: BoxDecoration(
-                      //       //   color: Colors.white,
-                      //       //   border: Border.all(color: Colors.black, width: 1.5),
-                      //       //   borderRadius: BorderRadius.circular(MediaQuery.of(context).size.height * 0.02),
-                      //       // ),
-                      //       child: Row(
-                      //         mainAxisSize: MainAxisSize.min,
-                      //         children: <Widget>[
-                      //           // const Text('\u{1F4F8}', style: TextStyle(color: Colors.black, fontSize: 16)),
-                      //           // const SizedBox(width: 10),
-                      //           Text(
-                      //             '$userShootingListCount ショット',
-                      //             style: const TextStyle(
-                      //               color: Colors.black,
-                      //               fontSize: 30,
-                      //               fontWeight: FontWeight.bold,
-                      //             ),
-                      //           ),
-                      //         ],
-                      //       ),
-                      //     ),
-                      //   )
                     ],
                   );
                 } else {
