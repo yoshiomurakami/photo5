@@ -326,7 +326,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     });
   }
 
-
   Future<void> insertImageData(Map<String, dynamic> photoData) async {
     final dbPath = await getDatabasesPath();
     final path = p.join(dbPath, 'images_database.db');
@@ -355,6 +354,34 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
   }
 
+  Future<bool> saveOtherUserImage(String imageUrl, String imageName) async {
+    try {
+      // サーバーから画像をダウンロード
+      var photoResponse = await http.get(Uri.parse(imageUrl));
+      var thumbResponse = await http.get(Uri.parse(imageUrl.replaceAll('_photo.webp', '_thumb.webp')));
+
+      if (photoResponse.statusCode == 200 && thumbResponse.statusCode == 200) {
+        // アプリケーションの一時ディレクトリを取得
+        final Directory tempDir = await getTemporaryDirectory();
+
+        // 写真とサムネイルの一時ファイルパス
+        final String tempPhotoPath = p.join(tempDir.path, imageName);
+        final String tempThumbPath = p.join(tempDir.path, imageName.replaceFirst('_photo.webp', '_thumb.webp'));
+
+        // 写真とサムネイルを一時ファイルとして保存
+        File(tempPhotoPath).writeAsBytesSync(photoResponse.bodyBytes);
+        File(tempThumbPath).writeAsBytesSync(thumbResponse.bodyBytes);
+
+        // 永続的なディレクトリに保存
+        await _saveFiles(tempPhotoPath, tempThumbPath); // 自分の画像保存と同じメソッドを使用して保存
+
+        return true; // 保存成功
+      }
+    } catch (e) {
+      debugPrint("Error saving image: $e");
+    }
+    return false; // 保存失敗
+  }
 
   void setupSocketListeners() {
     socket?.on('receive_tap_message', (data) {
@@ -416,42 +443,6 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       }
     });
   }
-
-
-  Future<bool> saveOtherUserImage(String imageUrl, String imageName) async {
-    try {
-      // サーバーから画像をダウンロード
-      var photoResponse = await http.get(Uri.parse(imageUrl));
-      var thumbResponse = await http.get(Uri.parse(imageUrl.replaceAll('_photo.webp', '_thumb.webp')));
-
-      if (photoResponse.statusCode == 200 && thumbResponse.statusCode == 200) {
-        // アプリケーションのドキュメントディレクトリを取得
-        final Directory appDir = await getApplicationDocumentsDirectory();
-
-        // 写真とサムネイルのディレクトリパス
-        final String imageDirectoryPath = p.join(appDir.path, 'uploadImage');
-        final String thumbDirectoryPath = p.join(appDir.path, 'uploadThumb');
-
-        // ディレクトリが存在するか確認し、なければ作成
-        await Directory(imageDirectoryPath).create(recursive: true);
-        await Directory(thumbDirectoryPath).create(recursive: true);
-
-        // 写真とサムネイルのフルファイルパスを構築
-        final String photoFilePath = p.join(imageDirectoryPath, imageName);
-        final String thumbFilePath = p.join(thumbDirectoryPath, imageName.replaceFirst('_photo.webp', '_thumb.webp'));
-
-        // ファイルとして保存
-        await File(photoFilePath).writeAsBytes(photoResponse.bodyBytes);
-        await File(thumbFilePath).writeAsBytes(thumbResponse.bodyBytes);
-
-        return true; // 保存成功
-      }
-    } catch (e) {
-      debugPrint("Error saving image: $e");
-    }
-    return false; // 保存失敗
-  }
-
 
   @override
   void dispose() {
