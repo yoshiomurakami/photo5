@@ -647,8 +647,8 @@ class StartupState extends State<Startup> with WidgetsBindingObserver {
 
     try {
       // 位置情報の取得
-      // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      Position position = fakePosition;
+      Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      // Position position = fakePosition;
       debugPrint("Location: Lat ${position.latitude}, Lng ${position.longitude}");
 
       // 国コードと住所の取得

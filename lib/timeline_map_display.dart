@@ -614,6 +614,17 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       toggleTimelineAndAlbum,
     );
 
+    // カメライベントの監視を開始
+    chatConnection.listenToCameraEvent(context, (Map<String, dynamic> data) {
+      String event = data['event'];
+      int? shootingRoomCount = data['shootingRoomCount'];
+
+      if ((event == 'someone_start_camera' || event == 'someone_leave_camera') && shootingRoomCount != null) {
+        // shootingRoomCountの値を更新
+        shootingRoomCountNotifier.value = shootingRoomCount;
+      }
+    });
+
     _initializeCamera();
     groupedAlbums = groupAlbumsByGroupId(_albumList);
     groupAlbumKeys = groupedAlbums.keys.toList();
@@ -636,6 +647,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
     selectedItemNotifier.addListener(_resetTranslatedAddress);
   }
+
 
   void _loadInitialImageIfNecessary() {
     if (groupedItemsList.isNotEmpty) {
@@ -663,6 +675,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     translatedAddressNotifier.dispose();
     super.dispose();
   }
+
+
 
   Future<void> _checkDatabaseEmpty() async {
     _isDatabaseEmpty = await isDatabaseEmpty();
@@ -1691,57 +1705,89 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
 
             Positioned(
               bottom: widget.size.width * 0.05, // ボタンの直径に基づいて中央に配置
-              left: (widget.size.width / 2) - (widget.size.width * 0.2) / 2, // 画面中央に揃えるため、ボタンの横幅の半分を引く
-              child: SizedBox(
-                width: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
-                height: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
-                child: FloatingActionButton(
-                  heroTag: 'cameraScreenUniqueTag', // ユニークなタグを設定
-                  backgroundColor: const Color(0xFFFFCC4D),
-                  elevation: 0,
-                  shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
-                  onPressed: () {
-                    if (_cameras != null && _cameras!.isNotEmpty) {
-                      chatConnection.emitEvent("enter_shooting_room");
-                      _waitForGroupIdAndTimestamp().then((cameraData) {
-                        if (cameraData != null) {
-                          _openCamera(_cameras![0], cameraData);
+              left: (widget.size.width / 2) - (widget.size.width * 0.2) / 2, // ボタンを中央に配置
+              child: Stack(
+                clipBehavior: Clip.none, // バッチがボタンからはみ出しても表示されるように設定
+                children: [
+                  // ボタンのサイズをwidget.size.width * 0.2に設定
+                  SizedBox(
+                    width: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
+                    height: widget.size.width * 0.2, // ボタンの直径をディスプレイ横幅の20%に設定
+                    child: FloatingActionButton(
+                      heroTag: 'cameraScreenUniqueTag', // ユニークなタグを設定
+                      backgroundColor: const Color(0xFFFFCC4D),
+                      elevation: 0,
+                      shape: const CircleBorder(side: BorderSide(color: Colors.black, width: 1.3)),
+                      onPressed: () {
+                        if (_cameras != null && _cameras!.isNotEmpty) {
+                          chatConnection.emitEvent("enter_shooting_room");
+                          _waitForGroupIdAndTimestamp().then((cameraData) {
+                            if (cameraData != null) {
+                              _openCamera(_cameras![0], cameraData);
 
-                          // shootingRoomDataの内容をプリント
-                          List<dynamic> shootingRoomData = cameraData['shootingRoomData'];
-                          if (shootingRoomData.isNotEmpty) {
-                            debugPrint("shootingRoomData contains ${shootingRoomData.length} users:");
-                            for (var user in shootingRoomData) {
-                              debugPrint("User ID: ${user['userID']}, Country Code: ${user['countryCode']}, Lat: ${user['lat']}, Lng: ${user['lng']}");
+                              // shootingRoomDataの内容をプリント
+                              List<dynamic> shootingRoomData = cameraData['shootingRoomData'];
+                              if (shootingRoomData.isNotEmpty) {
+                                debugPrint("shootingRoomData contains ${shootingRoomData.length} users:");
+                                for (var user in shootingRoomData) {
+                                  debugPrint("User ID: ${user['userID']}, Country Code: ${user['countryCode']}, Lat: ${user['lat']}, Lng: ${user['lng']}");
+                                }
+                              } else {
+                                debugPrint("No users found in shootingRoomData.");
+                              }
+                            } else {
+                              debugPrint("Failed to get the group ID and timestamp.");
                             }
-                          } else {
-                            debugPrint("No users found in shootingRoomData.");
-                          }
+                          }).catchError((error) {
+                            debugPrint("Error fetching group ID and timestamp: $error");
+                          });
                         } else {
-                          debugPrint("Failed to get the group ID and timestamp.");
+                          debugPrint("No available cameras found.");
                         }
-                      }).catchError((error) {
-                        debugPrint("Error fetching group ID and timestamp: $error");
-                      });
-                    } else {
-                      debugPrint("No available cameras found.");
-                    }
-                  },
-
-                  child: Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    alignment: Alignment.center,
-                    child: const Text(
-                      '\u{1F4F8}',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        height: 1.0,
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        alignment: Alignment.center,
+                        child: const Padding(
+                          padding: EdgeInsets.only(bottom: 4.0), // 下に少し余白を入れて絵文字を上に移動
+                          child: Text(
+                            '\u{1F4F8}', // カメラの絵文字
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 30, // フォントサイズはそのまま
+                              height: 1.0,  // 高さ調整
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
-                ),
+                  // バッチ表示部分
+                  Positioned(
+                    right: -5, // ボタンから少しはみ出す位置
+                    top: -10,   // ボタンから少しはみ出す位置
+                    child: ValueListenableBuilder<int?>(
+                      valueListenable: shootingRoomCountNotifier,
+                      builder: (context, shootingRoomCount, child) {
+                        if (shootingRoomCount == null || shootingRoomCount == 0) {
+                          return const SizedBox.shrink(); // shootingRoomCountが0の場合はバッチを非表示
+                        }
+                        return Container(
+                          padding: const EdgeInsets.all(8), // バッチのサイズを大きくする
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            shootingRoomCount.toString(),
+                            style: const TextStyle(color: Colors.white, fontSize: 16), // バッチ内のテキストサイズを大きく設定
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -1890,7 +1936,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     chatConnection.on('assign_group_id', (data) {
       if (data is Map<String, dynamic>) {
         String groupID = data['groupID'];
-        int timestamp = data['timestamp'];
+        // timestampがnullの場合にデフォルト値を設定
+        int timestamp = data['timestamp'] ?? DateTime.now().millisecondsSinceEpoch;
         int shootingRoomCount = data['shootingRoomCount'];
         List<dynamic> shootingRoomData = data['usersInShootingRoom']; // shootingRoomDataを取得
 

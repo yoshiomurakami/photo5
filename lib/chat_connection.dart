@@ -586,7 +586,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         return;
       }
 
-        if (action == 'connected' && distance >= 10000) {
+        if (action == 'connected' && distance >= 0) {
         // if (action == 'connected') {
 
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
@@ -613,7 +613,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
         debugPrint("distance = $distance /chachacha");
 
       }
-      else if (action == 'disconnected' && distance >= 10000) {
+      else if (action == 'disconnected' && distance >= 0) {
         // else if (action == 'disconnected') {
         keepState(countUniqueUserIdsWithStatusZero(existingUserLocations));
 
@@ -632,7 +632,7 @@ class ConnectionWidgetsManager extends ChangeNotifier {
               widget: newWidget, isRightAligned: isRightAligned);
         }
       }
-      else if (action == 'disconnected' && distance <= 10000) {
+      else if (action == 'disconnected' && distance <= 0) {
         // else if (action == 'disconnected') {
 
 
@@ -1331,5 +1331,5 @@ class CameraHelper {
 }
 
 
-
+ValueNotifier<int?> shootingRoomCountNotifier = ValueNotifier(null);
 

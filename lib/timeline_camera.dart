@@ -101,10 +101,10 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
   bool showTimer = false;
 
   // 他の変数と同じように国旗を保持するためのMapを定義します
-  // Map<String, String> userFlags = {};
-  Map<String, String> userFlags = {
-    for (var i = 0; i < 30; i++) 'dummy$i': 'FR',
-  };
+  Map<String, String> userFlags = {};
+  // Map<String, String> userFlags = {
+  //   for (var i = 0; i < 30; i++) 'dummy$i': 'FR',
+  // };
 
   //タイマーシャッターを組み込んだinitstate
   @override
@@ -465,6 +465,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     countdownTimer?.cancel(); // Timerが初期化されている場合のみキャンセル
     countdownTimer = null;
 
+
     WidgetsBinding.instance.removeObserver(this);  // Observerを削除
     _photoEventSubscription.cancel();
     socket?.off('receive_tap_message');
@@ -524,6 +525,14 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
       _imagePath = null;
       _showImage = false;
     }
+
+    // カウントダウンタイマーが存在する場合はキャンセル
+    if (countdownTimer != null && countdownTimer!.isActive) {
+      countdownTimer!.cancel();
+      countdownTimer = null;
+      remainingSeconds = 0; // 残り時間もリセット
+    }
+
     if (mounted) {
       _leaveShootingRoom();
       _disposeCameraController();
@@ -637,8 +646,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    Position position = fakePosition;
+    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    // Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();
@@ -935,9 +944,9 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
             String countryCode = user['countryCode'];
             debugPrint("Adding flag for userID: $userID with countryCode: $countryCode");
             // すでにuserIDがuserFlagsに存在しない場合のみ追加する
-            if (!userFlags.containsKey(userID)) {
+            // if (!userFlags.containsKey(userID)) {
               userFlags[userID] = countryCode;
-            }
+            // }
           }
         });
       }
@@ -960,7 +969,11 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
         });
       }
 
-      handleUpdateUserShootingList(data);
+      // handleUpdateUserShootingList(data);
+
+      setState(() {
+        userShootingListCount = data['shootingRoomCount'];
+      });
 
       if (data['shootingRoomCount'] == 1) {
         setState(() {
@@ -1094,7 +1107,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                   }
                   return Stack(
                     children: [
-                      // Camera preview scaled according to the aspect ratio
+                      // 撮影モードの画面
                       if (!_showImage && !_isControllerDisposed && _controller.value.isInitialized)
                         Center(
                           child: Transform.scale(
@@ -1112,7 +1125,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           child: Container(color: Colors.white),
                         ),
 
-                      // Countdown Timer in the Center
+                      // タイマー表示
                       if (!_showImage && showTimer && remainingSeconds > 0 && userShootingListCount > 1) // タイマーが有効な場合のみ表示
                         Center(
                           child: Container(
@@ -1206,7 +1219,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
                           ),
                         ),
 
-                      // Existing image or thumbnail display logic...
+                      // 撮影後の写真とサムネイルを表示
                       _showImage && _imagePath != null
                           ? Positioned.fill(
                         child: Stack(
