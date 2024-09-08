@@ -385,7 +385,7 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
           if (countdownTimer != null && countdownTimer!.isActive) {
             countdownTimer!.cancel(); // 前のタイマーをキャンセル
             countdownTimer = null;
-            remainingSeconds = 10; // タイマーをリセット
+            // remainingSeconds = 10; // タイマーをリセット
           }
 
           // 新しいタイマーの開始
@@ -498,14 +498,15 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
 
 
   void _leaveShootingRoom() {
+    // ref.read(connectionWidgetsManagerProvider).chatConnection.emitEvent("leave_shooting_room");
+    final chatConnection = ChatConnection();
+    chatConnection.emitEvent("leave_shooting_room");
+
+
     if (countdownTimer != null && countdownTimer!.isActive) {
       countdownTimer?.cancel();
       countdownTimer = null;  // タイマーの参照をクリア
     }
-
-    // ref.read(connectionWidgetsManagerProvider).chatConnection.emitEvent("leave_shooting_room");
-    final chatConnection = ChatConnection();
-    chatConnection.emitEvent("leave_shooting_room");
   }
 
 
@@ -646,8 +647,8 @@ class _CameraScreenState extends ConsumerState<CameraScreen> with WidgetsBinding
     );
 
     // Fetch the user's current location.
-    Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
-    // Position position = fakePosition;
+    // Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.medium);
+    Position position = fakePosition;
     debugPrint('Current position: $position');
     _imageLat = position.latitude.toString();
     _imageLng = position.longitude.toString();

@@ -619,6 +619,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
       String event = data['event'];
       int? shootingRoomCount = data['shootingRoomCount'];
 
+      debugPrint("event = $event & shootingRoomCount = $shootingRoomCount");
+
       if ((event == 'someone_start_camera' || event == 'someone_leave_camera') && shootingRoomCount != null) {
         // shootingRoomCountの値を更新
         shootingRoomCountNotifier.value = shootingRoomCount;
@@ -1780,7 +1782,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                             shape: BoxShape.circle,
                           ),
                           child: Text(
-                            shootingRoomCount.toString(),
+                            '$shootingRoomCount',
                             style: const TextStyle(color: Colors.white, fontSize: 16), // バッチ内のテキストサイズを大きく設定
                           ),
                         );

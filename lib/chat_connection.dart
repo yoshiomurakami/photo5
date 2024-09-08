@@ -336,7 +336,7 @@ class ConnectionWidgetsDisplay extends HookConsumerWidget {
       child: GestureDetector(
         onTap: () {}, // これにより親のタップイベントを無効化
         child: Container(
-          height: MediaQuery.of(context).size.height * 0.9,
+          height: MediaQuery.of(context).size.height * 0.2,
           decoration: BoxDecoration(
             color: Colors.grey[200]!.withOpacity(0.0),
           ),
@@ -1333,3 +1333,56 @@ class CameraHelper {
 
 ValueNotifier<int?> shootingRoomCountNotifier = ValueNotifier(null);
 
+// ShootingRoomCountを管理するStateNotifier
+class ShootingRoomCountNotifier extends StateNotifier<int> {
+  ShootingRoomCountNotifier() : super(0);
+
+  void updateCount(int newCount) {
+    state = newCount;
+  }
+}
+
+// Providerでグローバルに提供
+final shootingRoomCountProvider = StateNotifierProvider<ShootingRoomCountNotifier, int>((ref) {
+  return ShootingRoomCountNotifier();
+});
+
+
+// countdownTimerの状態を管理するStateNotifier
+class TimerNotifier extends StateNotifier<int> {
+  TimerNotifier() : super(0); // 初期値は0秒
+  Timer? _countdownTimer;
+
+  // タイマーの状態を開始
+  void startCountdown(int seconds) {
+    if (_countdownTimer != null && _countdownTimer!.isActive) {
+      _countdownTimer?.cancel(); // 既存のタイマーをキャンセル
+    }
+
+    state = seconds; // 残り秒数を設定
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (state > 0) {
+        state--; // 毎秒減算
+      } else {
+        timer.cancel(); // タイマー終了
+      }
+    });
+  }
+
+  // タイマーの停止とリセット
+  void resetTimer() {
+    _countdownTimer?.cancel(); // タイマーを停止
+    _countdownTimer = null;
+    state = 0; // 残り秒数をリセット
+  }
+
+  // タイマーがアクティブか確認
+  bool isActive() {
+    return _countdownTimer != null && _countdownTimer!.isActive;
+  }
+}
+
+// Providerでグローバルに提供
+final timerProvider = StateNotifierProvider<TimerNotifier, int>((ref) {
+  return TimerNotifier();
+});
