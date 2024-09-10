@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -11,7 +12,6 @@ class AlbumScreen extends StatefulWidget {
 }
 
 class _AlbumScreenState extends State<AlbumScreen> {
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
   List<AlbumTimeLine> _albumData = [];
   List<AlbumTimeLine> _filteredAlbumList = [];
 
@@ -28,7 +28,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
     List<AlbumTimeLine> albumList = await fetchAlbumDataFromDB();
     setState(() {
       _albumData = albumList;
-      _filteredAlbumList = List.from(albumList);
+      _filteredAlbumList = List.from(albumList); // 初期状態は全て表示
       _isLoading = false;
     });
   }
@@ -57,58 +57,21 @@ class _AlbumScreenState extends State<AlbumScreen> {
     }
   }
 
-  // フィルタリングする
   void _filterByUserID(String userID) {
-    final List<AlbumTimeLine> newList = _albumData.where((album) => album.userID == userID).toList();
-    _animateListChanges(newList);
-  }
-
-  // 並び替える
-  void _sortBySequenceNumber() {
-    final List<AlbumTimeLine> sortedList = List.from(_filteredAlbumList);
-    if (_isSortedBySequence) {
-      sortedList.sort((a, b) => a.id.compareTo(b.id));
-    } else {
-      sortedList.sort((a, b) => a.sequenceNumber.compareTo(b.sequenceNumber));
-    }
-    _isSortedBySequence = !_isSortedBySequence;
-    _animateListChanges(sortedList);
-  }
-
-  // リストの変更をアニメーション付きで処理
-  void _animateListChanges(List<AlbumTimeLine> newList) {
-    final oldList = _filteredAlbumList;
-    for (int i = 0; i < oldList.length; i++) {
-      if (!newList.contains(oldList[i])) {
-        // アイテムが削除されたときにアニメーションする
-        _listKey.currentState?.removeItem(
-          i,
-              (context, animation) => _buildRemovedItem(oldList[i], animation),
-          duration: const Duration(milliseconds: 300),
-        );
-      }
-    }
-
     setState(() {
-      _filteredAlbumList = newList;
+      _filteredAlbumList = _albumData.where((album) => album.userID == userID).toList();
     });
-
-    // 新しいアイテムの追加アニメーション
-    for (int i = 0; i < newList.length; i++) {
-      if (!oldList.contains(newList[i])) {
-        _listKey.currentState?.insertItem(i, duration: const Duration(milliseconds: 300));
-      }
-    }
   }
 
-  Widget _buildRemovedItem(AlbumTimeLine item, Animation<double> animation) {
-    return FadeTransition(
-      opacity: animation,
-      child: SizeTransition(
-        sizeFactor: animation,
-        child: _buildAlbumItem(item),
-      ),
-    );
+  void _sortBySequenceNumber() {
+    setState(() {
+      if (_isSortedBySequence) {
+        _filteredAlbumList.sort((a, b) => a.id.compareTo(b.id)); // デフォルトのid順
+      } else {
+        _filteredAlbumList.sort((a, b) => a.sequenceNumber.compareTo(b.sequenceNumber)); // sequenceNumber順
+      }
+      _isSortedBySequence = !_isSortedBySequence;
+    });
   }
 
   Widget _buildAlbumItem(AlbumTimeLine item) {
@@ -121,7 +84,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
           ),
         );
       },
-      child: Image.file(File(item.thumbPath), fit: BoxFit.cover),
+      child: Image.file(File(item.thumbPath)),
     );
   }
 
@@ -135,15 +98,17 @@ class _AlbumScreenState extends State<AlbumScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Padding(
         padding: const EdgeInsets.all(8.0),
-        child: AnimatedList(
-          key: _listKey,
-          initialItemCount: _filteredAlbumList.length,
-          itemBuilder: (context, index, animation) {
-            return SizeTransition(
-              sizeFactor: animation,
-              child: _buildAlbumItem(_filteredAlbumList[index]),
-            );
-          },
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 500),
+          child: MasonryGridView.count(
+            key: ValueKey(_filteredAlbumList.length),
+            crossAxisCount: 4, // 1行に4つのサムネイル
+            itemCount: _filteredAlbumList.length,
+            itemBuilder: (BuildContext context, int index) =>
+                _buildAlbumItem(_filteredAlbumList[index]),
+            mainAxisSpacing: 4.0,
+            crossAxisSpacing: 4.0,
+          ),
         ),
       ),
       floatingActionButton: Row(
@@ -152,14 +117,14 @@ class _AlbumScreenState extends State<AlbumScreen> {
           FloatingActionButton(
             heroTag: 'filterBtn',
             onPressed: () {
-              _filterByUserID('oYwHcGX5'); // userIDでフィルター
+              _filterByUserID('oYwHcGX5'); // userIDが'oYwHcGX5'の写真を表示
             },
             child: const Icon(Icons.filter_list),
           ),
           const SizedBox(width: 16),
           FloatingActionButton(
             heroTag: 'sortBtn',
-            onPressed: _sortBySequenceNumber, // 並び替え
+            onPressed: _sortBySequenceNumber, // 並び順を変更
             child: const Icon(Icons.sort),
           ),
         ],
@@ -168,7 +133,7 @@ class _AlbumScreenState extends State<AlbumScreen> {
   }
 }
 
-// AlbumTimeLineモデル
+// サンプルのAlbumTimeLineモデル
 class AlbumTimeLine {
   final String imagePath;
   final String thumbPath;
@@ -198,7 +163,7 @@ class AlbumTimeLine {
   }
 }
 
-// フルスクリーン画像表示
+// フルスクリーン画像表示用の画面
 class FullScreenImage extends StatelessWidget {
   final AlbumTimeLine photo;
 

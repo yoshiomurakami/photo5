@@ -13,7 +13,8 @@ import 'timeline_providers.dart';
 import 'timeline_map_card.dart';
 import 'chat_connection.dart';
 import 'timeline_camera.dart';
-import 'album_timeline.dart';
+// import 'album_timeline.dart';
+import 'album_screen.dart';
 import 'package:flag/flag.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:intl/intl.dart';
@@ -506,9 +507,9 @@ class MapUpdateService {
     if (selectedItem is TimelineItem) {
       lat = selectedItem.lat;
       lng = selectedItem.lng;
-    } else if (selectedItem is AlbumTimeLine) {
-      lat = selectedItem.lat;
-      lng = selectedItem.lng;
+    // } else if (selectedItem is AlbumTimeLine) {
+    //   lat = selectedItem.lat;
+    //   lng = selectedItem.lng;
     } else {
       return;
     }
@@ -568,7 +569,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
   String _lastSelectedGroupID = 'camera';
   final Map<String, int> _lastSelectedIndexes = {};
   late FixedExtentScrollController _pickerController = FixedExtentScrollController(initialItem: 0);
-  late Map<String, List<AlbumTimeLine>> groupedAlbums;
+  // late Map<String, List<AlbumTimeLine>> groupedAlbums;
   late List<String> groupAlbumKeys;
   late List<String> groupKeys;
   String _lastSelectedAlbumGroupID = '';
@@ -628,8 +629,8 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     });
 
     _initializeCamera();
-    groupedAlbums = groupAlbumsByGroupId(_albumList);
-    groupAlbumKeys = groupedAlbums.keys.toList();
+    // groupedAlbums = groupAlbumsByGroupId(_albumList);
+    // groupAlbumKeys = groupedAlbums.keys.toList();
     ConnectionWidgetsManager manager = ref.read(connectionWidgetsManagerProvider);
     manager.setOnPhotoTapCallback(scrollToTarget);
 
@@ -1474,20 +1475,25 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
                   ),
                 ),
               ),
-            //アルバム表示ボタン
-            if (showAlbumWheelScrollView && _albumList.isNotEmpty)
-              Positioned(
-                top: widget.size.height * 0.3,
-                bottom: widget.size.height * 0.3,
-                left: 0,
-                right: 0,
-                child: AlbumTimeLineView(
-                  size: MediaQuery.of(context).size,
-                  albumList: _albumList,
-                  lastSelectedAlbumGroupID: _lastSelectedAlbumGroupID,
-                  updateAlbumGroupIDCallback: updateLastSelectedAlbumGroupID,
-                ),
+            // アルバム画面を開くボタンを配置
+            Positioned(
+              bottom: MediaQuery.of(context).size.height * 0.1,  // 画面下部に配置
+              right: MediaQuery.of(context).size.width * 0.05,   // 画面右に配置
+              child: FloatingActionButton(
+                heroTag: 'albumScreenTag',
+                backgroundColor: Colors.blueAccent,  // ボタンの背景色
+                onPressed: () {
+                  // アルバム画面に遷移
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AlbumScreen(), // アルバム画面を表示
+                    ),
+                  );
+                },
+                child: const Icon(Icons.photo_album),  // アルバムアイコンを表示
               ),
+            ),
 
 
 
@@ -1834,7 +1840,7 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     isMapVisibleNotifier.value = !isMapVisibleNotifier.value;
 
     if (showAlbumWheelScrollView) {
-      _loadAlbumData();
+      // _loadAlbumData();
     } else {
       int targetIndex = groupedItemsList.indexWhere((list) =>
           list.any((item) => item.groupID == _lastSelectedGroupID));
@@ -1851,16 +1857,16 @@ class MapDisplayState extends ConsumerState<MapDisplayStateful> with SingleTicke
     }
   }
 
-  Future<void> _loadAlbumData() async {
-    List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
-    debugPrint('Fetched album data: ${albumData.length} items');
-
-    setState(() {
-      _albumList = albumData;
-      isAlbumDataLoaded = true;
-      debugPrint('_albumList updated: ${_albumList.length} items');
-    });
-  }
+  // Future<void> _loadAlbumData() async {
+  //   List<AlbumTimeLine> albumData = await fetchAlbumDataFromDB();
+  //   debugPrint('Fetched album data: ${albumData.length} items');
+  //
+  //   setState(() {
+  //     _albumList = albumData;
+  //     isAlbumDataLoaded = true;
+  //     debugPrint('_albumList updated: ${_albumList.length} items');
+  //   });
+  // }
 
   Future<void> _checkAlbumDataExistence() async {
     bool isEmpty = await isDatabaseEmpty();
